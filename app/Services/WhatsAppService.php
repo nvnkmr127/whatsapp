@@ -308,9 +308,51 @@ class WhatsAppService
             ]);
         }
 
-        $mediaObject = [
-            'link' => $link,
-        ];
+        // Resolve if we can do a Direct Media Upload via Meta POST /media API
+        // This bypasses external URL fetch requirements (solves localhost / NAT delivery failure)
+        $mediaObject = [];
+        $mediaId = null;
+
+        $cleanPath = $link;
+        if (preg_match('#^https?://[^/]+/(storage|public)/(.*)$#i', $link, $m)) {
+            $cleanPath = $m[2];
+        } elseif (preg_match('#^/?(storage|public)/(.*)$#i', $link, $m)) {
+            $cleanPath = $m[2];
+        }
+
+        $configuredDisk = config('filesystems.default', 'public');
+        $disk = ($configuredDisk === 'local') ? 'public' : $configuredDisk;
+        $localPath = \Illuminate\Support\Facades\Storage::disk($disk)->path($cleanPath);
+
+        if (file_exists($localPath)) {
+            $mimeType = match($type) {
+                'audio' => 'audio/ogg',
+                'image' => 'image/jpeg',
+                'video' => 'video/mp4',
+                default => 'application/octet-stream',
+            };
+            if (function_exists('mime_content_type')) {
+                $detectedMime = @mime_content_type($localPath);
+                if ($detectedMime) {
+                    $mimeType = $detectedMime;
+                }
+            }
+
+            Log::info("Attempting Direct Meta Media Upload for local file: {$localPath} (mime: {$mimeType})");
+            $uploadRes = $this->client->uploadMedia($localPath, $mimeType);
+            if (!empty($uploadRes['success']) && !empty($uploadRes['id'])) {
+                $mediaId = $uploadRes['id'];
+                Log::info("Direct Meta Media Upload successful! Media ID: {$mediaId}");
+            } else {
+                Log::warning("Direct Meta Media Upload failed, falling back to link method: " . json_encode($uploadRes['error'] ?? ''));
+            }
+        }
+
+        if ($mediaId) {
+            $mediaObject = ['id' => $mediaId];
+        } else {
+            $mediaObject = ['link' => $link];
+        }
 
         // WhatsApp only supports captions for these types
         if ($caption && in_array($type, ['image', 'video', 'document'])) {

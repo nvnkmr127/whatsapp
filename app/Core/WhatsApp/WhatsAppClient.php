@@ -73,6 +73,74 @@ class WhatsAppClient
         return $this->sendRequestFullUrl($url, $method, $data, $endpoint);
     }
 
+    /**
+     * Upload a local media file directly to Meta Cloud API to obtain a media_id.
+     */
+    public function uploadMedia(string $filePath, string $mimeType = 'audio/ogg'): array
+    {
+        if (! $this->phoneId) {
+            return ['success' => false, 'error' => 'Phone ID not configured', 'status_code' => 400];
+        }
+
+        // Sandbox Mode Interceptor
+        if ($this->team && $this->team->is_sandbox_mode) {
+            Log::info("WhatsApp API [SANDBOX] Intercepted media upload for $filePath");
+            return [
+                'success' => true,
+                'is_sandbox' => true,
+                'id' => 'sandbox_media_' . bin2hex(random_bytes(8)),
+            ];
+        }
+
+        $url = "{$this->baseUrl}/{$this->phoneId}/media";
+
+        $appSecret = $this->appSecret ?: config('whatsapp.app_secret');
+        $isSystemToken = $this->token && str_starts_with($this->token, 'EAAB');
+
+        $queryParams = [];
+        if (! $isSystemToken && $appSecret && $this->token && ! $this->skipAppSecretProof) {
+            $queryParams['appsecret_proof'] = hash_hmac('sha256', $this->token, $appSecret);
+        }
+
+        try {
+            if (! file_exists($filePath)) {
+                return ['success' => false, 'error' => "Local file not found at: {$filePath}"];
+            }
+
+            $response = Http::withToken($this->token)
+                ->withQueryParameters($queryParams)
+                ->timeout(60)
+                ->attach('file', file_get_contents($filePath), basename($filePath), ['Content-Type' => $mimeType])
+                ->post($url, [
+                    'messaging_product' => 'whatsapp',
+                    'type' => $mimeType,
+                ]);
+
+            if ($response->successful()) {
+                $data = $response->json();
+                return [
+                    'success' => true,
+                    'data' => $data,
+                    'id' => $data['id'] ?? null,
+                ];
+            }
+
+            Log::error("WhatsApp API Media Upload Failed", [
+                'status' => $response->status(),
+                'error' => $response->json(),
+            ]);
+
+            return [
+                'success' => false,
+                'error' => $response->json(),
+                'status_code' => $response->status(),
+            ];
+        } catch (\Exception $e) {
+            Log::error("WhatsApp API Media Upload Exception: " . $e->getMessage());
+            return ['success' => false, 'error' => $e->getMessage()];
+        }
+    }
+
     public function sendRequestFullUrl(string $url, string $method, array $data = [], string $endpoint = 'unknown'): array
     {
         // Sandbox Mode Interceptor
