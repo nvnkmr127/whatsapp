@@ -178,11 +178,13 @@ export function Composer({
         )}
       </View>
 
-      <EmojiPicker
-        open={isEmojiPickerOpen}
-        onClose={() => setIsEmojiPickerOpen(false)}
-        onEmojiSelected={handleEmojiSelect}
-      />
+      {isEmojiPickerOpen && (
+        <EmojiPicker
+          open={isEmojiPickerOpen}
+          onClose={() => setIsEmojiPickerOpen(false)}
+          onEmojiSelected={handleEmojiSelect}
+        />
+      )}
     </>
   );
 }

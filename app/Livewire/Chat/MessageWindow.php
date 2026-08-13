@@ -492,15 +492,7 @@ class MessageWindow extends Component
             ],
         ]);
 
-        \App\Jobs\SendMessageJob::dispatch(
-            Auth::user()->currentTeam->id,
-            $this->conversation->contact->phone_number,
-            'audio',
-            Storage::disk($disk)->url($path),
-            null,
-            'en_US',
-            $message->id
-        );
+        \App\Jobs\SendMessageJob::dispatch($message);
 
         $this->reset('voiceNote');
         $this->loadConversation();
