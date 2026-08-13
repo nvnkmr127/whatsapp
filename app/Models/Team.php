@@ -150,7 +150,6 @@ class Team extends JetstreamTeam
             'offer_converted_churned' => 'boolean',
             'offer_snapshot' => 'array',
             'whatsapp_setup_completed_at' => 'datetime',
-            'whatsapp_setup_state' => \App\Enums\IntegrationState::class,
             'whatsapp_phone_status_checked_at' => 'datetime',
             'whatsapp_token_expires_at' => 'datetime',
             'whatsapp_token_last_validated' => 'datetime',
@@ -493,6 +492,29 @@ class Team extends JetstreamTeam
         }
 
         return (int) $this->getPlanLimit('max_call_minutes_per_month', 0);
+    }
+
+    public function getWhatsappSetupStateAttribute($value)
+    {
+        if (!$value) {
+            return \App\Enums\IntegrationState::DISCONNECTED;
+        }
+
+        $normalized = strtolower(trim($value));
+        if ($normalized === 'not_configured') {
+            return \App\Enums\IntegrationState::DISCONNECTED;
+        }
+
+        return \App\Enums\IntegrationState::tryFrom($normalized) ?? \App\Enums\IntegrationState::DISCONNECTED;
+    }
+
+    public function setWhatsappSetupStateAttribute($value)
+    {
+        if ($value instanceof \App\Enums\IntegrationState) {
+            $this->attributes['whatsapp_setup_state'] = $value->value;
+        } else {
+            $this->attributes['whatsapp_setup_state'] = $value ? strtolower(trim((string)$value)) : 'disconnected';
+        }
     }
 }
 
