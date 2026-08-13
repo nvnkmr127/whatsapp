@@ -138,9 +138,17 @@ export const api = {
             unauthorizedCallback?.();
           }
         }
+        let errorMessage = data?.message;
+        if (!errorMessage) {
+          if (response.status === 413) {
+            errorMessage = 'The file is too large to upload. Please try a smaller file or compress it.';
+          } else {
+            errorMessage = `HTTP error! Status: ${response.status}`;
+          }
+        }
         throw {
           status: response.status,
-          message: data?.message || `HTTP error! Status: ${response.status}`,
+          message: errorMessage,
           errors: data?.errors || null,
           data,
         };

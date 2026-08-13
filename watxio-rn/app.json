@@ -57,7 +57,8 @@
         {
           "microphonePermission": "Watxio needs microphone access to record voice notes."
         }
-      ]
+      ],
+      "expo-video"
     ],
     "extra": {
       "eas": {

@@ -136,9 +136,9 @@ class MessageController extends Controller
             'caption' => $isMedia ? $request->input('content') : null,
             'media_url' => $cleanMediaUrl,
             'media_type' => $isMedia ? (
-                \Illuminate\Support\Facades\Storage::disk('public')->exists($cleanMediaUrl) 
-                    ? \Illuminate\Support\Facades\Storage::disk('public')->mimeType($cleanMediaUrl) 
-                    : ($request->input('type') === 'image' ? 'image/jpeg' : $request->input('type'))
+                \Illuminate\Support\Facades\Storage::disk(config('filesystems.default', 'public'))->exists($cleanMediaUrl) 
+                    ? \Illuminate\Support\Facades\Storage::disk(config('filesystems.default', 'public'))->mimeType($cleanMediaUrl) 
+                    : ($request->input('type') === 'image' ? 'image/jpeg' : ($request->input('type') === 'video' ? 'video/mp4' : $request->input('type')))
             ) : null,
             'reply_to_message_id' => $replyToId,
             'metadata' => empty($metadata) ? null : $metadata,

@@ -3,7 +3,8 @@ import {
   Modal, View, Pressable, Image, Text, StatusBar,
   ActivityIndicator, Dimensions, StyleSheet, Linking, Share,
 } from 'react-native';
-import { Video, ResizeMode } from 'expo-av';
+import { useVideoPlayer, VideoView } from 'expo-video';
+import { useEvent } from 'expo';
 import { X, Download, Share2 } from 'lucide-react-native';
 import { resolveMediaUrl } from '@/utils/media';
 
@@ -17,7 +18,7 @@ interface Props {
 }
 
 export function MediaViewer({ visible, uri, type, onClose }: Props) {
-  const [loading, setLoading] = useState(true);
+  const [imageLoading, setImageLoading] = useState(true);
   const resolvedUri = resolveMediaUrl(uri) || uri;
 
   const rawType = (type || '').toLowerCase();
@@ -35,6 +36,36 @@ export function MediaViewer({ visible, uri, type, onClose }: Props) {
     else if (urlLower.match(/\.(pdf|doc|docx|xls|xlsx|csv|zip|rar|txt)(\?|$)/i)) isDoc = true;
     else isImage = true;
   }
+
+  // Setup the video player
+  const player = useVideoPlayer(isVideo && visible ? resolvedUri : null, (playerInstance) => {
+    playerInstance.play();
+  });
+
+  const { status, error } = useEvent(player, 'statusChange', {
+    status: player.status,
+  });
+
+  React.useEffect(() => {
+    if (visible) {
+      setImageLoading(true);
+    }
+  }, [uri, visible]);
+
+  React.useEffect(() => {
+    if (visible && isVideo && resolvedUri) {
+      player.replaceAsync(resolvedUri);
+      player.play();
+    } else {
+      player.pause();
+    }
+  }, [visible, isVideo, resolvedUri, player]);
+
+  React.useEffect(() => {
+    if (error) {
+      console.warn('Video playback error:', error);
+    }
+  }, [error]);
 
   const handleDownload = async () => {
     try {
@@ -90,29 +121,25 @@ export function MediaViewer({ visible, uri, type, onClose }: Props) {
         <View style={styles.content}>
           {isImage && (
             <>
-              {loading && <ActivityIndicator color="#fff" size="large" style={StyleSheet.absoluteFillObject} />}
+              {imageLoading && <ActivityIndicator color="#fff" size="large" style={StyleSheet.absoluteFillObject} />}
               <Image
                 source={{ uri: resolvedUri }}
                 style={styles.image}
                 resizeMode="contain"
-                onLoadEnd={() => setLoading(false)}
+                onLoadEnd={() => setImageLoading(false)}
               />
             </>
           )}
           {isVideo && (
             <View style={styles.image}>
-              {loading && <ActivityIndicator color="#fff" size="large" style={StyleSheet.absoluteFillObject} />}
-              <Video
-                source={{ uri: resolvedUri }}
+              {(status === 'loading' || status === 'idle') && (
+                <ActivityIndicator color="#fff" size="large" style={StyleSheet.absoluteFillObject} />
+              )}
+              <VideoView
+                player={player}
                 style={styles.image}
-                useNativeControls
-                resizeMode={ResizeMode.CONTAIN}
-                shouldPlay
-                onLoad={() => setLoading(false)}
-                onError={(err) => {
-                  console.warn('Video playback error:', err);
-                  setLoading(false);
-                }}
+                nativeControls
+                contentFit="contain"
               />
             </View>
           )}
