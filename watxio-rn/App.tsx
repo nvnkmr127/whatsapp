@@ -10,6 +10,8 @@ import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { KeyboardProvider } from 'react-native-keyboard-controller';
 
+import { NavigationContainer, DefaultTheme, DarkTheme } from '@react-navigation/native';
+import { navigationRef } from '@/navigation/navigationRef';
 import AppNavigator from '@/navigation/AppNavigator';
 import { useTokens, ThemeProvider } from '@/theme';
 import { useColorScheme as useNWColorScheme } from 'nativewind';
@@ -19,7 +21,7 @@ import { useGlobalState } from '@/store';
 import { registerForPushNotifications } from '@/services/notifications';
 
 function Root() {
-  const { scheme } = useTokens();
+  const { scheme, tokens } = useTokens();
   const { setColorScheme } = useNWColorScheme();
   const [globalState] = useGlobalState();
 
@@ -49,12 +51,24 @@ function Root() {
     }
   }, [globalState.token]);
 
+  const navTheme = {
+    ...(scheme === 'dark' ? DarkTheme : DefaultTheme),
+    colors: {
+      ...(scheme === 'dark' ? DarkTheme.colors : DefaultTheme.colors),
+      background: tokens.bg,
+      card: tokens.bg,
+      text: tokens.ink,
+      primary: tokens.accent,
+      border: tokens.hairline,
+    },
+  };
+
   return (
-    <>
+    <NavigationContainer theme={navTheme} ref={navigationRef}>
       <StatusBar style={scheme === 'dark' ? 'light' : 'dark'} />
       <AppNavigator />
       <CallOverlayManager />
-    </>
+    </NavigationContainer>
   );
 }
 

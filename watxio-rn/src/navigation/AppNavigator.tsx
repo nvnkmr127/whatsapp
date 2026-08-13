@@ -1,7 +1,6 @@
 // src/navigation/AppNavigator.tsx — bottom tabs + native stack.
 
 import React from 'react';
-import { NavigationContainer, DefaultTheme, DarkTheme } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { createBottomTabNavigator, BottomTabBarProps } from '@react-navigation/bottom-tabs';
 import { View, Text, Pressable } from 'react-native';
@@ -116,50 +115,32 @@ function MainTabs() {
 }
 
 export default function AppNavigator() {
-  const { tokens, scheme } = useTokens();
-
   // Handle notification taps → navigate to the right screen
   useNotificationNavigation(navigationRef);
 
-  // Build a React Navigation theme from our tokens so push transitions and
-  // screen backgrounds don't flash white on dark mode.
-  const navTheme = {
-    ...(scheme === 'dark' ? DarkTheme : DefaultTheme),
-    colors: {
-      ...(scheme === 'dark' ? DarkTheme.colors : DefaultTheme.colors),
-      background: tokens.bg,
-      card: tokens.bg,
-      text: tokens.ink,
-      primary: tokens.accent,
-      border: tokens.hairline,
-    },
-  };
-
   return (
-    <NavigationContainer theme={navTheme} ref={navigationRef}>
-      <Stack.Navigator screenOptions={{ headerShown: false }} initialRouteName="Onboarding">
-        <Stack.Screen name="Onboarding" component={OnboardingScreen} />
-        <Stack.Screen name="Main"      component={MainTabs} />
-        <Stack.Screen name="Chat"      component={ChatScreen} />
-        <Stack.Screen name="Contact"   component={ContactScreen} />
-        <Stack.Screen
-          name="Broadcast"
-          component={BroadcastScreen}
-          options={{ presentation: 'modal', animation: 'slide_from_bottom' }}
-        />
-        <Stack.Screen
-          name="Login"
-          component={LoginScreen}
-          options={{ presentation: 'modal' }}
-        />
-        <Stack.Screen name="Activities" component={ActivitiesScreen} />
-        <Stack.Screen name="ActivityDetail" component={ActivityDetailScreen} />
-        <Stack.Screen name="CampaignDetail" component={CampaignDetailScreen} />
-        <Stack.Screen name="Calls" component={CallsScreen} />
-        <Stack.Screen name="Bots" component={BotsScreen} />
-        <Stack.Screen name="AiSettings" component={AiSettingsScreen} />
-        <Stack.Screen name="StarredMessages" component={StarredMessagesScreen} />
-      </Stack.Navigator>
-    </NavigationContainer>
+    <Stack.Navigator screenOptions={{ headerShown: false }} initialRouteName="Onboarding">
+      <Stack.Screen name="Onboarding" component={OnboardingScreen} />
+      <Stack.Screen name="Main"      component={MainTabs} />
+      <Stack.Screen name="Chat"      component={ChatScreen} />
+      <Stack.Screen name="Contact"   component={ContactScreen} />
+      <Stack.Screen
+        name="Broadcast"
+        component={BroadcastScreen}
+        options={{ presentation: 'modal', animation: 'slide_from_bottom' }}
+      />
+      <Stack.Screen
+        name="Login"
+        component={LoginScreen}
+        options={{ presentation: 'modal' }}
+      />
+      <Stack.Screen name="Activities" component={ActivitiesScreen} />
+      <Stack.Screen name="ActivityDetail" component={ActivityDetailScreen} />
+      <Stack.Screen name="CampaignDetail" component={CampaignDetailScreen} />
+      <Stack.Screen name="Calls" component={CallsScreen} />
+      <Stack.Screen name="Bots" component={BotsScreen} />
+      <Stack.Screen name="AiSettings" component={AiSettingsScreen} />
+      <Stack.Screen name="StarredMessages" component={StarredMessagesScreen} />
+    </Stack.Navigator>
   );
 }

@@ -389,7 +389,8 @@ export default (wire, conversationId, teamId, userId, showTransferModal, showInt
             stream.getTracks().forEach(track => track.stop());
             const audioBlob = new Blob(this.audioChunks, { type: 'audio/ogg; codecs=opus' });
             if (this.shouldSendRecording) {
-                wire.upload('voiceNote', audioBlob, (uploadedFilename) => {
+                const audioFile = new File([audioBlob], 'voice-note.ogg', { type: 'audio/ogg' });
+                wire.upload('voiceNote', audioFile, (uploadedFilename) => {
                     wire.sendVoiceNote(uploadedFilename);
                 });
             }
