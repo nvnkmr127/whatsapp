@@ -189,13 +189,17 @@ class MessageWindow extends Component
         try {
             $this->validate(['newAttachment' => 'max:16384']); // 16MB
 
+            // Resolve target disk: local-to-public fallback
+            $configuredDisk = config('filesystems.default');
+            $disk = ($configuredDisk === 'local') ? 'public' : $configuredDisk;
+
             $this->newAttachmentData = [
                 'name' => $this->newAttachment->getClientOriginalName(),
                 'mime_type' => $this->newAttachment->getMimeType(),
                 'size' => $this->newAttachment->getSize(),
                 // Same disk full_media_url resolves against, or SendMessageJob
                 // hands Meta a URL that 404s.
-                'path' => $this->newAttachment->store('chat-media', config('filesystems.default')),
+                'path' => $this->newAttachment->store('chat-media', $disk),
             ];
         } catch (\Exception $e) {
             $this->uploadError = 'File upload failed: '.$e->getMessage();
@@ -462,15 +466,28 @@ class MessageWindow extends Component
 
     public function sendVoiceNote($audioFile)
     {
-        // wire.upload('voiceNote', blob, callback) sets $this->voiceNote to a
-        // TemporaryUploadedFile — $audioFile is just the temp filename string.
-        // Kept off `newAttachment` so the composer's upload hook doesn't fire.
+        // Support array wrap in case Livewire passes it as an array
+        if (is_array($audioFile)) {
+            $audioFile = head($audioFile);
+        }
+
+        // Try resolving from local property first, fallback to manual creation from temporary file path
         $file = $this->voiceNote;
+        if (!$file && $audioFile) {
+            try {
+                $file = \Livewire\Features\SupportFileUploads\TemporaryUploadedFile::createFromLivewire($audioFile);
+            } catch (\Exception $e) {
+                Log::error("Failed to create TemporaryUploadedFile from voice note path: " . $e->getMessage());
+            }
+        }
+
         if (! $this->conversation || ! $file) {
             return;
         }
 
-        $disk = config('filesystems.default');
+        // Resolve target disk: local-to-public fallback
+        $configuredDisk = config('filesystems.default');
+        $disk = ($configuredDisk === 'local') ? 'public' : $configuredDisk;
 
         // Store with an explicit .ogg extension. A blob upload has no filename, so
         // store() would save it extensionless and the server would serve it as

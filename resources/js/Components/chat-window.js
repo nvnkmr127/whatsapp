@@ -390,9 +390,15 @@ export default (wire, conversationId, teamId, userId, showTransferModal, showInt
             const audioBlob = new Blob(this.audioChunks, { type: 'audio/ogg; codecs=opus' });
             if (this.shouldSendRecording) {
                 const audioFile = new File([audioBlob], 'voice-note.ogg', { type: 'audio/ogg' });
-                wire.upload('voiceNote', audioFile, (uploadedFilename) => {
-                    wire.sendVoiceNote(uploadedFilename);
-                });
+                wire.upload('voiceNote', audioFile, 
+                    (uploadedFilename) => {
+                        wire.sendVoiceNote(uploadedFilename);
+                    },
+                    (error) => {
+                        console.error('Voice note upload failed:', error);
+                        window.dispatchEvent(new CustomEvent('notify', { detail: { message: 'Failed to upload voice note. Please try again.', type: 'error' } }));
+                    }
+                );
             }
         };
 
