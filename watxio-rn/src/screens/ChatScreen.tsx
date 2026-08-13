@@ -995,12 +995,20 @@ export default function ChatScreen({ navigation, route }: any) {
         mediaTypes: ['images', 'videos'],
         allowsEditing: false,
         quality: 0.8,
+        // iOS only: ask the OS to transcode to low quality before returning
+        // the video, so files are small enough to upload without hitting nginx
+        // 413. On Android, quality is not controllable here — the nginx
+        // client_max_body_size must be raised on the server.
+        videoQuality: ImagePicker.UIImagePickerControllerQualityType.Low,
       });
     } else {
       result = await ImagePicker.launchImageLibraryAsync({
         mediaTypes: ['images', 'videos'],
         allowsEditing: false,
         quality: 0.8,
+        // iOS only: ask the OS to transcode to low quality when picking from
+        // gallery. On Android, no quality control — server nginx limit applies.
+        videoQuality: ImagePicker.UIImagePickerControllerQualityType.Low,
       });
     }
 
@@ -1016,6 +1024,11 @@ export default function ChatScreen({ navigation, route }: any) {
       }
       if (!fileName.includes('.')) {
         fileName += mimeType === 'video/mp4' ? '.mp4' : '.jpg';
+      }
+
+      if (__DEV__ && asset.type === 'video') {
+        const sizeMB = asset.fileSize ? (asset.fileSize / (1024 * 1024)).toFixed(1) : 'unknown';
+        console.log('[VIDEO_PICK] Picked video:', { fileName, mimeType, sizeMB: `${sizeMB} MB`, uri: asset.uri });
       }
 
       setSelectedMedia({
@@ -1144,6 +1157,24 @@ export default function ChatScreen({ navigation, route }: any) {
           }
           if (!fileName.match(/\.(mp4|mov|avi|mkv|3gp|webm)$/i)) {
             fileName = `${fileName.replace(/\.[^/.]+$/, '')}.mp4`;
+          }
+
+          // Hard size guard: 60 MB max to avoid 413 from nginx.
+          // Phone videos picked with videoQuality: 0.3 are typically <20 MB.
+          // If somehow still too large, show a clear error instead of a cryptic upload failure.
+          const fileSizeBytes = mediaToUpload.size ?? 0;
+          const MAX_VIDEO_BYTES = 60 * 1024 * 1024; // 60 MB
+          if (__DEV__) {
+            console.log('[VIDEO_SEND] Video file size:', `${(fileSizeBytes / (1024 * 1024)).toFixed(1)} MB`);
+          }
+          if (fileSizeBytes > MAX_VIDEO_BYTES) {
+            showDialog(
+              'Video Too Large',
+              `This video is ${(fileSizeBytes / (1024 * 1024)).toFixed(0)} MB. Please select a shorter clip (videos must be under 60 MB). WhatsApp limits video to 16 MB.`,
+              [{ text: 'OK', style: 'cancel' }]
+            );
+            setIsSending(false);
+            return;
           }
         } else if (!finalMime || finalMime === 'application/octet-stream') {
           const ext = fileName.split('.').pop()?.toLowerCase();
