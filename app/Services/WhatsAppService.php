@@ -251,6 +251,34 @@ class WhatsAppService
         $conversationService = new \App\Services\ConversationService;
         $conversation = $conversationService->ensureActiveConversation($contact);
 
+        // Auto-fallback unsupported (.mov, .webm, etc.) or large (>16MB) videos to document type for delivery guarantee
+        if ($type === 'video') {
+            $extension = strtolower(pathinfo(parse_url($link, PHP_URL_PATH), PATHINFO_EXTENSION));
+            $isUnsupported = !in_array($extension, ['mp4', '3gp']);
+            
+            $isTooLarge = false;
+            if ($existingMessage) {
+                try {
+                    $path = $existingMessage->media_url;
+                    $disk = config('filesystems.default', 'public');
+                    $remoteDisk = ($disk === 'local') ? 'public' : $disk;
+                    if (\Illuminate\Support\Facades\Storage::disk($remoteDisk)->exists($path)) {
+                        $size = \Illuminate\Support\Facades\Storage::disk($remoteDisk)->size($path);
+                        if ($size > 16 * 1024 * 1024) { // 16MB
+                            $isTooLarge = true;
+                        }
+                    }
+                } catch (\Throwable $e) { }
+            }
+
+            if ($isUnsupported || $isTooLarge) {
+                $type = 'document';
+                if ($existingMessage) {
+                    $existingMessage->update(['type' => 'document']);
+                }
+            }
+        }
+
         // 2. Pre-Persist or Use Existing
         $msg = $existingMessage;
         if (! $msg) {
