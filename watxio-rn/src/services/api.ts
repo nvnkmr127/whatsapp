@@ -62,7 +62,8 @@ export const api = {
     method: string,
     endpoint: string,
     body?: any,
-    customHeaders?: Record<string, string>
+    customHeaders?: Record<string, string>,
+    timeoutMs: number = 15000
   ): Promise<T> {
     const cleanEndpoint = endpoint.startsWith('/') ? endpoint : `/${endpoint}`;
     const url = `${apiBaseUrl}${cleanEndpoint}`;
@@ -108,12 +109,12 @@ export const api = {
     }
 
     const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 15000);
+    const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
     config.signal = controller.signal;
 
     try {
       if (__DEV__ && !isSilent) {
-        console.log(`[API REQUEST] ${method} ${url}`, { headers, body });
+        console.log(`[API REQUEST] ${method} ${url} (timeout: ${timeoutMs}ms)`, { headers, body });
       }
       const response = await fetch(url, config);
 
@@ -158,7 +159,7 @@ export const api = {
     } catch (error: any) {
       const isAbort = error?.name === 'AbortError' || error?.message === 'Aborted';
       const normalizedError = isAbort
-        ? { status: undefined, message: 'Request timed out after 15s', isTimeout: true, name: 'TimeoutError' }
+        ? { status: undefined, message: `Request timed out after ${Math.round(timeoutMs / 1000)}s`, isTimeout: true, name: 'TimeoutError' }
         : error;
 
       if (__DEV__ && !isSilent) {
@@ -170,23 +171,23 @@ export const api = {
     }
   },
 
-  get<T = any>(endpoint: string, headers?: Record<string, string>) {
-    return this.request<T>('GET', endpoint, undefined, headers);
+  get<T = any>(endpoint: string, headers?: Record<string, string>, timeoutMs?: number) {
+    return this.request<T>('GET', endpoint, undefined, headers, timeoutMs);
   },
 
-  post<T = any>(endpoint: string, body?: any, headers?: Record<string, string>) {
-    return this.request<T>('POST', endpoint, body, headers);
+  post<T = any>(endpoint: string, body?: any, headers?: Record<string, string>, timeoutMs?: number) {
+    return this.request<T>('POST', endpoint, body, headers, timeoutMs);
   },
 
-  put<T = any>(endpoint: string, body?: any, headers?: Record<string, string>) {
-    return this.request<T>('PUT', endpoint, body, headers);
+  put<T = any>(endpoint: string, body?: any, headers?: Record<string, string>, timeoutMs?: number) {
+    return this.request<T>('PUT', endpoint, body, headers, timeoutMs);
   },
 
-  patch<T = any>(endpoint: string, body?: any, headers?: Record<string, string>) {
-    return this.request<T>('PATCH', endpoint, body, headers);
+  patch<T = any>(endpoint: string, body?: any, headers?: Record<string, string>, timeoutMs?: number) {
+    return this.request<T>('PATCH', endpoint, body, headers, timeoutMs);
   },
 
-  delete<T = any>(endpoint: string, headers?: Record<string, string>) {
-    return this.request<T>('DELETE', endpoint, undefined, headers);
+  delete<T = any>(endpoint: string, headers?: Record<string, string>, timeoutMs?: number) {
+    return this.request<T>('DELETE', endpoint, undefined, headers, timeoutMs);
   },
 };

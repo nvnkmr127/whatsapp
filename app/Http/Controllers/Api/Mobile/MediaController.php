@@ -63,6 +63,17 @@ class MediaController extends Controller
             $fullUrl = rtrim($origin, '/') . '/storage/' . ltrim($path, '/');
         }
 
+        \Log::info('[MOBILE_MEDIA_UPLOAD] Media uploaded successfully', [
+            'original_name' => $file->getClientOriginalName(),
+            'extension' => $extension,
+            'mime' => $mime,
+            'detected_type' => $type,
+            'disk' => $disk,
+            'path' => $path,
+            'full_url' => $fullUrl,
+            'size_bytes' => $file->getSize(),
+        ]);
+
         return response()->json([
             'success' => true,
             'url' => $fullUrl,

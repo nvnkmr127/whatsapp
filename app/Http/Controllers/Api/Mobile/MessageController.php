@@ -94,7 +94,7 @@ class MessageController extends Controller
         $team = $user->currentTeam;
         
         // Meta Policy: Check 24-hour window for text/media messages
-        if (in_array($request->type, ['text', 'image', 'document']) && !$conversation->isWithin24Hours()) {
+        if (in_array($request->type, ['text', 'image', 'document', 'video', 'audio']) && !$conversation->isWithin24Hours()) {
             \Log::warning('[MOBILE_API_MESSAGE_STORE] Policy Violation: 24-hour window closed.', [
                 'conversation_id' => $conversation->id,
                 'type' => $request->type,

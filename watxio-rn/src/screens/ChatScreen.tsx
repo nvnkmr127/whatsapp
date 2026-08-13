@@ -1159,13 +1159,25 @@ export default function ChatScreen({ navigation, route }: any) {
         } as any);
 
         try {
-          const uploadRes = await api.post('/v1/mobile/media/upload', formData);
+          if (__DEV__) {
+            console.log('[VIDEO_SEND] Starting media upload...', {
+              type: mediaToUpload.type,
+              name: fileName,
+              mime: finalMime,
+              uri: uploadUri,
+            });
+          }
+          // Use 120-second timeout for file uploads
+          const uploadRes = await api.post('/v1/mobile/media/upload', formData, undefined, 120000);
+          if (__DEV__) {
+            console.log('[VIDEO_SEND] Media upload successful:', uploadRes);
+          }
           mediaUrl = uploadRes.url;
           if (uploadRes.type && uploadRes.type !== 'document') {
             msgType = uploadRes.type;
           }
         } catch (uploadErr: any) {
-          console.warn('Media upload failed:', uploadErr);
+          console.warn('[VIDEO_SEND] Media upload failed:', uploadErr);
           showDialog('Media Upload Failed', uploadErr?.message || 'Could not upload media to server. Please check your connection or try a smaller file.');
           setIsSending(false);
           return;
@@ -1187,7 +1199,14 @@ export default function ChatScreen({ navigation, route }: any) {
 
       setReplyingTo(null);
 
-      await api.post(`/v1/mobile/conversations/${conversationId}/messages`, payload);
+      if (__DEV__) {
+        console.log('[VIDEO_SEND] Sending message payload:', payload);
+      }
+      // Use 120-second timeout for message creation which triggers synchronous Meta upload
+      const sendRes = await api.post(`/v1/mobile/conversations/${conversationId}/messages`, payload, undefined, 120000);
+      if (__DEV__) {
+        console.log('[VIDEO_SEND] Message sent successfully:', sendRes);
+      }
       fetchConversationDetailsRef.current(true).catch((e) =>
         console.warn('[Send] fetchConversationDetails failed:', e)
       );
