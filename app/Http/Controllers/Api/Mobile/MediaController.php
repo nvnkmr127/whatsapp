@@ -49,13 +49,17 @@ class MediaController extends Controller
             $type = 'video';
         }
 
-        // Store in public disk for easy access (or s3 in production)
-        $path = $file->storeAs('mobile/uploads/' . $type, $fileName, 'public');
+        // Resolve target disk based on default configuration (S3/R2 in production, public locally)
+        $configuredDisk = config('filesystems.default', 'public');
+        $disk = ($configuredDisk === 'local') ? 'public' : $configuredDisk;
 
-        $origin = request()->getSchemeAndHttpHost();
-        if (str_contains($origin, 'localhost') || str_contains($origin, '127.0.0.1')) {
-            $fullUrl = Storage::disk('public')->url($path);
-        } else {
+        // Store in resolved disk
+        $path = $file->storeAs('mobile/uploads/' . $type, $fileName, $disk);
+
+        try {
+            $fullUrl = Storage::disk($disk)->url($path);
+        } catch (\Throwable $e) {
+            $origin = request()->getSchemeAndHttpHost();
             $fullUrl = rtrim($origin, '/') . '/storage/' . ltrim($path, '/');
         }
 
