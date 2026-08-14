@@ -672,15 +672,11 @@ class MessageWindow extends Component
             ],
         ]);
 
-        \App\Jobs\SendMessageJob::dispatch(
-            Auth::user()->currentTeam->id,
-            $this->conversation->contact->phone_number,
-            'audio',
-            Storage::disk($disk)->url($path),
-            null,
-            'en_US',
-            $message->id
-        );
+        // Dispatch the Message (not a raw URL) so SendMessageJob resolves the link
+        // via $message->full_media_url — which SIGNS S3/R2 URLs. A raw Storage::url()
+        // is unsigned and 403s on a private bucket, so WhatsApp can't fetch the audio.
+        // This mirrors the attachment sender (sendMessage) and works on any disk.
+        \App\Jobs\SendMessageJob::dispatch($message);
 
         $this->reset('voiceNote');
         $this->loadConversation();
