@@ -550,36 +550,56 @@ class MessageWindow extends Component
         $convertedTmp = null;
 
         if ($srcExt === 'webm') {
-            $ffmpegBin = trim((string) shell_exec('which ffmpeg 2>/dev/null')) ?: 'ffmpeg';
-            $tmpOgg    = sys_get_temp_dir() . '/' . \Illuminate\Support\Str::random(20) . '.ogg';
+            $ffmpegBin = 'ffmpeg';
+            foreach (['/usr/bin/ffmpeg', '/usr/local/bin/ffmpeg', '/bin/ffmpeg'] as $candidate) {
+                if (@file_exists($candidate)) {
+                    $ffmpegBin = $candidate;
+                    break;
+                }
+            }
 
-            Log::info('[VN:B5a] webm detected — attempting FFmpeg transcoding', [
-                'ffmpeg'  => $ffmpegBin,
-                'src'     => $srcPath,
-                'target'  => $tmpOgg,
+            $tmpOgg = sys_get_temp_dir() . '/' . \Illuminate\Support\Str::random(20) . '.ogg';
+
+            Log::info('[VN:B5a] webm detected — attempting FFmpeg transcoding via Process', [
+                'ffmpeg' => $ffmpegBin,
+                'src'    => $srcPath,
+                'target' => $tmpOgg,
             ]);
 
-            $cmd    = escapeshellcmd($ffmpegBin)
-                    . ' -y -i ' . escapeshellarg($srcPath)
-                    . ' -c:a libopus -f ogg '
-                    . escapeshellarg($tmpOgg)
-                    . ' 2>&1';
-            $output = shell_exec($cmd);
+            try {
+                $process = new \Symfony\Component\Process\Process([
+                    $ffmpegBin,
+                    '-y',
+                    '-i', $srcPath,
+                    '-vn',
+                    '-c:a', 'libopus',
+                    '-b:a', '32k',
+                    '-ar', '16000',
+                    '-f', 'ogg',
+                    $tmpOgg
+                ]);
+                $process->setTimeout(30);
+                $process->run();
 
-            if (file_exists($tmpOgg) && filesize($tmpOgg) > 100) {
-                Log::info('[VN:B5a] FFmpeg transcoding SUCCESS', [
-                    'ogg_size' => filesize($tmpOgg),
-                ]);
-                $srcPath      = $tmpOgg;
-                $ext          = 'ogg';
-                $mimeType     = 'audio/ogg';
-                $convertedTmp = $tmpOgg;
-            } else {
-                Log::warning('[VN:B5a] FFmpeg not available or transcoding failed — storing as .ogg anyway', [
-                    'ffmpeg_output' => $output,
-                ]);
-                // Keep the webm binary but store as .ogg so Meta at least
-                // uses the right MIME type when delivering the message.
+                if ($process->isSuccessful() && file_exists($tmpOgg) && filesize($tmpOgg) > 100) {
+                    Log::info('[VN:B5a] FFmpeg transcoding SUCCESS', [
+                        'ogg_size' => filesize($tmpOgg),
+                    ]);
+                    $srcPath      = $tmpOgg;
+                    $ext          = 'ogg';
+                    $mimeType     = 'audio/ogg';
+                    $convertedTmp = $tmpOgg;
+                } else {
+                    Log::error('[VN:B5a] FFmpeg process failed', [
+                        'exitCode' => $process->getExitCode(),
+                        'errorOutput' => $process->getErrorOutput(),
+                        'output' => $process->getOutput(),
+                    ]);
+                    $ext      = 'ogg';
+                    $mimeType = 'audio/ogg';
+                }
+            } catch (\Throwable $fe) {
+                Log::error('[VN:B5a] FFmpeg execution exception: ' . $fe->getMessage());
                 $ext      = 'ogg';
                 $mimeType = 'audio/ogg';
             }
@@ -591,6 +611,7 @@ class MessageWindow extends Component
                 default => 'audio/ogg',
             };
         }
+
 
         $fileName = \Illuminate\Support\Str::random(40) . '.' . $ext;
         Log::info('[VN:B6] Calling storeAs()', [
