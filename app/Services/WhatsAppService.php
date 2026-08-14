@@ -310,21 +310,35 @@ class WhatsAppService
 
         // Resolve if we can do a Direct Media Upload via Meta POST /media API
         // This bypasses external URL fetch requirements (solves localhost / NAT delivery failure)
+        // and fixes private R2/S3 bucket access (WhatsApp cannot fetch signed CDN URLs).
         $mediaObject = [];
         $mediaId = null;
 
-        $cleanPath = $link;
-        if (preg_match('#^https?://[^/]+/(storage|public)/(.*)$#i', $link, $m)) {
-            $cleanPath = $m[2];
-        } elseif (preg_match('#^/?(storage|public)/(.*)$#i', $link, $m)) {
-            $cleanPath = $m[2];
-        }
-
         $configuredDisk = config('filesystems.default', 'public');
         $disk = ($configuredDisk === 'local') ? 'public' : $configuredDisk;
-        $localPath = \Illuminate\Support\Facades\Storage::disk($disk)->path($cleanPath);
 
-        if (file_exists($localPath)) {
+        // Extract the clean relative path from the stored media_url or signed CDN link
+        $cleanPath = null;
+        if ($existingMessage && $existingMessage->media_url) {
+            $rawStored = $existingMessage->media_url;
+            // It's already a clean relative path (e.g. "mobile/uploads/audio/uuid.ogg")
+            if (!str_starts_with($rawStored, 'http://') && !str_starts_with($rawStored, 'https://')) {
+                $cleanPath = ltrim(preg_replace('#^/?(storage|public)/#i', '', $rawStored), '/');
+            }
+        }
+
+        // If no clean path from the message, try to extract from the signed URL
+        if (!$cleanPath) {
+            if (preg_match('#^https?://[^/]+/(storage|public)/(.*)$#i', $link, $m)) {
+                $cleanPath = strtok($m[2], '?');
+            } elseif (preg_match('#^/?(storage|public)/(.*)$#i', $link, $m)) {
+                $cleanPath = strtok($m[2], '?');  // $m[2] = path after storage|public, not $m[1]
+            }
+        }
+
+        // 1. Try local file path first (for local disk deployments)
+        $localPath = $cleanPath ? \Illuminate\Support\Facades\Storage::disk($disk)->path($cleanPath) : null;
+        if ($localPath && file_exists($localPath)) {
             $mimeType = match($type) {
                 'audio' => 'audio/ogg',
                 'image' => 'image/jpeg',
@@ -346,14 +360,70 @@ class WhatsAppService
                 $mimeType = $detectedMime;
             }
 
-
             Log::info("Attempting Direct Meta Media Upload for local file: {$localPath} (mime: {$mimeType})");
             $uploadRes = $this->client->uploadMedia($localPath, $mimeType);
             if (!empty($uploadRes['success']) && !empty($uploadRes['id'])) {
                 $mediaId = $uploadRes['id'];
                 Log::info("Direct Meta Media Upload successful! Media ID: {$mediaId}");
             } else {
-                Log::warning("Direct Meta Media Upload failed, falling back to link method: " . json_encode($uploadRes['error'] ?? ''));
+                Log::warning("Direct Meta Media Upload failed, falling back to remote disk method: " . json_encode($uploadRes['error'] ?? ''));
+            }
+        }
+
+        // 2. If no local file (remote disk: R2/S3), stream from disk to a temp file and upload directly.
+        //    This avoids sending signed private bucket URLs to WhatsApp which results in 403.
+        if (!$mediaId && $cleanPath && config("filesystems.disks.{$disk}.driver") === 's3') {
+            try {
+                if (\Illuminate\Support\Facades\Storage::disk($disk)->exists($cleanPath)) {
+                    $ext = strtolower(pathinfo($cleanPath, PATHINFO_EXTENSION));
+                    $mimeType = match($ext) {
+                        'ogg', 'opus' => 'audio/ogg',
+                        'm4a'         => 'audio/mp4',
+                        'mp3'         => 'audio/mpeg',
+                        'aac'         => 'audio/aac',
+                        'mp4'         => 'video/mp4',
+                        'jpg', 'jpeg' => 'image/jpeg',
+                        'png'         => 'image/png',
+                        'gif'         => 'image/gif',
+                        'webp'        => 'image/webp',
+                        'pdf'         => 'application/pdf',
+                        default       => 'application/octet-stream',
+                    };
+                    if ($type === 'audio') {
+                        $mimeType = in_array($ext, ['ogg', 'opus']) ? 'audio/ogg' : ($ext === 'm4a' ? 'audio/mp4' : ($ext === 'mp3' ? 'audio/mpeg' : 'audio/ogg'));
+                    }
+
+                    $tmpFile = sys_get_temp_dir() . '/' . \Illuminate\Support\Str::random(20) . '.' . $ext;
+                    $stream = \Illuminate\Support\Facades\Storage::disk($disk)->readStream($cleanPath);
+                    if (is_resource($stream)) {
+                        // Use stream_copy_to_stream for reliable binary write (file_put_contents
+                        // may not correctly handle all remote PHP stream resource types)
+                        $out = fopen($tmpFile, 'wb');
+                        if ($out) {
+                            stream_copy_to_stream($stream, $out);
+                            fclose($out);
+                        }
+                        fclose($stream);
+
+                        if (file_exists($tmpFile) && filesize($tmpFile) > 0) {
+                            Log::info("Attempting Direct Meta Media Upload for remote R2/S3 file: {$cleanPath} (mime: {$mimeType}, size: " . filesize($tmpFile) . "b, temp: {$tmpFile})");
+                            $uploadRes = $this->client->uploadMedia($tmpFile, $mimeType);
+                            @unlink($tmpFile);
+
+                            if (!empty($uploadRes['success']) && !empty($uploadRes['id'])) {
+                                $mediaId = $uploadRes['id'];
+                                Log::info("Direct Meta Media Upload (from R2/S3) successful! Media ID: {$mediaId}");
+                            } else {
+                                Log::warning("Direct Meta Media Upload (from R2/S3) failed: " . json_encode($uploadRes['error'] ?? ''));
+                            }
+                        } else {
+                            Log::warning("R2/S3 stream wrote 0 bytes to temp file — skipping Meta upload for {$cleanPath}");
+                            @unlink($tmpFile);
+                        }
+                    }
+                }
+            } catch (\Throwable $e) {
+                Log::warning("Failed to stream file from R2/S3 for direct Meta upload: " . $e->getMessage());
             }
         }
 
