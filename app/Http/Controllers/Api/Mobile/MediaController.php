@@ -39,39 +39,65 @@ class MediaController extends Controller
         $fileName = Str::uuid() . '.' . $extension;
         
         if ($request->input('is_voice_note') == 'true' || $request->input('is_voice_note') === true) {
-            $ffmpegBin = env('FFMPEG_PATH')
-                ?: (new \Symfony\Component\Process\ExecutableFinder)
-                    ->find('ffmpeg', null, ['/opt/homebrew/bin', '/usr/local/bin', '/usr/bin', '/bin']);
+            // Skip transcoding if file is already an ogg Opus file
+            if ($extension !== 'ogg') {
+                $ffmpegBin = env('FFMPEG_PATH');
 
-            if ($ffmpegBin) {
-                $tmpOgg = sys_get_temp_dir() . '/' . \Illuminate\Support\Str::random(20) . '.ogg';
-                $srcTmp = sys_get_temp_dir() . '/' . \Illuminate\Support\Str::random(20) . '.' . $extension;
-                file_put_contents($srcTmp, file_get_contents($file->getRealPath()));
+                if (!$ffmpegBin) {
+                    $extraDirs = [
+                        '/opt/homebrew/bin', '/usr/local/bin', '/usr/bin', '/bin',
+                        'C:/ffmpeg/bin', 'C:/ProgramData/chocolatey/bin',
+                        'C:/Program Files/ffmpeg/bin', 'C:/tools/ffmpeg/bin',
+                    ];
+                    $userProfile = getenv('USERPROFILE') ?: getenv('HOME');
+                    if ($userProfile && is_dir($userProfile . '/AppData/Local/Microsoft/WinGet/Packages')) {
+                        $winGetPkgs = glob($userProfile . '/AppData/Local/Microsoft/WinGet/Packages/Gyan.FFmpeg*');
+                        foreach ($winGetPkgs as $pkg) {
+                            $subDirs = glob($pkg . '/ffmpeg-*');
+                            foreach ($subDirs as $sd) {
+                                if (is_dir($sd . '/bin')) {
+                                    $extraDirs[] = $sd . '/bin';
+                                }
+                            }
+                        }
+                    }
 
-                $process = new \Symfony\Component\Process\Process([
-                    $ffmpegBin,
-                    '-y',
-                    '-i', $srcTmp,
-                    '-vn',
-                    '-c:a', 'libopus',
-                    '-b:a', '32k',
-                    '-ar', '16000',
-                    '-f', 'ogg',
-                    $tmpOgg
-                ]);
-                $process->setTimeout(30);
-                $process->run();
-                @unlink($srcTmp);
-
-                if ($process->isSuccessful() && file_exists($tmpOgg) && filesize($tmpOgg) > 100) {
-                    $file = new \Illuminate\Http\UploadedFile($tmpOgg, 'voice.ogg', 'audio/ogg', null, true);
-                    $extension = 'ogg';
-                    $fileName = Str::uuid() . '.' . $extension;
-                } else {
-                    \Log::error('[MOBILE_MEDIA_UPLOAD] FFmpeg transcoding failed', ['error' => $process->getErrorOutput()]);
+                    $ffmpegBin = (new \Symfony\Component\Process\ExecutableFinder)
+                        ->find('ffmpeg', null, array_values(array_unique($extraDirs)));
                 }
-            } else {
-                \Log::error('[MOBILE_MEDIA_UPLOAD] ffmpeg not found — cannot convert voice note.');
+
+                if ($ffmpegBin) {
+                    $tmpOgg = sys_get_temp_dir() . '/' . \Illuminate\Support\Str::random(20) . '.ogg';
+                    $srcTmp = sys_get_temp_dir() . '/' . \Illuminate\Support\Str::random(20) . '.' . $extension;
+                    copy($file->getRealPath(), $srcTmp);
+
+                    $process = new \Symfony\Component\Process\Process([
+                        $ffmpegBin,
+                        '-y',
+                        '-i', $srcTmp,
+                        '-vn',
+                        '-c:a', 'libopus',
+                        '-b:a', '32k',
+                        '-ar', '16000',
+                        '-f', 'ogg',
+                        $tmpOgg
+                    ]);
+                    $process->setTimeout(30);
+                    $process->run();
+                    @unlink($srcTmp);
+
+                    if ($process->isSuccessful() && file_exists($tmpOgg) && filesize($tmpOgg) > 100) {
+                        $file = new \Illuminate\Http\UploadedFile($tmpOgg, 'voice.ogg', 'audio/ogg', null, true);
+                        $extension = 'ogg';
+                        $fileName = Str::uuid() . '.' . $extension;
+                    } else {
+                        \Log::error('[MOBILE_MEDIA_UPLOAD] FFmpeg transcoding failed', ['error' => $process->getErrorOutput()]);
+                        return response()->json(['error' => 'Could not convert voice note audio format. Please try again.'], 422);
+                    }
+                } else {
+                    \Log::error('[MOBILE_MEDIA_UPLOAD] ffmpeg not found — cannot convert voice note.');
+                    return response()->json(['error' => 'Voice notes require server audio conversion support (FFmpeg). Please contact support.'], 422);
+                }
             }
         }
         

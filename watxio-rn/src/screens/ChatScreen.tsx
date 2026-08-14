@@ -1856,7 +1856,7 @@ export default function ChatScreen({ navigation, route }: any) {
                   // actually succeeds server-side. Matches the regular send() path.
                   await api.post(`/v1/mobile/conversations/${conversationId}/messages`, {
                     type: 'audio',
-                    media_url: uploadRes.url,
+                    media_url: uploadRes.path || uploadRes.url,
                     content: `Voice message (${timeStr})`,
                     is_voice_note: true,
                   }, undefined, 120000);
