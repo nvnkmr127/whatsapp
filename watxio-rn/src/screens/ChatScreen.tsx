@@ -115,6 +115,16 @@ export default function ChatScreen({ navigation, route }: any) {
     return () => clearInterval(interval);
   }, [isRecording, isRecordingPaused]);
 
+  // Voice recording cleanup on unmount
+  useEffect(() => {
+    return () => {
+      if (recordingRef.current) {
+        recordingRef.current.stopAndUnloadAsync().catch(() => {});
+        recordingRef.current = null;
+      }
+    };
+  }, []);
+
   // Save Contact States
   const [showSaveContact, setShowSaveContact] = useState(false);
   const [saveContactName, setSaveContactName] = useState('');
@@ -1751,6 +1761,14 @@ export default function ChatScreen({ navigation, route }: any) {
               recordingSeconds={recordingSeconds}
               onStartRecording={async () => {
                 try {
+                  // Clean up any stale recording reference to prevent Expo lockups
+                  if (recordingRef.current) {
+                    try {
+                      await recordingRef.current.stopAndUnloadAsync();
+                    } catch (_) {}
+                    recordingRef.current = null;
+                  }
+
                   const permission = await Audio.requestPermissionsAsync();
                   if (permission.status === 'granted') {
                     await Audio.setAudioModeAsync({
