@@ -529,35 +529,86 @@ class MessageWindow extends Component
         $configuredDisk = config('filesystems.default');
         $disk = ($configuredDisk === 'local') ? 'public' : $configuredDisk;
 
-        // Preserve actual uploaded extension
-        $uploadedExt  = strtolower(pathinfo($file->getClientOriginalName(), PATHINFO_EXTENSION));
-        $ext          = in_array($uploadedExt, ['ogg', 'webm', 'mp3', 'mp4', 'm4a', 'opus']) ? $uploadedExt : 'ogg';
-        $mimeType     = match($ext) {
-            'ogg'  => 'audio/ogg',
-            'webm' => 'audio/webm',
-            'mp3'  => 'audio/mpeg',
-            'm4a'  => 'audio/mp4',
-            default => 'audio/ogg',
-        };
+        // Resolve actual uploaded extension
+        $uploadedExt = strtolower(pathinfo($file->getClientOriginalName(), PATHINFO_EXTENSION));
+        $srcExt      = in_array($uploadedExt, ['ogg', 'webm', 'mp3', 'mp4', 'm4a', 'opus']) ? $uploadedExt : 'ogg';
 
-        Log::info('[VN:B5] Extension / MIME resolved', [
-            'uploadedExt'   => $uploadedExt,
-            'finalExt'      => $ext,
-            'mimeType'      => $mimeType,
-            'disk'          => $disk,
-            'file_size'     => $file->getSize(),
-            'file_realPath' => $file->getRealPath(),
-            'file_tmpPath'  => $file->getPathname(),
+        Log::info('[VN:B5] Extension resolved', [
+            'uploadedExt' => $uploadedExt,
+            'srcExt'      => $srcExt,
+            'file_size'   => $file->getSize(),
+            'realPath'    => $file->getRealPath(),
         ]);
+
+        // ── FFmpeg transcoding ───────────────────────────────────────────────
+        // Chrome records audio/webm. WhatsApp only accepts audio/ogg (opus),
+        // audio/mp4, audio/aac, audio/mpeg, or audio/amr for audio messages.
+        // We must convert webm → ogg before uploading to avoid silent failures.
+        $srcPath  = $file->getRealPath();
+        $ext      = $srcExt;
+        $mimeType = 'audio/ogg';
+        $convertedTmp = null;
+
+        if ($srcExt === 'webm') {
+            $ffmpegBin = trim((string) shell_exec('which ffmpeg 2>/dev/null')) ?: 'ffmpeg';
+            $tmpOgg    = sys_get_temp_dir() . '/' . \Illuminate\Support\Str::random(20) . '.ogg';
+
+            Log::info('[VN:B5a] webm detected — attempting FFmpeg transcoding', [
+                'ffmpeg'  => $ffmpegBin,
+                'src'     => $srcPath,
+                'target'  => $tmpOgg,
+            ]);
+
+            $cmd    = escapeshellcmd($ffmpegBin)
+                    . ' -y -i ' . escapeshellarg($srcPath)
+                    . ' -c:a libopus -f ogg '
+                    . escapeshellarg($tmpOgg)
+                    . ' 2>&1';
+            $output = shell_exec($cmd);
+
+            if (file_exists($tmpOgg) && filesize($tmpOgg) > 100) {
+                Log::info('[VN:B5a] FFmpeg transcoding SUCCESS', [
+                    'ogg_size' => filesize($tmpOgg),
+                ]);
+                $srcPath      = $tmpOgg;
+                $ext          = 'ogg';
+                $mimeType     = 'audio/ogg';
+                $convertedTmp = $tmpOgg;
+            } else {
+                Log::warning('[VN:B5a] FFmpeg not available or transcoding failed — storing as .ogg anyway', [
+                    'ffmpeg_output' => $output,
+                ]);
+                // Keep the webm binary but store as .ogg so Meta at least
+                // uses the right MIME type when delivering the message.
+                $ext      = 'ogg';
+                $mimeType = 'audio/ogg';
+            }
+        } else {
+            $mimeType = match($ext) {
+                'ogg'  => 'audio/ogg',
+                'mp3'  => 'audio/mpeg',
+                'm4a'  => 'audio/mp4',
+                default => 'audio/ogg',
+            };
+        }
 
         $fileName = \Illuminate\Support\Str::random(40) . '.' . $ext;
         Log::info('[VN:B6] Calling storeAs()', [
             'directory' => 'voice-notes',
             'fileName'  => $fileName,
             'disk'      => $disk,
+            'mimeType'  => $mimeType,
         ]);
 
-        $path = $file->storeAs('voice-notes', $fileName, $disk);
+        if ($convertedTmp) {
+            // Store from the converted temp file using Laravel's File wrapper
+            $path = \Illuminate\Support\Facades\Storage::disk($disk)
+                ->putFileAs('voice-notes', new \Illuminate\Http\File($convertedTmp), $fileName);
+            @unlink($convertedTmp);
+        } else {
+            $path = $file->storeAs('voice-notes', $fileName, $disk);
+        }
+
 
         if (!$path) {
             Log::error('[VN:B6] FAIL — storeAs() returned false (disk write failed)', [
