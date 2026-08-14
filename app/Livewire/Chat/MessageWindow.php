@@ -567,9 +567,16 @@ class MessageWindow extends Component
 
             $tmpOgg = sys_get_temp_dir() . '/' . \Illuminate\Support\Str::random(20) . '.ogg';
 
+            // Livewire's temp upload has no absolute path ffmpeg can open —
+            // getRealPath() is relative to the upload disk (e.g. "livewire-tmp/..").
+            // Copy the bytes to a real local file first; $file->get() reads from
+            // whatever disk the temp file lives on (local or cloud).
+            $srcTmp = sys_get_temp_dir() . '/' . \Illuminate\Support\Str::random(20) . '.webm';
+            file_put_contents($srcTmp, $file->get());
+
             Log::info('[VN:B5a] webm detected — attempting FFmpeg transcoding via Process', [
                 'ffmpeg' => $ffmpegBin,
-                'src'    => $srcPath,
+                'src'    => $srcTmp,
                 'target' => $tmpOgg,
             ]);
 
@@ -577,7 +584,7 @@ class MessageWindow extends Component
                 $process = new \Symfony\Component\Process\Process([
                     $ffmpegBin,
                     '-y',
-                    '-i', $srcPath,
+                    '-i', $srcTmp,
                     '-vn',
                     '-c:a', 'libopus',
                     '-b:a', '32k',
@@ -587,6 +594,7 @@ class MessageWindow extends Component
                 ]);
                 $process->setTimeout(30);
                 $process->run();
+                @unlink($srcTmp); // ffmpeg has finished reading the source
 
                 if ($process->isSuccessful() && file_exists($tmpOgg) && filesize($tmpOgg) > 100) {
                     Log::info('[VN:B5a] FFmpeg transcoding SUCCESS', [
@@ -609,6 +617,7 @@ class MessageWindow extends Component
                 }
             } catch (\Throwable $fe) {
                 Log::error('[VN:B5a] FFmpeg execution exception: ' . $fe->getMessage());
+                @unlink($srcTmp);
                 @unlink($tmpOgg);
                 $this->dispatch('notify', ['type' => 'error', 'message' => 'Could not process the voice note. Please try again.']);
                 $this->reset('voiceNote');
