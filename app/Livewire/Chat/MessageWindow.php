@@ -661,17 +661,15 @@ class MessageWindow extends Component
             ],
         ]);
 
-        Log::info('[VN:B8] Message created', [
-            'message_id'   => $message->id,
-            'media_url'    => $message->media_url,
-            'full_media_url' => $message->full_media_url,
-            'type'         => $message->type,
-            'media_type'   => $message->media_type,
-        ]);
-
-        Log::info('[VN:B9] Dispatching SendMessageJob...');
-        \App\Jobs\SendMessageJob::dispatch($message);
-        Log::info('[VN:B10] SendMessageJob dispatched — done.');
+        \App\Jobs\SendMessageJob::dispatch(
+            Auth::user()->currentTeam->id,
+            $this->conversation->contact->phone_number,
+            'audio',
+            Storage::disk($disk)->url($path),
+            null,
+            'en_US',
+            $message->id
+        );
 
         $this->reset('voiceNote');
         $this->loadConversation();
