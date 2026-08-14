@@ -35,6 +35,7 @@ import { resolveMediaUrl } from '@/utils/media';
 import { ChatSkeleton } from '@/components/ChatSkeleton';
 import { MediaViewer } from '@/components/MediaViewer';
 import { ReplyPreview } from '@/components/ReplyPreview';
+import { VideoThumbnailPreview } from '@/components/VideoThumbnailPreview';
 import { api } from '@/services/api';
 import { CallWebRTC } from '@/services/webrtc';
 import { useGlobalState } from '@/store';
@@ -1696,7 +1697,17 @@ export default function ChatScreen({ navigation, route }: any) {
             <View className="bg-surface dark:bg-d-surface px-3 py-2 border-t border-hairline dark:border-d-hairline flex-row items-center justify-between">
               <View className="flex-row items-center gap-3">
                 <View className="w-12 h-12 bg-surface2 dark:bg-d-surface2 rounded items-center justify-center overflow-hidden">
-                  {selectedMedia.type === 'image' || selectedMedia.type === 'video' ? (
+                  {selectedMedia.type === 'video' ? (
+                    <VideoThumbnailPreview
+                      videoUri={selectedMedia.uri}
+                      width={48}
+                      height={48}
+                      borderRadius={4}
+                      showPlayButton={true}
+                      playButtonSize="small"
+                      showDurationBadge={false}
+                    />
+                  ) : selectedMedia.type === 'image' ? (
                     <Image source={{ uri: selectedMedia.uri }} style={{ width: '100%', height: '100%' }} />
                   ) : (
                     <Text className="text-2xl">📄</Text>

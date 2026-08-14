@@ -2,6 +2,7 @@ import React from 'react';
 import { View, Text, Image, Pressable } from 'react-native';
 import { Camera, Video, FileText, Mic, X } from 'lucide-react-native';
 import { useTokens } from '@/theme';
+import { VideoThumbnailPreview } from './VideoThumbnailPreview';
 import type { ChatMessage } from '@/types';
 import { safeExtractText } from '@/utils/text';
 import { resolveMediaUrl } from '@/utils/media';
@@ -73,13 +74,25 @@ export function ReplyPreview({ message, contactName, onPress, onCancel, inBubble
         </View>
 
         {/* Optional Right Thumbnail */}
-        {hasMedia && (isImage || isVideo) && resolvedMediaUrl && (
+        {hasMedia && resolvedMediaUrl && (
           <View className="p-1 justify-center">
-            <Image 
-              source={{ uri: resolvedMediaUrl }} 
-              style={{ width: 42, height: 42, borderRadius: 6 }} 
-              resizeMode="cover" 
-            />
+            {isVideo ? (
+              <VideoThumbnailPreview
+                videoUri={resolvedMediaUrl}
+                width={42}
+                height={42}
+                borderRadius={6}
+                showPlayButton={true}
+                playButtonSize="small"
+                showDurationBadge={false}
+              />
+            ) : isImage ? (
+              <Image 
+                source={{ uri: resolvedMediaUrl }} 
+                style={{ width: 42, height: 42, borderRadius: 6 }} 
+                resizeMode="cover" 
+              />
+            ) : null}
           </View>
         )}
       </Pressable>
@@ -116,12 +129,26 @@ export function ReplyPreview({ message, contactName, onPress, onCancel, inBubble
           </View>
         </View>
 
-        {hasMedia && (isImage || isVideo) && resolvedMediaUrl && (
-          <Image 
-            source={{ uri: resolvedMediaUrl }} 
-            style={{ width: 40, height: 40, borderRadius: 6, marginRight: 8 }} 
-            resizeMode="cover" 
-          />
+        {hasMedia && resolvedMediaUrl && (
+          <View className="justify-center mr-2">
+            {isVideo ? (
+              <VideoThumbnailPreview
+                videoUri={resolvedMediaUrl}
+                width={40}
+                height={40}
+                borderRadius={6}
+                showPlayButton={true}
+                playButtonSize="small"
+                showDurationBadge={false}
+              />
+            ) : isImage ? (
+              <Image 
+                source={{ uri: resolvedMediaUrl }} 
+                style={{ width: 40, height: 40, borderRadius: 6 }} 
+                resizeMode="cover" 
+              />
+            ) : null}
+          </View>
         )}
 
         {onCancel && (

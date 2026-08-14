@@ -5,6 +5,7 @@ import { Check, CheckCheck, Star, Play, Pause, FileText, Mic, Clock, AlertCircle
 import { Audio } from 'expo-av';
 import { useTokens } from '@/theme';
 import { ReplyPreview } from './ReplyPreview';
+import { VideoThumbnailPreview } from './VideoThumbnailPreview';
 import type { MessageStatus, ChatMessage } from '@/types';
 import { safeExtractText } from '@/utils/text';
 import { resolveMediaUrl } from '@/utils/media';
@@ -194,8 +195,34 @@ export function Bubble({
           <ReplyPreview message={replyTo} contactName={contactName} inBubble={true} onPress={onReplyPress} />
         ) : null}
 
-        {/* ── Native WhatsApp Image / Video Preview ── */}
-        {hasMedia && (isImage || isVideo) && (
+        {/* ── Native WhatsApp Video Preview ── */}
+        {hasMedia && isVideo && (
+          <View className="relative">
+            <Pressable onPress={onMediaPress} className="relative overflow-hidden rounded-t-lg active:opacity-90">
+              <VideoThumbnailPreview
+                videoUri={resolvedMediaUrl || mediaUrl || ''}
+                thumbnailUrl={metadata?.thumbnail_url || metadata?.poster_url}
+                width={260}
+                height={190}
+                duration={metadata?.duration || metadata?.video_length}
+                showPlayButton={true}
+                playButtonSize="medium"
+              >
+                {/* Floating Timestamp when NO caption is present */}
+                {!childText && (
+                  <View className="absolute bottom-1.5 right-2 bg-black/60 px-2 py-0.5 rounded-full flex-row items-center gap-1">
+                    {isStarred && <Star size={9} color="#EAB308" fill="#EAB308" style={{ marginRight: 1 }} />}
+                    {time && <Text className="text-white text-[10px] font-medium">{time}</Text>}
+                    {renderStatusIcon('#ffffff')}
+                  </View>
+                )}
+              </VideoThumbnailPreview>
+            </Pressable>
+          </View>
+        )}
+
+        {/* ── Native WhatsApp Image Preview ── */}
+        {hasMedia && isImage && (
           <View className="relative">
             <Pressable onPress={onMediaPress} className="relative overflow-hidden rounded-t-lg active:opacity-90">
               {resolvedMediaUrl ? (
@@ -208,22 +235,13 @@ export function Bubble({
                 </View>
               ) : (
                 <View style={{ width: 260, height: 160 }} className="bg-black/10 dark:bg-white/10 items-center justify-center p-4">
-                  {isVideo ? <VideoIcon size={36} color={tokens.muted} /> : <ImageIcon size={36} color={tokens.muted} />}
+                  <ImageIcon size={36} color={tokens.muted} />
                   <Text className="text-muted dark:text-d-muted text-xs font-medium mt-1.5">
-                    {isVideo ? 'Video' : 'Photo'}
+                    Photo
                   </Text>
                   <View className="flex-row items-center gap-1 mt-2 px-3 py-1 bg-surface dark:bg-d-surface rounded-full border border-hairline dark:border-d-hairline shadow-sm">
                     <Download size={13} color={tokens.accent} />
                     <Text className="text-[11.5px] font-semibold text-accent dark:text-d-accent">Tap to view / download</Text>
-                  </View>
-                </View>
-              )}
-
-              {/* Video Play Button Overlay */}
-              {isVideo && (
-                <View className="absolute inset-0 items-center justify-center bg-black/25">
-                  <View className="w-12 h-12 rounded-full bg-black/60 items-center justify-center border border-white/80 shadow-md">
-                    <Play size={22} color="#ffffff" fill="#ffffff" style={{ marginLeft: 3 }} />
                   </View>
                 </View>
               )}
