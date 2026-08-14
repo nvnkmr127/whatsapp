@@ -331,15 +331,19 @@ class WhatsAppService
                 'video' => 'video/mp4',
                 default => 'application/octet-stream',
             };
-            if (function_exists('mime_content_type')) {
-                $detectedMime = @mime_content_type($localPath);
-                if ($detectedMime) {
-                    if ($type === 'audio' && (str_contains($detectedMime, 'webm') || str_contains($detectedMime, 'matroska'))) {
-                        $mimeType = 'audio/ogg';
-                    } else {
-                        $mimeType = $detectedMime;
-                    }
+            $detectedMime = function_exists('mime_content_type') ? (@mime_content_type($localPath) ?: '') : '';
+            if ($type === 'audio') {
+                if (str_contains($detectedMime, 'webm') || str_contains($detectedMime, 'matroska') || str_contains($detectedMime, 'ogg') || str_contains($detectedMime, 'octet-stream') || str_ends_with(strtolower($localPath), '.ogg') || str_ends_with(strtolower($localPath), '.opus')) {
+                    $mimeType = 'audio/ogg';
+                } elseif (str_contains($detectedMime, 'mp4') || str_contains($detectedMime, 'm4a') || str_ends_with(strtolower($localPath), '.m4a')) {
+                    $mimeType = 'audio/mp4';
+                } elseif (str_contains($detectedMime, 'mpeg') || str_contains($detectedMime, 'mp3') || str_ends_with(strtolower($localPath), '.mp3')) {
+                    $mimeType = 'audio/mpeg';
+                } else {
+                    $mimeType = 'audio/ogg';
                 }
+            } elseif ($detectedMime) {
+                $mimeType = $detectedMime;
             }
 
 

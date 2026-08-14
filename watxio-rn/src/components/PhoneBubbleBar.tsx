@@ -1,8 +1,8 @@
 // src/components/PhoneBubbleBar.tsx — keyboard-aware bottom composer used by Chat.
 
-import React, { useState, useRef } from 'react';
-import { View, TextInput, Pressable, Keyboard, PanResponder, Animated, Text } from 'react-native';
-import { Paperclip, Smile, Send, Mic, X } from 'lucide-react-native';
+import React, { useState, useRef, useEffect } from 'react';
+import { View, TextInput, Pressable, Keyboard, PanResponder, Animated, Text, StyleSheet } from 'react-native';
+import { Paperclip, Smile, Send, Mic, X, Trash2, Pause, Play } from 'lucide-react-native';
 import { useTokens } from '@/theme';
 import { IconButton } from './Button';
 import EmojiPicker from 'rn-emoji-keyboard';
@@ -21,10 +21,45 @@ interface Props {
   
   // Voice messaging props
   isRecording?: boolean;
+  isPaused?: boolean;
   recordingSeconds?: number;
   onStartRecording?: () => void;
   onCancelRecording?: () => void;
   onSendRecording?: () => void;
+  onTogglePause?: () => void;
+}
+
+// Dynamic Animated Waveform visualizer for WhatsApp Voice Recording
+function WaveformVisualizer({ isRecording, isPaused }: { isRecording: boolean; isPaused: boolean }) {
+  const [bars, setBars] = useState<number[]>([
+    4, 8, 14, 22, 12, 18, 26, 14, 8, 16, 24, 10, 18, 14, 20, 12, 8, 16, 22, 14, 10, 18, 12, 6
+  ]);
+
+  useEffect(() => {
+    if (!isRecording || isPaused) return;
+
+    const interval = setInterval(() => {
+      setBars((prev) =>
+        prev.map(() => Math.floor(Math.random() * 20) + 4)
+      );
+    }, 120);
+
+    return () => clearInterval(interval);
+  }, [isRecording, isPaused]);
+
+  return (
+    <View style={styles.waveformContainer}>
+      {bars.map((h, i) => (
+        <View
+          key={i}
+          style={[
+            styles.waveformBar,
+            { height: h }
+          ]}
+        />
+      ))}
+    </View>
+  );
 }
 
 export function Composer({ 
@@ -37,10 +72,12 @@ export function Composer({
   contactName,
   onCancelReply,
   isRecording = false,
+  isPaused = false,
   recordingSeconds = 0,
   onStartRecording,
   onCancelRecording,
-  onSendRecording
+  onSendRecording,
+  onTogglePause
 }: Props) {
   const { tokens } = useTokens();
   const [isEmojiPickerOpen, setIsEmojiPickerOpen] = useState(false);
@@ -51,50 +88,6 @@ export function Composer({
   };
 
   const pan = useRef(new Animated.ValueXY()).current;
-  const isCanceledRef = useRef(false);
-
-  const panResponder = useRef(
-    PanResponder.create({
-      onStartShouldSetPanResponder: () => true,
-      onPanResponderGrant: () => {
-        isCanceledRef.current = false;
-        pan.setValue({ x: 0, y: 0 });
-        if (onStartRecording) {
-          onStartRecording();
-        }
-      },
-      onPanResponderMove: (e, gestureState) => {
-        if (gestureState.dx < 0) {
-           pan.setValue({ x: gestureState.dx, y: 0 });
-        }
-        
-        if (gestureState.dx < -100 && !isCanceledRef.current) {
-          isCanceledRef.current = true;
-          if (onCancelRecording) onCancelRecording();
-          resetMicPos();
-        }
-      },
-      onPanResponderRelease: (e, gestureState) => {
-        if (!isCanceledRef.current) {
-          if (onSendRecording) onSendRecording();
-        }
-        resetMicPos();
-      },
-      onPanResponderTerminate: () => {
-        if (!isCanceledRef.current) {
-          if (onCancelRecording) onCancelRecording();
-        }
-        resetMicPos();
-      }
-    })
-  ).current;
-
-  const resetMicPos = () => {
-    Animated.spring(pan, {
-      toValue: { x: 0, y: 0 },
-      useNativeDriver: false,
-    }).start();
-  };
 
   const formatTime = (seconds: number) => {
     return `${Math.floor(seconds / 60)}:${(seconds % 60).toString().padStart(2, '0')}`;
@@ -102,23 +95,61 @@ export function Composer({
 
   return (
     <>
-      <View className="bg-surface dark:bg-d-surface px-3 py-2.5 flex-row items-end gap-2 overflow-hidden">
+      <View style={[styles.composerContainer, { backgroundColor: tokens.bg }]}>
         {isRecording ? (
-          // Recording State UI
-          <View className="flex-1 flex-row items-center justify-between pl-2 h-[42px]">
-            <View className="flex-row items-center gap-2">
-              <View className="w-2.5 h-2.5 rounded-full bg-danger dark:bg-d-danger animate-pulse" />
-              <Text className="text-ink dark:text-d-ink font-mono text-base font-medium">
+          // ── Native WhatsApp Voice Recording Bar ──
+          <View style={styles.recordingOuter}>
+            {/* Top Row: Duration Timer (left) + Live Waveform Visualizer (right) */}
+            <View style={styles.recordingTopRow}>
+              <Text style={[styles.timerText, { color: tokens.ink }]}>
                 {formatTime(recordingSeconds)}
               </Text>
+              <WaveformVisualizer isRecording={isRecording} isPaused={isPaused} />
             </View>
-            
-            <View className="flex-1 items-end pr-8">
-              <Text className="text-muted dark:text-d-muted text-sm">« Slide to cancel</Text>
+
+            {/* Bottom Row: Trash (left) | Pause/Resume Pill (center) | Green Send (right) */}
+            <View style={styles.recordingBottomRow}>
+              {/* Trash / Delete Button */}
+              <Pressable
+                onPress={onCancelRecording}
+                style={({ pressed }) => [styles.trashButton, pressed && { opacity: 0.8 }]}
+              >
+                <Trash2 size={20} color="#F87171" />
+              </Pressable>
+
+              {/* Pause / Resume Pill Button */}
+              <Pressable
+                onPress={onTogglePause}
+                style={({ pressed }) => [
+                  styles.pausePill,
+                  { backgroundColor: tokens.surface2 || '#202c33' },
+                  pressed && { opacity: 0.85 }
+                ]}
+              >
+                {isPaused ? (
+                  <>
+                    <Play size={18} color={tokens.ink} fill={tokens.ink} />
+                    <Text style={[styles.pausePillText, { color: tokens.ink }]}>Resume</Text>
+                  </>
+                ) : (
+                  <>
+                    <Pause size={18} color={tokens.ink} fill={tokens.ink} />
+                    <Text style={[styles.pausePillText, { color: tokens.ink }]}>Pause</Text>
+                  </>
+                )}
+              </Pressable>
+
+              {/* Green Send Button */}
+              <Pressable
+                onPress={onSendRecording}
+                style={({ pressed }) => [styles.sendAudioButton, pressed && { opacity: 0.85 }]}
+              >
+                <Send size={18} color="#FFFFFF" strokeWidth={2.2} style={{ marginLeft: 2 }} />
+              </Pressable>
             </View>
           </View>
         ) : (
-          // Normal State UI
+          // ── Normal Input State ──
           <>
             <IconButton icon={Paperclip} color={tokens.muted} onPress={onAttach} style={{ marginBottom: 4 }} />
             <View className="flex-1 bg-surface2 dark:bg-d-surface2 rounded-[22px] px-3.5 py-2 min-h-[42px] justify-center">
@@ -162,19 +193,24 @@ export function Composer({
           </>
         )}
 
-        {hasContent && !isRecording ? (
-          <Pressable
-            onPress={onSend}
-            className="w-[42px] h-[42px] rounded-full bg-accent dark:bg-d-accent items-center justify-center active:opacity-85 mb-0.5"
-          >
-            <Send size={18} color={tokens.accentInk} strokeWidth={2} />
-          </Pressable>
-        ) : (
-          <Animated.View style={{ transform: [{ translateX: pan.x }] }} {...panResponder.panHandlers}>
-            <View className={`w-[42px] h-[42px] rounded-full items-center justify-center ${isRecording ? 'bg-accent dark:bg-d-accent scale-110' : ''} mb-0.5`}>
-               <Mic size={isRecording ? 24 : 22} color={isRecording ? tokens.accentInk : tokens.accent} strokeWidth={isRecording ? 2 : 1.5} />
-            </View>
-          </Animated.View>
+        {!isRecording && (
+          hasContent ? (
+            <Pressable
+              onPress={onSend}
+              className="w-[42px] h-[42px] rounded-full bg-accent dark:bg-d-accent items-center justify-center active:opacity-85 mb-0.5"
+            >
+              <Send size={18} color={tokens.accentInk} strokeWidth={2} />
+            </Pressable>
+          ) : (
+            <Pressable
+              onPress={onStartRecording}
+              style={styles.micWrapper}
+            >
+              <View style={[styles.micButton, { backgroundColor: tokens.accent }]}>
+                <Mic size={22} color={tokens.accentInk} strokeWidth={1.8} />
+              </View>
+            </Pressable>
+          )
         )}
       </View>
 
@@ -189,3 +225,87 @@ export function Composer({
   );
 }
 
+const styles = StyleSheet.create({
+  composerContainer: {
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    flexDirection: 'row',
+    alignItems: 'flex-end',
+    gap: 8,
+    overflow: 'hidden',
+  },
+  recordingOuter: {
+    flex: 1,
+    paddingHorizontal: 4,
+    paddingVertical: 2,
+  },
+  recordingTopRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 8,
+    marginBottom: 12,
+  },
+  timerText: {
+    fontFamily: 'monospace',
+    fontSize: 18,
+    fontWeight: '600',
+  },
+  waveformContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 2,
+    height: 28,
+  },
+  waveformBar: {
+    width: 2.5,
+    borderRadius: 2,
+    backgroundColor: '#8696a0',
+  },
+  recordingBottomRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: 10,
+  },
+  trashButton: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#3B1C24',
+  },
+  pausePill: {
+    flex: 1,
+    height: 44,
+    borderRadius: 22,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    paddingHorizontal: 16,
+  },
+  pausePillText: {
+    fontSize: 14,
+    fontWeight: '600',
+  },
+  sendAudioButton: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#00a884',
+  },
+  micWrapper: {
+    marginBottom: 2,
+  },
+  micButton: {
+    width: 42,
+    height: 42,
+    borderRadius: 21,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+});

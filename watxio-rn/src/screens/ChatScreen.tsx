@@ -94,6 +94,7 @@ export default function ChatScreen({ navigation, route }: any) {
   const [loadingTemplates, setLoadingTemplates] = useState(false);
   const [isMuted, setIsMuted] = useState(false);
   const [isRecording, setIsRecording] = useState(false);
+  const [isRecordingPaused, setIsRecordingPaused] = useState(false);
   const [recordingSeconds, setRecordingSeconds] = useState(0);
   const recordingRef = useRef<Audio.Recording | null>(null);
 
@@ -102,6 +103,17 @@ export default function ChatScreen({ navigation, route }: any) {
 
   // Media Viewer State
   const [mediaViewer, setMediaViewer] = useState<{ uri: string; type: 'image' | 'video' | 'audio' | 'document' } | null>(null);
+
+  // Voice recording timer effect
+  useEffect(() => {
+    let interval: NodeJS.Timeout;
+    if (isRecording && !isRecordingPaused) {
+      interval = setInterval(() => {
+        setRecordingSeconds((s) => s + 1);
+      }, 1000);
+    }
+    return () => clearInterval(interval);
+  }, [isRecording, isRecordingPaused]);
 
   // Save Contact States
   const [showSaveContact, setShowSaveContact] = useState(false);
@@ -1735,6 +1747,7 @@ export default function ChatScreen({ navigation, route }: any) {
               contactName={contact.name}
               onCancelReply={() => setReplyingTo(null)}
               isRecording={isRecording}
+              isPaused={isRecordingPaused}
               recordingSeconds={recordingSeconds}
               onStartRecording={async () => {
                 try {
@@ -1749,6 +1762,7 @@ export default function ChatScreen({ navigation, route }: any) {
                     );
                     recordingRef.current = recording;
                     setIsRecording(true);
+                    setIsRecordingPaused(false);
                     setRecordingSeconds(0);
                   } else {
                     showDialog('Permission Denied', 'Microphone permission is required to send voice notes.');
@@ -1758,17 +1772,39 @@ export default function ChatScreen({ navigation, route }: any) {
                   showDialog('Error', 'Could not start recording audio.');
                 }
               }}
+              onTogglePause={async () => {
+                if (!recordingRef.current) return;
+                try {
+                  if (isRecordingPaused) {
+                    await recordingRef.current.startAsync();
+                    setIsRecordingPaused(false);
+                  } else {
+                    await recordingRef.current.pauseAsync();
+                    setIsRecordingPaused(true);
+                  }
+                } catch (err) {
+                  console.warn('Failed to toggle pause recording:', err);
+                }
+              }}
               onCancelRecording={async () => {
                 setIsRecording(false);
+                setIsRecordingPaused(false);
                 if (recordingRef.current) {
                   try {
                     await recordingRef.current.stopAndUnloadAsync();
                   } catch (e) { }
                   recordingRef.current = null;
                 }
+                try {
+                  await Audio.setAudioModeAsync({
+                    allowsRecordingIOS: false,
+                    playsInSilentModeIOS: true,
+                  });
+                } catch (e) {}
               }}
               onSendRecording={async () => {
                 setIsRecording(false);
+                setIsRecordingPaused(false);
                 let uri: string | null = null;
                 const rec = recordingRef.current;
                 recordingRef.current = null;
@@ -1781,6 +1817,13 @@ export default function ChatScreen({ navigation, route }: any) {
                     console.warn('Failed to stop recording:', e);
                   }
                 }
+
+                try {
+                  await Audio.setAudioModeAsync({
+                    allowsRecordingIOS: false,
+                    playsInSilentModeIOS: true,
+                  });
+                } catch (e) {}
 
                 const duration = recordingSeconds || 1;
                 const timeStr = `${Math.floor(duration / 60)}:${(duration % 60).toString().padStart(2, '0')}`;

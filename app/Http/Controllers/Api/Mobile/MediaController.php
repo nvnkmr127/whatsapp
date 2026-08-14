@@ -77,9 +77,15 @@ class MediaController extends Controller
         
         // Determine type based on mime or extension
         $mime = strtolower((string) $file->getMimeType());
+        if ($extension === 'ogg' || str_contains($mime, 'ogg')) {
+            $mime = 'audio/ogg';
+        }
         $type = 'document';
         if (str_contains($mime, 'audio') || in_array($extension, ['mp3','ogg','wav','m4a','aac','opus','3gp'])) {
             $type = 'audio';
+            if ($extension === 'ogg') {
+                $mime = 'audio/ogg';
+            }
         } elseif (str_contains($mime, 'image') || in_array($extension, ['jpg','jpeg','png','gif','webp','heic','heif'])) {
             $type = 'image';
         } elseif (str_contains($mime, 'video') || in_array($extension, ['mp4','mov','avi','mkv','webm'])) {
