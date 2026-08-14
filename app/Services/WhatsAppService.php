@@ -314,6 +314,18 @@ class WhatsAppService
         $mediaObject = [];
         $mediaId = null;
 
+        // Voice notes must be OGG/Opus for WhatsApp (voice:true). Detect early so we can
+        // transcode before uploading — mobile recorders often produce non-Opus OGG, which
+        // Meta accepts on upload but rejects on delivery (error 131053 "Media upload error").
+        $isVoice = false;
+        if ($type === 'audio') {
+            if ($existingMessage && (!empty($existingMessage->metadata['voice_note']) || !empty($existingMessage->metadata['is_voice_note']))) {
+                $isVoice = true;
+            } elseif (str_ends_with(strtolower(strtok((string) $link, '?')), '.ogg') || str_ends_with(strtolower(strtok((string) $link, '?')), '.opus')) {
+                $isVoice = true;
+            }
+        }
+
         $configuredDisk = config('filesystems.default', 'public');
         $disk = ($configuredDisk === 'local') ? 'public' : $configuredDisk;
 
@@ -361,7 +373,11 @@ class WhatsAppService
             }
 
             Log::info("Attempting Direct Meta Media Upload for local file: {$localPath} (mime: {$mimeType})");
-            $uploadRes = $this->client->uploadMedia($localPath, $mimeType);
+            $uploadPath = ($type === 'audio' && $isVoice) ? $this->ensureOpus($localPath) : $localPath;
+            $uploadRes = $this->client->uploadMedia($uploadPath, $mimeType);
+            if ($uploadPath !== $localPath) {
+                @unlink($uploadPath);
+            }
             if (!empty($uploadRes['success']) && !empty($uploadRes['id'])) {
                 $mediaId = $uploadRes['id'];
                 Log::info("Direct Meta Media Upload successful! Media ID: {$mediaId}");
@@ -407,7 +423,11 @@ class WhatsAppService
 
                         if (file_exists($tmpFile) && filesize($tmpFile) > 0) {
                             Log::info("Attempting Direct Meta Media Upload for remote R2/S3 file: {$cleanPath} (mime: {$mimeType}, size: " . filesize($tmpFile) . "b, temp: {$tmpFile})");
-                            $uploadRes = $this->client->uploadMedia($tmpFile, $mimeType);
+                            $uploadPath = ($type === 'audio' && $isVoice) ? $this->ensureOpus($tmpFile) : $tmpFile;
+                            $uploadRes = $this->client->uploadMedia($uploadPath, $mimeType);
+                            if ($uploadPath !== $tmpFile) {
+                                @unlink($uploadPath);
+                            }
                             @unlink($tmpFile);
 
                             if (!empty($uploadRes['success']) && !empty($uploadRes['id'])) {
@@ -438,17 +458,8 @@ class WhatsAppService
             $mediaObject['caption'] = $caption;
         }
 
-        // If the audio message is a voice note, Meta requires setting "voice": true inside the audio object.
-        // We detect this if the message has voice note metadata, or if the link/file points to an .ogg/.opus file.
-        $isVoice = false;
-        if ($type === 'audio') {
-            if ($existingMessage && (!empty($existingMessage->metadata['voice_note']) || !empty($existingMessage->metadata['is_voice_note']))) {
-                $isVoice = true;
-            } elseif (str_ends_with(strtolower(strtok((string) $link, '?')), '.ogg') || str_ends_with(strtolower(strtok((string) $link, '?')), '.opus')) {
-                $isVoice = true;
-            }
-        }
-
+        // If the audio message is a voice note, Meta requires setting "voice": true inside
+        // the audio object. $isVoice was resolved earlier (see the transcode step above).
         if ($isVoice) {
             $mediaObject['voice'] = true;
         }
@@ -511,6 +522,53 @@ class WhatsAppService
                 'error_message' => $e->getMessage(),
             ]);
             throw $e;
+        }
+    }
+
+    /**
+     * Ensure an audio file is OGG/Opus (required for WhatsApp voice notes with voice:true).
+     * Returns the original path if already Opus or if ffmpeg/ffprobe is unavailable; otherwise
+     * returns a new temp .ogg path that the caller is responsible for deleting.
+     *
+     * ponytail: shells out to ffmpeg; degrades to uploading as-is if the binary is missing.
+     */
+    private function ensureOpus(string $path): string
+    {
+        try {
+            $codec = trim((string) @shell_exec(
+                'ffprobe -v error -select_streams a:0 -show_entries stream=codec_name -of csv=p=0 '
+                . escapeshellarg($path) . ' 2>/dev/null'
+            ));
+
+            if ($codec === 'opus') {
+                return $path; // already correct
+            }
+            if ($codec === '') {
+                Log::warning("ensureOpus: could not probe codec for {$path}; uploading as-is");
+
+                return $path;
+            }
+
+            $out = sys_get_temp_dir() . '/' . \Illuminate\Support\Str::random(20) . '.ogg';
+            @shell_exec(
+                'ffmpeg -y -i ' . escapeshellarg($path)
+                . ' -c:a libopus -b:a 32k -ar 48000 -ac 1 ' . escapeshellarg($out) . ' 2>/dev/null'
+            );
+
+            if (file_exists($out) && filesize($out) > 0) {
+                Log::info("ensureOpus: transcoded voice note '{$codec}' -> opus ({$path} -> {$out})");
+
+                return $out;
+            }
+
+            @unlink($out);
+            Log::warning("ensureOpus: ffmpeg transcode failed for {$path} (codec {$codec}); uploading as-is");
+
+            return $path;
+        } catch (\Throwable $e) {
+            Log::warning('ensureOpus error: ' . $e->getMessage());
+
+            return $path;
         }
     }
 
