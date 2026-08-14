@@ -1854,12 +1854,19 @@ export default function ChatScreen({ navigation, route }: any) {
                   // 120s: /messages runs SendMessageJob inline (synchronous Meta
                   // media upload + send), so the default 15s can abort a send that
                   // actually succeeds server-side. Matches the regular send() path.
-                  await api.post(`/v1/mobile/conversations/${conversationId}/messages`, {
+                  const sendRes = await api.post(`/v1/mobile/conversations/${conversationId}/messages`, {
                     type: 'audio',
                     media_url: uploadRes.path || uploadRes.url,
                     content: `Voice message (${timeStr})`,
                     is_voice_note: true,
                   }, undefined, 120000);
+
+                  // SendMessageJob runs inline, so the response carries the real
+                  // outcome. The endpoint returns 200 even when WhatsApp rejected the
+                  // media, so surface a real failure instead of a silent success.
+                  if (sendRes?.message?.status === 'failed') {
+                    showDialog('Voice Note Not Delivered', sendRes.message.error_message || 'WhatsApp rejected the voice note.');
+                  }
                   fetchConversationDetailsRef.current(true).catch((e) =>
                     console.warn('[Voice] fetchConversationDetails failed:', e)
                   );

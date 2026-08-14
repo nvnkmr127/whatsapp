@@ -167,7 +167,12 @@ class MessageController extends Controller
                 'error_message' => $e->getMessage(),
             ]);
         }
-        
+
+        // SendMessageJob runs inline (it does NOT queue), so by now the message is
+        // already 'sent' or 'failed'. Surface a real failure to the app instead of
+        // reporting success — otherwise the voice note silently "doesn't send".
+        $message->refresh();
+
         $data = $message->toArray();
         $data['is_outbound'] = $message->direction === 'outbound';
         
