@@ -152,6 +152,15 @@ class MessageController extends Controller
             'status' => 'queued',
         ]);
 
+        \Log::info('[MOBILE_API_MESSAGE_STORE] Message created', [
+            'message_id' => $message->id,
+            'type' => $message->type,
+            'media_url' => $message->media_url,
+            'media_type' => $message->media_type,
+            'metadata' => $message->metadata,
+            'is_voice_note_input' => $request->input('is_voice_note'),
+        ]);
+
         // Load relationships before dispatching SendMessageJob
         $message->load(['contact', 'replyTo']);
 

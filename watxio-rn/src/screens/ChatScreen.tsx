@@ -1833,6 +1833,8 @@ export default function ChatScreen({ navigation, route }: any) {
                   return;
                 }
 
+                console.log('[Voice Debug] Recording stopped. Local URI:', uri);
+
                 // Prepend locally
                 setMessages((m) => [...m, { kind: 'out', text: `🎙️ Voice message (${timeStr})`, time: 'now', status: 'queued', media_url: uri, media_type: 'audio' }]);
 
@@ -1845,32 +1847,33 @@ export default function ChatScreen({ navigation, route }: any) {
                   } as any);
                   formData.append('is_voice_note', 'true');
 
-                  // 120s timeout: this request also runs a synchronous server-side
-                  // ffmpeg transcode (m4a -> ogg), so the default 15s can abort mid-
-                  // convert on a mobile network and the note never sends. Matches the
-                  // image/video upload timeout.
+                  console.log('[Voice Debug] Uploading file to /v1/mobile/media/upload...');
                   const uploadRes = await api.post('/v1/mobile/media/upload', formData, undefined, 120000);
+                  console.log('[Voice Debug] Upload response received:', uploadRes);
 
-                  // 120s: /messages runs SendMessageJob inline (synchronous Meta
-                  // media upload + send), so the default 15s can abort a send that
-                  // actually succeeds server-side. Matches the regular send() path.
-                  const sendRes = await api.post(`/v1/mobile/conversations/${conversationId}/messages`, {
+                  const sendPayload = {
                     type: 'audio',
                     media_url: uploadRes.path || uploadRes.url,
                     content: `Voice message (${timeStr})`,
                     is_voice_note: true,
-                  }, undefined, 120000);
+                  };
+                  console.log('[Voice Debug] Posting message to conversation messages endpoint:', sendPayload);
+                  
+                  const sendRes = await api.post(`/v1/mobile/conversations/${conversationId}/messages`, sendPayload, undefined, 120000);
+                  console.log('[Voice Debug] Send message response received:', sendRes);
 
                   // SendMessageJob runs inline, so the response carries the real
                   // outcome. The endpoint returns 200 even when WhatsApp rejected the
                   // media, so surface a real failure instead of a silent success.
                   if (sendRes?.message?.status === 'failed') {
+                    console.warn('[Voice Debug] Send message failed status on backend:', sendRes.message);
                     showDialog('Voice Note Not Delivered', sendRes.message.error_message || 'WhatsApp rejected the voice note.');
                   }
                   fetchConversationDetailsRef.current(true).catch((e) =>
                     console.warn('[Voice] fetchConversationDetails failed:', e)
                   );
                 } catch (err: any) {
+                  console.error('[Voice Debug] Caught error in api block:', err);
                   console.warn('Voice upload api block:', err);
                   showDialog('Failed to Send Voice Note', err.message || 'Upload failed.');
                 }

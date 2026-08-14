@@ -471,7 +471,19 @@ class WhatsAppService
         }
 
         try {
+            Log::info('[WhatsAppService::sendMedia] Sending media payload to Meta', [
+                'to' => $to,
+                'type' => $type,
+                'is_voice_detected' => $isVoice,
+                'payload' => $payload,
+            ]);
+
             $response = $this->client->sendRequest('messages', $payload);
+
+            Log::info('[WhatsAppService::sendMedia] Meta API response', [
+                'to' => $to,
+                'response' => $response,
+            ]);
 
             if ($response['success'] ?? false) {
                 $wamId = $response['data']['messages'][0]['id'] ?? null;

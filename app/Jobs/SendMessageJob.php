@@ -198,6 +198,14 @@ class SendMessageJob
                     return;
                 }
 
+                Log::info('[SendMessageJob] Dispatching sendMedia', [
+                    'message_id' => $this->messageId,
+                    'phone' => $this->phone,
+                    'type' => $this->type,
+                    'content' => $this->content,
+                    'has_existing_message' => !empty($existingMessage),
+                ]);
+
                 $response = $waService->sendMedia(
                     $this->phone,
                     $this->type,
@@ -205,6 +213,11 @@ class SendMessageJob
                     $existingMessage ? ($existingMessage->caption ?? null) : null,
                     $existingMessage
                 );
+
+                Log::info('[SendMessageJob] sendMedia response', [
+                    'message_id' => $this->messageId,
+                    'response' => $response,
+                ]);
             }
 
             if (! empty($response['error'])) {

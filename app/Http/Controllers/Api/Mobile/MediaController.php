@@ -23,6 +23,13 @@ class MediaController extends Controller
 
         $file = $request->file('file');
         
+        \Log::info('[MOBILE_MEDIA_UPLOAD] Upload request received', [
+            'original_name' => $file->getClientOriginalName(),
+            'mime_type' => $file->getClientMimeType(),
+            'size' => $file->getSize(),
+            'is_voice_note_input' => $request->input('is_voice_note'),
+        ]);
+        
         // Derive extension from MIME type or original filename
         $clientExt = strtolower($file->getClientOriginalExtension());
         $allowedExtensions = ['jpg','jpeg','png','gif','webp','heic','heif','mp4','mov','avi','mkv','webm','3gp','mp3','ogg','wav','m4a','aac','opus','pdf','doc','docx','xls','xlsx','csv','txt'];
@@ -39,6 +46,10 @@ class MediaController extends Controller
         $fileName = Str::uuid() . '.' . $extension;
         
         $isVoiceNote = filter_var($request->input('is_voice_note'), FILTER_VALIDATE_BOOLEAN);
+        \Log::info('[MOBILE_MEDIA_UPLOAD] Voice note flag resolved', [
+            'is_voice_note_bool' => $isVoiceNote,
+            'file_extension' => $extension,
+        ]);
         if ($isVoiceNote) {
             // Skip transcoding if file is already an ogg Opus file
             if ($extension !== 'ogg') {
@@ -84,15 +95,29 @@ class MediaController extends Controller
                         $tmpOgg
                     ]);
                     $process->setTimeout(30);
+                    
+                    \Log::info('[MOBILE_MEDIA_UPLOAD] Running FFmpeg transcoding', [
+                        'ffmpeg_path' => $ffmpegBin,
+                        'src_temp' => $srcTmp,
+                        'dst_temp' => $tmpOgg,
+                    ]);
+                    
                     $process->run();
                     @unlink($srcTmp);
 
                     if ($process->isSuccessful() && file_exists($tmpOgg) && filesize($tmpOgg) > 100) {
+                        \Log::info('[MOBILE_MEDIA_UPLOAD] FFmpeg transcoding succeeded', [
+                            'size_bytes' => filesize($tmpOgg)
+                        ]);
                         $file = new \Illuminate\Http\UploadedFile($tmpOgg, 'voice.ogg', 'audio/ogg', 0, true);
                         $extension = 'ogg';
                         $fileName = Str::uuid() . '.' . $extension;
                     } else {
-                        \Log::error('[MOBILE_MEDIA_UPLOAD] FFmpeg transcoding failed', ['error' => $process->getErrorOutput()]);
+                        \Log::error('[MOBILE_MEDIA_UPLOAD] FFmpeg transcoding failed', [
+                            'exit_code' => $process->getExitCode(),
+                            'error' => $process->getErrorOutput(),
+                            'output' => $process->getOutput(),
+                        ]);
                         return response()->json(['error' => 'Could not convert voice note audio format. Please try again.'], 422);
                     }
                 } else {
