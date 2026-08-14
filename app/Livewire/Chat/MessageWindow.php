@@ -550,12 +550,19 @@ class MessageWindow extends Component
         $convertedTmp = null;
 
         if ($srcExt === 'webm') {
-            $ffmpegBin = 'ffmpeg';
-            foreach (['/usr/bin/ffmpeg', '/usr/local/bin/ffmpeg', '/bin/ffmpeg'] as $candidate) {
-                if (@file_exists($candidate)) {
-                    $ffmpegBin = $candidate;
-                    break;
-                }
+            // WhatsApp rejects webm outright — it must become real ogg/opus.
+            // If ffmpeg is missing or the convert fails we must NOT ship the raw
+            // webm bytes under a .ogg name: WhatsApp silently drops that. Bail
+            // loudly instead so the user knows to retry / install ffmpeg.
+            $ffmpegBin = env('FFMPEG_PATH')
+                ?: (new \Symfony\Component\Process\ExecutableFinder)
+                    ->find('ffmpeg', null, ['/opt/homebrew/bin', '/usr/local/bin', '/usr/bin', '/bin']);
+
+            if (! $ffmpegBin) {
+                Log::error('[VN:B5a] ffmpeg not found — cannot convert webm voice note. Install ffmpeg or set FFMPEG_PATH.');
+                $this->dispatch('notify', ['type' => 'error', 'message' => 'Voice notes need audio conversion support on the server (ffmpeg). Please contact support.']);
+                $this->reset('voiceNote');
+                return;
             }
 
             $tmpOgg = sys_get_temp_dir() . '/' . \Illuminate\Support\Str::random(20) . '.ogg';
@@ -595,13 +602,17 @@ class MessageWindow extends Component
                         'errorOutput' => $process->getErrorOutput(),
                         'output' => $process->getOutput(),
                     ]);
-                    $ext      = 'ogg';
-                    $mimeType = 'audio/ogg';
+                    @unlink($tmpOgg);
+                    $this->dispatch('notify', ['type' => 'error', 'message' => 'Could not process the voice note. Please try again.']);
+                    $this->reset('voiceNote');
+                    return;
                 }
             } catch (\Throwable $fe) {
                 Log::error('[VN:B5a] FFmpeg execution exception: ' . $fe->getMessage());
-                $ext      = 'ogg';
-                $mimeType = 'audio/ogg';
+                @unlink($tmpOgg);
+                $this->dispatch('notify', ['type' => 'error', 'message' => 'Could not process the voice note. Please try again.']);
+                $this->reset('voiceNote');
+                return;
             }
         } else {
             $mimeType = match($ext) {
