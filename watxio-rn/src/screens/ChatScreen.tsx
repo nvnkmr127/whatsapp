@@ -1800,6 +1800,7 @@ export default function ChatScreen({ navigation, route }: any) {
                     name: 'voice.m4a',
                     type: 'audio/m4a',
                   } as any);
+                  formData.append('is_voice_note', 'true');
 
                   const uploadRes = await api.post('/v1/mobile/media/upload', formData);
 
@@ -1807,6 +1808,7 @@ export default function ChatScreen({ navigation, route }: any) {
                     type: 'audio',
                     media_url: uploadRes.url,
                     content: `Voice message (${timeStr})`,
+                    is_voice_note: true,
                   });
                   fetchConversationDetailsRef.current(true).catch((e) =>
                     console.warn('[Voice] fetchConversationDetails failed:', e)

@@ -38,6 +38,43 @@ class MediaController extends Controller
         
         $fileName = Str::uuid() . '.' . $extension;
         
+        if ($request->input('is_voice_note') == 'true' || $request->input('is_voice_note') === true) {
+            $ffmpegBin = env('FFMPEG_PATH')
+                ?: (new \Symfony\Component\Process\ExecutableFinder)
+                    ->find('ffmpeg', null, ['/opt/homebrew/bin', '/usr/local/bin', '/usr/bin', '/bin']);
+
+            if ($ffmpegBin) {
+                $tmpOgg = sys_get_temp_dir() . '/' . \Illuminate\Support\Str::random(20) . '.ogg';
+                $srcTmp = sys_get_temp_dir() . '/' . \Illuminate\Support\Str::random(20) . '.' . $extension;
+                file_put_contents($srcTmp, file_get_contents($file->getRealPath()));
+
+                $process = new \Symfony\Component\Process\Process([
+                    $ffmpegBin,
+                    '-y',
+                    '-i', $srcTmp,
+                    '-vn',
+                    '-c:a', 'libopus',
+                    '-b:a', '32k',
+                    '-ar', '16000',
+                    '-f', 'ogg',
+                    $tmpOgg
+                ]);
+                $process->setTimeout(30);
+                $process->run();
+                @unlink($srcTmp);
+
+                if ($process->isSuccessful() && file_exists($tmpOgg) && filesize($tmpOgg) > 100) {
+                    $file = new \Illuminate\Http\UploadedFile($tmpOgg, 'voice.ogg', 'audio/ogg', null, true);
+                    $extension = 'ogg';
+                    $fileName = Str::uuid() . '.' . $extension;
+                } else {
+                    \Log::error('[MOBILE_MEDIA_UPLOAD] FFmpeg transcoding failed', ['error' => $process->getErrorOutput()]);
+                }
+            } else {
+                \Log::error('[MOBILE_MEDIA_UPLOAD] ffmpeg not found — cannot convert voice note.');
+            }
+        }
+        
         // Determine type based on mime or extension
         $mime = strtolower((string) $file->getMimeType());
         $type = 'document';

@@ -116,6 +116,9 @@ class MessageController extends Controller
         if ($replyToId) {
             $metadata['reply_to_message_id'] = $replyToId;
         }
+        if ($request->input('is_voice_note')) {
+            $metadata['voice_note'] = true;
+        }
 
         $rawMediaUrl = $request->input('media_url');
         $cleanMediaUrl = $rawMediaUrl;
