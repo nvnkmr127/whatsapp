@@ -438,8 +438,18 @@ class WhatsAppService
             $mediaObject['caption'] = $caption;
         }
 
-        // If the audio message is a voice note, Meta requires setting "voice": true inside the audio object
-        if ($type === 'audio' && $existingMessage && (!empty($existingMessage->metadata['voice_note']) || !empty($existingMessage->metadata['is_voice_note']))) {
+        // If the audio message is a voice note, Meta requires setting "voice": true inside the audio object.
+        // We detect this if the message has voice note metadata, or if the link/file points to an .ogg/.opus file.
+        $isVoice = false;
+        if ($type === 'audio') {
+            if ($existingMessage && (!empty($existingMessage->metadata['voice_note']) || !empty($existingMessage->metadata['is_voice_note']))) {
+                $isVoice = true;
+            } elseif (str_ends_with(strtolower(strtok((string) $link, '?')), '.ogg') || str_ends_with(strtolower(strtok((string) $link, '?')), '.opus')) {
+                $isVoice = true;
+            }
+        }
+
+        if ($isVoice) {
             $mediaObject['voice'] = true;
         }
 

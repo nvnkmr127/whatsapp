@@ -123,8 +123,9 @@ class MediaController extends Controller
         $configuredDisk = config('filesystems.default', 'public');
         $disk = ($configuredDisk === 'local') ? 'public' : $configuredDisk;
 
-        // Store in resolved disk
-        $path = $file->storeAs('mobile/uploads/' . $type, $fileName, $disk);
+        // Store in resolved disk ('voice-notes' directory for voice notes to match web, otherwise standard uploads path)
+        $dir = $isVoiceNote ? 'voice-notes' : 'mobile/uploads/' . $type;
+        $path = $file->storeAs($dir, $fileName, $disk);
 
         try {
             $fullUrl = Storage::disk($disk)->url($path);
@@ -133,8 +134,10 @@ class MediaController extends Controller
             $fullUrl = rtrim($origin, '/') . '/storage/' . ltrim($path, '/');
         }
 
+        $originalName = method_exists($file, 'getClientOriginalName') ? $file->getClientOriginalName() : 'voice.ogg';
+
         \Log::info('[MOBILE_MEDIA_UPLOAD] Media uploaded successfully', [
-            'original_name' => $file->getClientOriginalName(),
+            'original_name' => $originalName,
             'extension' => $extension,
             'mime' => $mime,
             'detected_type' => $type,
@@ -148,7 +151,7 @@ class MediaController extends Controller
             'success' => true,
             'url' => $fullUrl,
             'path' => $path,
-            'fileName' => $file->getClientOriginalName(),
+            'fileName' => $originalName,
             'mime' => $mime,
             'size' => $file->getSize(),
             'type' => $type
