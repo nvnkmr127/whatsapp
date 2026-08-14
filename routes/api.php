@@ -171,6 +171,10 @@ Route::group(['middleware' => ['auth:sanctum', 'tenant', 'throttle:api', \App\Ht
 
         // Media Uploads
         Route::post('/media/upload', [\App\Http\Controllers\Api\Mobile\MediaController::class, 'upload']);
+        // Chunked upload: mobile splits large files into ~700 KB chunks to bypass
+        // nginx's 1 MB default body-size limit. Server reassembles on final chunk.
+        Route::post('/media/upload/chunk', [\App\Http\Controllers\Api\Mobile\ChunkedMediaController::class, 'uploadChunk']);
+
 
         // Campaigns / Broadcasting
         Route::get('/campaigns', [\App\Http\Controllers\Api\Mobile\CampaignController::class, 'index']);

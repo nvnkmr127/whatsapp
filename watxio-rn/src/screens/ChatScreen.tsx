@@ -13,6 +13,14 @@ import { Swipeable } from 'react-native-gesture-handler';
 import * as ImagePicker from 'expo-image-picker';
 import * as DocumentPicker from 'expo-document-picker';
 import * as ImageManipulator from 'expo-image-manipulator';
+import {
+  getInfoAsync,
+  readAsStringAsync,
+  writeAsStringAsync,
+  deleteAsync as fsDeleteAsync,
+  EncodingType,
+  cacheDirectory,
+} from 'expo-file-system/legacy';
 import { Audio } from 'expo-av';
 
 import { useTokens } from '@/theme';
@@ -464,6 +472,84 @@ export default function ChatScreen({ navigation, route }: any) {
     );
     const name = result.uri.split('/').pop() || `img_${Date.now()}.jpg`;
     return { uri: result.uri, mimeType: 'image/jpeg', name: name.includes('.') ? name : `${name}.jpg` };
+  };
+
+  /**
+   * Chunked file upload — mirrors what Livewire does on the web.
+   *
+   * Splits the file into CHUNK_SIZE pieces (each well under nginx's 1 MB
+   * default body limit) and POSTs them one-by-one to the chunk endpoint.
+   * The server stores each piece and assembles the full file when the last
+   * chunk arrives, returning the final URL in that response.
+   */
+  const CHUNK_SIZE = 700 * 1024; // 700 KB — safely under 1 MB nginx limit
+
+  const uploadInChunks = async (
+    uri: string,
+    fileName: string,
+    mimeType: string,
+  ): Promise<{ url: string; type: string }> => {
+    // Get the real file size from the filesystem
+    const info = await getInfoAsync(uri);
+    const fileSize: number = info.exists ? (info as any).size ?? 0 : 0;
+    const totalChunks = Math.max(1, Math.ceil(fileSize / CHUNK_SIZE));
+    const uploadId = `${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+
+    if (__DEV__) {
+      console.log('[CHUNKED_UPLOAD] Starting', {
+        fileName,
+        mimeType,
+        fileSizeMB: (fileSize / (1024 * 1024)).toFixed(1),
+        totalChunks,
+        uploadId,
+      });
+    }
+
+    let lastResponse: any = null;
+
+    for (let i = 0; i < totalChunks; i++) {
+      const start = i * CHUNK_SIZE;
+      const length = Math.min(CHUNK_SIZE, fileSize - start);
+
+      // Read this slice as base64
+      const chunkBase64 = await readAsStringAsync(uri, {
+        encoding: EncodingType.Base64,
+        position: start,
+        length,
+      });
+
+      // Write the raw bytes to a temp file so FormData sends it as binary
+      const tempUri = `${cacheDirectory}chunk_${uploadId}_${i}.bin`;
+      await writeAsStringAsync(tempUri, chunkBase64, {
+        encoding: EncodingType.Base64,
+      });
+
+      const formData = new FormData();
+      formData.append('upload_id', uploadId);
+      formData.append('chunk_index', String(i));
+      formData.append('total_chunks', String(totalChunks));
+      formData.append('filename', fileName);
+      formData.append('mime', mimeType);
+      formData.append('chunk', { uri: tempUri, name: `chunk_${i}.bin`, type: 'application/octet-stream' } as any);
+
+      if (__DEV__) {
+        console.log(`[CHUNKED_UPLOAD] Uploading chunk ${i + 1}/${totalChunks} (${(length / 1024).toFixed(0)} KB)`);
+      }
+
+      lastResponse = await api.post('/v1/mobile/media/upload/chunk', formData, undefined, 60000);
+
+      // Clean up temp chunk file immediately
+      fsDeleteAsync(tempUri, { idempotent: true }).catch(() => {});
+
+      // If the server returns a URL it means this was the final chunk and
+      // the file has been fully assembled
+      if (lastResponse?.url) {
+        if (__DEV__) console.log('[CHUNKED_UPLOAD] Done!', lastResponse);
+        return { url: lastResponse.url, type: lastResponse.type ?? 'video' };
+      }
+    }
+
+    throw new Error('Chunked upload completed but server did not return a URL.');
   };
 
   // Smart polling with exponential backoff when server is down
@@ -1190,26 +1276,31 @@ export default function ChatScreen({ navigation, route }: any) {
         } as any);
 
         try {
-          if (__DEV__) {
-            console.log('[VIDEO_SEND] Starting media upload...', {
-              type: mediaToUpload.type,
-              name: fileName,
-              mime: finalMime,
-              uri: uploadUri,
-            });
-          }
-          // Use 120-second timeout for file uploads
-          const uploadRes = await api.post('/v1/mobile/media/upload', formData, undefined, 120000);
-          if (__DEV__) {
-            console.log('[VIDEO_SEND] Media upload successful:', uploadRes);
-          }
-          mediaUrl = uploadRes.url;
-          if (uploadRes.type && uploadRes.type !== 'document') {
-            msgType = uploadRes.type;
+          if (mediaToUpload.type === 'video' || mediaToUpload.type === 'audio') {
+            // ── Chunked upload (same as Livewire on web) ─────────────────────
+            // Splits the file into 700 KB pieces so every request stays under
+            // nginx's 1 MB default body limit, then the server reassembles them.
+            if (__DEV__) {
+              console.log('[CHUNKED_UPLOAD] Using chunked upload for', mediaToUpload.type, fileName);
+            }
+            const chunkResult = await uploadInChunks(uploadUri, fileName, finalMime);
+            mediaUrl = chunkResult.url;
+            msgType  = chunkResult.type;
+          } else {
+            // ── Single-shot upload for images and documents ───────────────────
+            if (__DEV__) {
+              console.log('[VIDEO_SEND] Starting single upload...', { type: mediaToUpload.type, name: fileName, mime: finalMime });
+            }
+            const uploadRes = await api.post('/v1/mobile/media/upload', formData, undefined, 120000);
+            if (__DEV__) console.log('[VIDEO_SEND] Upload successful:', uploadRes);
+            mediaUrl = uploadRes.url;
+            if (uploadRes.type && uploadRes.type !== 'document') {
+              msgType = uploadRes.type;
+            }
           }
         } catch (uploadErr: any) {
           console.warn('[VIDEO_SEND] Media upload failed:', uploadErr);
-          showDialog('Media Upload Failed', uploadErr?.message || 'Could not upload media to server. Please check your connection or try a smaller file.');
+          showDialog('Media Upload Failed', uploadErr?.message || 'Could not upload media. Please check your connection and try again.');
           setIsSending(false);
           return;
         }
