@@ -334,9 +334,14 @@ class WhatsAppService
             if (function_exists('mime_content_type')) {
                 $detectedMime = @mime_content_type($localPath);
                 if ($detectedMime) {
-                    $mimeType = $detectedMime;
+                    if ($type === 'audio' && (str_contains($detectedMime, 'webm') || str_contains($detectedMime, 'matroska'))) {
+                        $mimeType = 'audio/ogg';
+                    } else {
+                        $mimeType = $detectedMime;
+                    }
                 }
             }
+
 
             Log::info("Attempting Direct Meta Media Upload for local file: {$localPath} (mime: {$mimeType})");
             $uploadRes = $this->client->uploadMedia($localPath, $mimeType);

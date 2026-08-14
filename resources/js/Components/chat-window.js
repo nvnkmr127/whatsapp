@@ -378,31 +378,61 @@ export default (wire, conversationId, teamId, userId, showTransferModal, showInt
             return;
         }
 
-        this.mediaRecorder = new MediaRecorder(stream);
+        // ── Detect what the browser can actually record ───────────────────────
+        // Chrome only supports audio/webm (opus). Firefox supports audio/ogg.
+        // Forcing the wrong type creates a corrupted file that WhatsApp rejects.
+        const preferredTypes = [
+            'audio/ogg; codecs=opus',   // Firefox, best for WhatsApp
+            'audio/webm; codecs=opus',  // Chrome, Edge
+            'audio/webm',               // Chrome fallback
+            'audio/ogg',                // Firefox fallback
+        ];
+        const supportedMime = preferredTypes.find(t => MediaRecorder.isTypeSupported(t)) || '';
+        const mimeOptions   = supportedMime ? { mimeType: supportedMime } : {};
+
+        // Derive a clean mime (no codecs) and matching file extension
+        const baseMime = supportedMime.split(';')[0].trim() || 'audio/webm';
+        const ext      = baseMime.includes('ogg') ? 'ogg' : 'webm';
+        const fileName = `voice-note.${ext}`;
+
+        this.mediaRecorder = new MediaRecorder(stream, mimeOptions);
         this.audioChunks = [];
 
         this.mediaRecorder.ondataavailable = (e) => {
-            this.audioChunks.push(e.data);
+            if (e.data && e.data.size > 0) this.audioChunks.push(e.data);
         };
 
         this.mediaRecorder.onstop = async () => {
             stream.getTracks().forEach(track => track.stop());
-            const audioBlob = new Blob(this.audioChunks, { type: 'audio/ogg; codecs=opus' });
-            if (this.shouldSendRecording) {
-                const audioFile = new File([audioBlob], 'voice-note.ogg', { type: 'audio/ogg' });
-                wire.upload('voiceNote', audioFile, 
-                    (uploadedFilename) => {
-                        wire.sendVoiceNote(uploadedFilename);
-                    },
-                    (error) => {
-                        console.error('Voice note upload failed:', error);
-                        window.dispatchEvent(new CustomEvent('notify', { detail: { message: 'Failed to upload voice note. Please try again.', type: 'error' } }));
-                    }
-                );
+
+            if (!this.shouldSendRecording) return;
+
+            if (this.audioChunks.length === 0) {
+                window.dispatchEvent(new CustomEvent('notify', { detail: { message: 'No audio recorded. Please try again.', type: 'error' } }));
+                return;
             }
+
+            const audioBlob = new Blob(this.audioChunks, { type: baseMime });
+            const audioFile = new File([audioBlob], fileName, { type: baseMime });
+
+            // Show uploading state
+            window.dispatchEvent(new CustomEvent('notify', { detail: { message: 'Uploading voice note…', type: 'info' } }));
+
+            wire.upload('voiceNote', audioFile,
+                (uploadedFilename) => {
+                    // Livewire sets $this->voiceNote automatically after upload.
+                    // Pass the temp path as fallback in case the property sync races.
+                    wire.sendVoiceNote(uploadedFilename);
+                },
+                (error) => {
+                    console.error('Voice note upload failed:', error);
+                    window.dispatchEvent(new CustomEvent('notify', { detail: { message: 'Failed to upload voice note. Please try again.', type: 'error' } }));
+                }
+            );
         };
 
-        this.mediaRecorder.start();
+        // Request data every second so we get audio even for very short recordings
+        this.mediaRecorder.start(1000);
         this.isRecording = true;
         this.shouldSendRecording = false;
 
@@ -424,6 +454,7 @@ export default (wire, conversationId, teamId, userId, showTransferModal, showInt
         clearInterval(this.recInterval);
         this.recInterval = null;
     },
+
 
     scrollToMessage(id) {
         const el = document.getElementById('message-' + id);

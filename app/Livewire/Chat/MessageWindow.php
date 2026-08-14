@@ -477,34 +477,74 @@ class MessageWindow extends Component
             try {
                 $file = \Livewire\Features\SupportFileUploads\TemporaryUploadedFile::createFromLivewire($audioFile);
             } catch (\Exception $e) {
-                Log::error("Failed to create TemporaryUploadedFile from voice note path: " . $e->getMessage());
+                Log::error('[VOICE_NOTE] Failed to create TemporaryUploadedFile: ' . $e->getMessage(), [
+                    'audioFile' => $audioFile,
+                    'conversationId' => $this->conversationId,
+                ]);
             }
         }
 
-        if (! $this->conversation || ! $file) {
+        if (!$file) {
+            Log::error('[VOICE_NOTE] No file resolved — voiceNote property and audioFile fallback both failed', [
+                'conversationId' => $this->conversationId,
+                'audioFile' => $audioFile,
+            ]);
             return;
         }
 
-        // Resolve target disk: local-to-public fallback
+        if (! $this->conversation) {
+            Log::error('[VOICE_NOTE] No conversation loaded', ['conversationId' => $this->conversationId]);
+            return;
+        }
+
+        // Resolve target disk
         $configuredDisk = config('filesystems.default');
         $disk = ($configuredDisk === 'local') ? 'public' : $configuredDisk;
 
-        // Store with an explicit .ogg extension. A blob upload has no filename, so
-        // store() would save it extensionless and the server would serve it as
-        // application/octet-stream — WhatsApp rejects that as a voice note.
-        $path = $file->storeAs('voice-notes', \Illuminate\Support\Str::random(40).'.ogg', $disk);
+        // Preserve the actual uploaded extension (.ogg from Firefox, .webm from Chrome).
+        // Always forcing .ogg on a webm file causes WhatsApp to reject it as malformed.
+        $uploadedExt = strtolower(pathinfo($file->getClientOriginalName(), PATHINFO_EXTENSION));
+        $ext = in_array($uploadedExt, ['ogg', 'webm', 'mp3', 'mp4', 'm4a', 'opus']) ? $uploadedExt : 'ogg';
+
+        // Set the correct MIME type for WhatsApp audio delivery
+        $mimeType = match($ext) {
+            'ogg'  => 'audio/ogg',
+            'webm' => 'audio/webm',
+            'mp3'  => 'audio/mpeg',
+            'm4a'  => 'audio/mp4',
+            default => 'audio/ogg',
+        };
+
+        $fileName = \Illuminate\Support\Str::random(40) . '.' . $ext;
+        $path = $file->storeAs('voice-notes', $fileName, $disk);
+
+        if (!$path) {
+            Log::error('[VOICE_NOTE] storeAs() returned false — storage write failed', [
+                'disk' => $disk,
+                'fileName' => $fileName,
+                'conversationId' => $this->conversationId,
+            ]);
+            return;
+        }
+
+        Log::info('[VOICE_NOTE] Stored audio file', [
+            'path'     => $path,
+            'ext'      => $ext,
+            'mimeType' => $mimeType,
+            'disk'     => $disk,
+        ]);
 
         $message = \App\Models\Message::create([
-            'team_id' => Auth::user()->currentTeam->id,
-            'contact_id' => $this->conversation->contact_id,
+            'team_id'         => Auth::user()->currentTeam->id,
+            'contact_id'      => $this->conversation->contact_id,
             'conversation_id' => $this->conversation->id,
-            'direction' => 'outbound',
-            'status' => 'queued',
-            'type' => 'audio',
-            'media_url' => $path,
-            'media_type' => 'audio/ogg',
-            'metadata' => [
-                'agent_id' => Auth::id(),
+            'direction'       => 'outbound',
+            'status'          => 'queued',
+            'type'            => 'audio',
+            'media_url'       => $path,
+            'media_type'      => $mimeType,
+            'metadata'        => [
+                'agent_id'   => Auth::id(),
                 'agent_name' => Auth::user()->name,
             ],
         ]);
@@ -515,6 +555,7 @@ class MessageWindow extends Component
         $this->loadConversation();
         $this->dispatch('messageSent');
     }
+
 
     public function closeConversation($reason = 'resolved')
     {
