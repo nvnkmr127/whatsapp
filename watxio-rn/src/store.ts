@@ -72,11 +72,11 @@ const state: GlobalState = {
   token: null,
   baseUrl: defaultBaseUrl,
   activeTeamId: null,
-  waNumber: '+1 (415) 555-0118',
-  businessName: 'Acme Coffee Roasters',
-  plan: 'Business · Tier 2',
-  userName: 'Naveen A.',
-  userRole: 'Founder · Watxio',
+  waNumber: '',
+  businessName: '',
+  plan: 'Business Plan',
+  userName: '',
+  userRole: '',
   user: null,
   teams: [],
   numbers: [],
@@ -86,38 +86,16 @@ const state: GlobalState = {
 api.setBaseUrl(state.baseUrl);
 api.setToken(state.token);
 
-// Global 401 callback — debounced so a single transient 401 (e.g. clock skew,
-// brief server hiccup) doesn't immediately wipe the session. Two consecutive
-// 401s within 5 s will log the user out.
-let unauthorizedTimer: ReturnType<typeof setTimeout> | null = null;
-let unauthorizedCount = 0;
+const STORAGE_KEY = '@watxio_session';
+
+// Global 401 callback — immediate unauthenticated session wipe and redirect to Onboarding
 api.onUnauthorized(() => {
-  unauthorizedCount++;
-  if (!unauthorizedTimer) {
-    unauthorizedTimer = setTimeout(() => {
-      unauthorizedTimer = null;
-      const count = unauthorizedCount;
-      unauthorizedCount = 0;
-      if (count >= 2) {
-        console.warn(`[Auth] Confirmed 401 Unauthenticated (${count} occurrences) — clearing expired session.`);
-        store.set({
-          token: null,
-          user: null,
-          teams: [],
-          numbers: [],
-          activeTeamId: null,
-        });
-        if (navigationRef.isReady()) {
-          navigationRef.reset({ index: 0, routes: [{ name: 'Onboarding' }] });
-        }
-      } else {
-        console.warn('[Auth] Single 401 received — treating as transient.');
-      }
-    }, 1500);
+  console.warn('[Auth] 401 Unauthenticated received — clearing session and returning to login.');
+  store.clearSession();
+  if (navigationRef.isReady()) {
+    navigationRef.reset({ index: 0, routes: [{ name: 'Onboarding' }] });
   }
 });
-
-const STORAGE_KEY = '@watxio_session';
 
 async function persistState(data: GlobalState) {
   try {
@@ -161,7 +139,7 @@ function schedulePersist() {
 export const store = {
   get: (): GlobalState => state,
   set: (updates: Partial<GlobalState>) => {
-    if (!__DEV__ || updates.token === null) {
+    if (!updates.baseUrl && (!__DEV__ || updates.token === null)) {
       updates.baseUrl = defaultBaseUrl;
     }
     Object.assign(state, updates);
@@ -169,6 +147,12 @@ export const store = {
     // Sync to API networking instance
     if (updates.token !== undefined) {
       api.setToken(updates.token);
+      if (updates.token === null) {
+        // Synchronously wipe storage on logout/invalidation to avoid race condition with app reload
+        AsyncStorage.removeItem(STORAGE_KEY).catch((e) =>
+          console.error('Failed to immediately remove session key:', e)
+        );
+      }
     }
     if (updates.baseUrl !== undefined) {
       api.setBaseUrl(updates.baseUrl);
@@ -179,8 +163,27 @@ export const store = {
 
     listeners.forEach((l) => l());
 
-    // Debounced persist — avoids AsyncStorage jank on message bursts
+    // Debounced persist for active state updates
     schedulePersist();
+  },
+  clearSession: async () => {
+    store.set({
+      token: null,
+      user: null,
+      teams: [],
+      numbers: [],
+      activeTeamId: null,
+      userName: '',
+      userRole: '',
+      businessName: '',
+      waNumber: '',
+      websocket: undefined,
+    });
+    try {
+      await AsyncStorage.removeItem(STORAGE_KEY);
+    } catch (e) {
+      console.error('Failed to clear session storage:', e);
+    }
   },
   subscribe: (listener: () => void) => {
     listeners.add(listener);
@@ -205,7 +208,18 @@ export const store = {
             data.websocket = undefined;
           }
 
-          let activeBaseUrl = defaultBaseUrl;
+          let activeBaseUrl = data.baseUrl || defaultBaseUrl;
+
+          if (__DEV__ && data.baseUrl) {
+            const devIp = getDevMachineIp();
+            activeBaseUrl = data.baseUrl
+              .replace('localhost', devIp)
+              .replace('127.0.0.1', devIp)
+              .replace('flow.watxio.com', devIp);
+            if (!activeBaseUrl.includes(':8000') && !activeBaseUrl.includes(':8081')) {
+              activeBaseUrl = `http://${devIp}:8000/api`;
+            }
+          }
 
           store.set({
             token: data.token,

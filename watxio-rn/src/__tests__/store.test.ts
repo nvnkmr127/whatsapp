@@ -88,4 +88,15 @@ describe('Global Store', () => {
     // In __DEV__, flow.watxio.com is overridden with http://192.168.31.52:8000/api
     expect(store.get().baseUrl).toContain('192.168.31.52');
   });
+
+  test('clearSession resets token and removes storage key', async () => {
+    store.set({ token: 'active-token', activeTeamId: 123 });
+    mockStorage['@watxio_session'] = JSON.stringify({ token: 'active-token' });
+
+    await store.clearSession();
+
+    expect(store.get().token).toBeNull();
+    expect(store.get().activeTeamId).toBeNull();
+    expect(AsyncStorage.removeItem).toHaveBeenCalledWith('@watxio_session');
+  });
 });

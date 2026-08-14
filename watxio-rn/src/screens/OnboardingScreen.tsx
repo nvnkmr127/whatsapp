@@ -71,13 +71,40 @@ export default function OnboardingScreen({ navigation }: any) {
     const checkSession = async () => {
       try {
         const hasSession = await store.loadSession();
-        if (hasSession) {
-          navigation.reset({ index: 0, routes: [{ name: 'Main' }] });
+        if (hasSession && store.get().token) {
+          // Validate token with backend server on app launch
+          try {
+            const meResponse = await api.get('/v1/mobile/auth/me');
+            const userTeams = meResponse.teams || [];
+            const activeTeam = userTeams[0] || null;
+            const teamNumbers = meResponse.numbers || [];
+            const activeNumberObj = teamNumbers[0] || null;
+
+            store.set({
+              user: meResponse.user,
+              teams: userTeams,
+              activeTeamId: activeTeam ? activeTeam.id : store.get().activeTeamId,
+              businessName: activeTeam ? activeTeam.name : (store.get().businessName || 'Watxio Workspace'),
+              waNumber: activeNumberObj ? activeNumberObj.display_number : store.get().waNumber,
+              userName: meResponse.user.name,
+              userRole: meResponse.user.role || 'Member',
+              numbers: teamNumbers,
+            });
+
+            navigation.reset({ index: 0, routes: [{ name: 'Main' }] });
+            return;
+          } catch (valErr: any) {
+            console.warn('[Session] Stored session validation failed on startup (unauthenticated or invalid):', valErr);
+            await store.clearSession();
+            setCheckingSession(false);
+          }
         } else {
+          await store.clearSession();
           setCheckingSession(false);
         }
       } catch (e) {
         console.error('Error loading session:', e);
+        await store.clearSession();
         setCheckingSession(false);
       }
     };
