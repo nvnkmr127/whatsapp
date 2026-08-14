@@ -678,6 +678,7 @@ class MessageWindow extends Component
             'metadata'        => [
                 'agent_id'   => Auth::id(),
                 'agent_name' => Auth::user()->name,
+                'voice_note' => true,
             ],
         ]);
 

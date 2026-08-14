@@ -438,6 +438,11 @@ class WhatsAppService
             $mediaObject['caption'] = $caption;
         }
 
+        // If the audio message is a voice note, Meta requires setting "voice": true inside the audio object
+        if ($type === 'audio' && $existingMessage && (!empty($existingMessage->metadata['voice_note']) || !empty($existingMessage->metadata['is_voice_note']))) {
+            $mediaObject['voice'] = true;
+        }
+
         $payload = [
             'messaging_product' => 'whatsapp',
             'to' => $to,

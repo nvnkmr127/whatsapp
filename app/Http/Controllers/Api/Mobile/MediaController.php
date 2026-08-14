@@ -38,7 +38,8 @@ class MediaController extends Controller
         
         $fileName = Str::uuid() . '.' . $extension;
         
-        if ($request->input('is_voice_note') == 'true' || $request->input('is_voice_note') === true) {
+        $isVoiceNote = filter_var($request->input('is_voice_note'), FILTER_VALIDATE_BOOLEAN);
+        if ($isVoiceNote) {
             // Skip transcoding if file is already an ogg Opus file
             if ($extension !== 'ogg') {
                 $ffmpegBin = env('FFMPEG_PATH');
@@ -87,7 +88,7 @@ class MediaController extends Controller
                     @unlink($srcTmp);
 
                     if ($process->isSuccessful() && file_exists($tmpOgg) && filesize($tmpOgg) > 100) {
-                        $file = new \Illuminate\Http\UploadedFile($tmpOgg, 'voice.ogg', 'audio/ogg', null, true);
+                        $file = new \Illuminate\Http\UploadedFile($tmpOgg, 'voice.ogg', 'audio/ogg', 0, true);
                         $extension = 'ogg';
                         $fileName = Str::uuid() . '.' . $extension;
                     } else {
