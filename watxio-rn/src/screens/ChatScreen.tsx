@@ -1845,14 +1845,21 @@ export default function ChatScreen({ navigation, route }: any) {
                   } as any);
                   formData.append('is_voice_note', 'true');
 
-                  const uploadRes = await api.post('/v1/mobile/media/upload', formData);
+                  // 120s timeout: this request also runs a synchronous server-side
+                  // ffmpeg transcode (m4a -> ogg), so the default 15s can abort mid-
+                  // convert on a mobile network and the note never sends. Matches the
+                  // image/video upload timeout.
+                  const uploadRes = await api.post('/v1/mobile/media/upload', formData, undefined, 120000);
 
+                  // 120s: /messages runs SendMessageJob inline (synchronous Meta
+                  // media upload + send), so the default 15s can abort a send that
+                  // actually succeeds server-side. Matches the regular send() path.
                   await api.post(`/v1/mobile/conversations/${conversationId}/messages`, {
                     type: 'audio',
                     media_url: uploadRes.url,
                     content: `Voice message (${timeStr})`,
                     is_voice_note: true,
-                  });
+                  }, undefined, 120000);
                   fetchConversationDetailsRef.current(true).catch((e) =>
                     console.warn('[Voice] fetchConversationDetails failed:', e)
                   );
