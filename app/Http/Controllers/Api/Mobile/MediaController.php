@@ -92,9 +92,7 @@ class MediaController extends Controller
                         '-vn',
                         '-c:a', 'libopus',
                         '-b:a', '32k',
-                        '-ar', '48000',
-                        '-ac', '1',
-                        '-application', 'voip',
+                        '-ar', '16000',
                         '-f', 'ogg',
                         $tmpOgg
                     ]);
@@ -113,9 +111,10 @@ class MediaController extends Controller
                         \Log::info('[MOBILE_MEDIA_UPLOAD] FFmpeg transcoding succeeded', [
                             'size_bytes' => filesize($tmpOgg)
                         ]);
-                        $file = new \Illuminate\Http\UploadedFile($tmpOgg, 'voice.ogg', 'audio/ogg', 0, true);
+                        $file = new \Illuminate\Http\File($tmpOgg);
                         $extension = 'ogg';
                         $fileName = Str::uuid() . '.' . $extension;
+                        $tmpOggFileToUnlink = $tmpOgg;
                     } else {
                         \Log::error('[MOBILE_MEDIA_UPLOAD] FFmpeg transcoding failed', [
                             'exit_code' => $process->getExitCode(),
@@ -155,6 +154,10 @@ class MediaController extends Controller
         // Store in resolved disk ('voice-notes' directory for voice notes to match web, otherwise standard uploads path)
         $dir = $isVoiceNote ? 'voice-notes' : 'mobile/uploads/' . $type;
         $path = $file->storeAs($dir, $fileName, $disk);
+
+        if (isset($tmpOggFileToUnlink) && file_exists($tmpOggFileToUnlink)) {
+            @unlink($tmpOggFileToUnlink);
+        }
 
         try {
             $fullUrl = Storage::disk($disk)->url($path);
