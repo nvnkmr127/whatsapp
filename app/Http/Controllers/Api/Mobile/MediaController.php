@@ -51,8 +51,10 @@ class MediaController extends Controller
             'file_extension' => $extension,
         ]);
         if ($isVoiceNote) {
-            // Skip transcoding if file is already an ogg Opus file
-            if ($extension !== 'ogg') {
+            // Always transcode voice notes to WhatsApp's canonical spec (48kHz mono Opus).
+            // A recorded .ogg can be Vorbis or an off-spec Opus sample rate — both are accepted
+            // by Meta's /media upload but rejected on delivery with 131053 "Media upload error".
+            {
                 $ffmpegBin = env('FFMPEG_PATH');
 
                 if (!$ffmpegBin) {
@@ -90,7 +92,9 @@ class MediaController extends Controller
                         '-vn',
                         '-c:a', 'libopus',
                         '-b:a', '32k',
-                        '-ar', '16000',
+                        '-ar', '48000',
+                        '-ac', '1',
+                        '-application', 'voip',
                         '-f', 'ogg',
                         $tmpOgg
                     ]);

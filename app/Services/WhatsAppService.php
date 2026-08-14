@@ -535,34 +535,35 @@ class WhatsAppService
     private function ensureOpus(string $path): string
     {
         try {
-            $codec = trim((string) @shell_exec(
-                'ffprobe -v error -select_streams a:0 -show_entries stream=codec_name -of csv=p=0 '
+            // WhatsApp voice notes require 48kHz mono Opus; anything else delivers as 131053.
+            $probe = trim((string) @shell_exec(
+                'ffprobe -v error -select_streams a:0 -show_entries stream=codec_name,sample_rate,channels -of csv=p=0 '
                 . escapeshellarg($path) . ' 2>/dev/null'
             ));
 
-            if ($codec === 'opus') {
-                return $path; // already correct
-            }
-            if ($codec === '') {
-                Log::warning("ensureOpus: could not probe codec for {$path}; uploading as-is");
+            if ($probe === '') {
+                Log::warning("ensureOpus: could not probe {$path}; uploading as-is");
 
                 return $path;
+            }
+            if ($probe === 'opus,48000,1') {
+                return $path; // already exactly the WhatsApp voice-note spec
             }
 
             $out = sys_get_temp_dir() . '/' . \Illuminate\Support\Str::random(20) . '.ogg';
             @shell_exec(
                 'ffmpeg -y -i ' . escapeshellarg($path)
-                . ' -c:a libopus -b:a 32k -ar 48000 -ac 1 ' . escapeshellarg($out) . ' 2>/dev/null'
+                . ' -vn -c:a libopus -b:a 32k -ar 48000 -ac 1 -application voip -f ogg ' . escapeshellarg($out) . ' 2>/dev/null'
             );
 
             if (file_exists($out) && filesize($out) > 0) {
-                Log::info("ensureOpus: transcoded voice note '{$codec}' -> opus ({$path} -> {$out})");
+                Log::info("ensureOpus: normalized voice note '{$probe}' -> opus,48000,1 ({$path} -> {$out})");
 
                 return $out;
             }
 
             @unlink($out);
-            Log::warning("ensureOpus: ffmpeg transcode failed for {$path} (codec {$codec}); uploading as-is");
+            Log::warning("ensureOpus: ffmpeg transcode failed for {$path} (probe {$probe}); uploading as-is");
 
             return $path;
         } catch (\Throwable $e) {
