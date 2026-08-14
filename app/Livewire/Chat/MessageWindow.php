@@ -466,18 +466,41 @@ class MessageWindow extends Component
 
     public function sendVoiceNote($audioFile)
     {
+        Log::info('[VN:B1] sendVoiceNote() called', [
+            'audioFile_raw' => $audioFile,
+            'audioFile_type' => gettype($audioFile),
+            'voiceNote_property_set' => !is_null($this->voiceNote),
+            'conversationId' => $this->conversationId,
+        ]);
+
         // Support array wrap in case Livewire passes it as an array
         if (is_array($audioFile)) {
             $audioFile = head($audioFile);
+            Log::info('[VN:B1] audioFile was array, unwrapped to: ' . $audioFile);
         }
 
         // Try resolving from local property first, fallback to manual creation from temporary file path
         $file = $this->voiceNote;
+        Log::info('[VN:B2] $this->voiceNote resolved', [
+            'is_null' => is_null($file),
+            'class'   => $file ? get_class($file) : 'null',
+        ]);
+
         if (!$file && $audioFile) {
+            Log::info('[VN:B3] voiceNote property null, trying createFromLivewire fallback with: ' . $audioFile);
             try {
                 $file = \Livewire\Features\SupportFileUploads\TemporaryUploadedFile::createFromLivewire($audioFile);
+                Log::info('[VN:B3] createFromLivewire success', [
+                    'class'            => get_class($file),
+                    'originalName'     => $file->getClientOriginalName(),
+                    'size'             => $file->getSize(),
+                    'mimeType'         => $file->getMimeType(),
+                    'clientMimeType'   => $file->getClientMimeType(),
+                    'realPath'         => $file->getRealPath(),
+                    'tmpPath'          => $file->getPathname(),
+                ]);
             } catch (\Exception $e) {
-                Log::error('[VOICE_NOTE] Failed to create TemporaryUploadedFile: ' . $e->getMessage(), [
+                Log::error('[VN:B3] FAIL — createFromLivewire threw exception: ' . $e->getMessage(), [
                     'audioFile' => $audioFile,
                     'conversationId' => $this->conversationId,
                 ]);
@@ -485,7 +508,7 @@ class MessageWindow extends Component
         }
 
         if (!$file) {
-            Log::error('[VOICE_NOTE] No file resolved — voiceNote property and audioFile fallback both failed', [
+            Log::error('[VN:B4] CRITICAL — no file resolved at all! Both voiceNote property and fallback failed.', [
                 'conversationId' => $this->conversationId,
                 'audioFile' => $audioFile,
             ]);
@@ -493,21 +516,23 @@ class MessageWindow extends Component
         }
 
         if (! $this->conversation) {
-            Log::error('[VOICE_NOTE] No conversation loaded', ['conversationId' => $this->conversationId]);
+            Log::error('[VN:B4] CRITICAL — no conversation loaded', ['conversationId' => $this->conversationId]);
             return;
         }
+
+        Log::info('[VN:B4] File and conversation OK', [
+            'conversationId' => $this->conversation->id,
+            'contact_id'     => $this->conversation->contact_id,
+        ]);
 
         // Resolve target disk
         $configuredDisk = config('filesystems.default');
         $disk = ($configuredDisk === 'local') ? 'public' : $configuredDisk;
 
-        // Preserve the actual uploaded extension (.ogg from Firefox, .webm from Chrome).
-        // Always forcing .ogg on a webm file causes WhatsApp to reject it as malformed.
-        $uploadedExt = strtolower(pathinfo($file->getClientOriginalName(), PATHINFO_EXTENSION));
-        $ext = in_array($uploadedExt, ['ogg', 'webm', 'mp3', 'mp4', 'm4a', 'opus']) ? $uploadedExt : 'ogg';
-
-        // Set the correct MIME type for WhatsApp audio delivery
-        $mimeType = match($ext) {
+        // Preserve actual uploaded extension
+        $uploadedExt  = strtolower(pathinfo($file->getClientOriginalName(), PATHINFO_EXTENSION));
+        $ext          = in_array($uploadedExt, ['ogg', 'webm', 'mp3', 'mp4', 'm4a', 'opus']) ? $uploadedExt : 'ogg';
+        $mimeType     = match($ext) {
             'ogg'  => 'audio/ogg',
             'webm' => 'audio/webm',
             'mp3'  => 'audio/mpeg',
@@ -515,19 +540,34 @@ class MessageWindow extends Component
             default => 'audio/ogg',
         };
 
+        Log::info('[VN:B5] Extension / MIME resolved', [
+            'uploadedExt'   => $uploadedExt,
+            'finalExt'      => $ext,
+            'mimeType'      => $mimeType,
+            'disk'          => $disk,
+            'file_size'     => $file->getSize(),
+            'file_realPath' => $file->getRealPath(),
+            'file_tmpPath'  => $file->getPathname(),
+        ]);
+
         $fileName = \Illuminate\Support\Str::random(40) . '.' . $ext;
+        Log::info('[VN:B6] Calling storeAs()', [
+            'directory' => 'voice-notes',
+            'fileName'  => $fileName,
+            'disk'      => $disk,
+        ]);
+
         $path = $file->storeAs('voice-notes', $fileName, $disk);
 
         if (!$path) {
-            Log::error('[VOICE_NOTE] storeAs() returned false — storage write failed', [
-                'disk' => $disk,
+            Log::error('[VN:B6] FAIL — storeAs() returned false (disk write failed)', [
+                'disk'     => $disk,
                 'fileName' => $fileName,
-                'conversationId' => $this->conversationId,
             ]);
             return;
         }
 
-        Log::info('[VOICE_NOTE] Stored audio file', [
+        Log::info('[VN:B7] File stored on disk', [
             'path'     => $path,
             'ext'      => $ext,
             'mimeType' => $mimeType,
@@ -549,7 +589,17 @@ class MessageWindow extends Component
             ],
         ]);
 
+        Log::info('[VN:B8] Message created', [
+            'message_id'   => $message->id,
+            'media_url'    => $message->media_url,
+            'full_media_url' => $message->full_media_url,
+            'type'         => $message->type,
+            'media_type'   => $message->media_type,
+        ]);
+
+        Log::info('[VN:B9] Dispatching SendMessageJob...');
         \App\Jobs\SendMessageJob::dispatch($message);
+        Log::info('[VN:B10] SendMessageJob dispatched — done.');
 
         $this->reset('voiceNote');
         $this->loadConversation();

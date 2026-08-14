@@ -362,7 +362,9 @@ export default (wire, conversationId, teamId, userId, showTransferModal, showInt
     },
 
     async startRecording() {
+        console.log('[VN:1] startRecording() called');
         if (!navigator.mediaDevices?.getUserMedia) {
+            console.error('[VN:1] FAIL — mediaDevices.getUserMedia not available');
             window.dispatchEvent(new CustomEvent('notify', { detail: { message: 'Microphone not supported in this browser.', type: 'error' } }));
             return;
         }
@@ -370,7 +372,9 @@ export default (wire, conversationId, teamId, userId, showTransferModal, showInt
         let stream;
         try {
             stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+            console.log('[VN:2] Got mic stream:', stream);
         } catch (err) {
+            console.error('[VN:2] FAIL — getUserMedia error:', err.name, err.message);
             const msg = err.name === 'NotAllowedError'
                 ? 'Microphone permission denied. Please allow access in your browser settings.'
                 : 'Could not access microphone: ' + err.message;
@@ -378,36 +382,54 @@ export default (wire, conversationId, teamId, userId, showTransferModal, showInt
             return;
         }
 
-        // ── Detect what the browser can actually record ───────────────────────
-        // Chrome only supports audio/webm (opus). Firefox supports audio/ogg.
-        // Forcing the wrong type creates a corrupted file that WhatsApp rejects.
+        // ── Detect supported MIME type ───────────────────────────────────────
         const preferredTypes = [
-            'audio/ogg; codecs=opus',   // Firefox, best for WhatsApp
-            'audio/webm; codecs=opus',  // Chrome, Edge
-            'audio/webm',               // Chrome fallback
-            'audio/ogg',                // Firefox fallback
+            'audio/ogg; codecs=opus',
+            'audio/webm; codecs=opus',
+            'audio/webm',
+            'audio/ogg',
         ];
         const supportedMime = preferredTypes.find(t => MediaRecorder.isTypeSupported(t)) || '';
         const mimeOptions   = supportedMime ? { mimeType: supportedMime } : {};
-
-        // Derive a clean mime (no codecs) and matching file extension
         const baseMime = supportedMime.split(';')[0].trim() || 'audio/webm';
         const ext      = baseMime.includes('ogg') ? 'ogg' : 'webm';
         const fileName = `voice-note.${ext}`;
 
+        console.log('[VN:3] MIME detection:', {
+            supportedMime,
+            baseMime,
+            ext,
+            fileName,
+            allSupported: preferredTypes.map(t => ({ type: t, supported: MediaRecorder.isTypeSupported(t) }))
+        });
+
         this.mediaRecorder = new MediaRecorder(stream, mimeOptions);
         this.audioChunks = [];
 
+        console.log('[VN:4] MediaRecorder created. State:', this.mediaRecorder.state, '| mimeType:', this.mediaRecorder.mimeType);
+
         this.mediaRecorder.ondataavailable = (e) => {
-            if (e.data && e.data.size > 0) this.audioChunks.push(e.data);
+            if (e.data && e.data.size > 0) {
+                this.audioChunks.push(e.data);
+                console.log('[VN:5] chunk received — size:', e.data.size, '| total chunks:', this.audioChunks.length);
+            }
+        };
+
+        this.mediaRecorder.onerror = (e) => {
+            console.error('[VN:ERR] MediaRecorder error:', e.error);
         };
 
         this.mediaRecorder.onstop = async () => {
+            console.log('[VN:6] onstop fired. shouldSend:', this.shouldSendRecording, '| chunks:', this.audioChunks.length);
             stream.getTracks().forEach(track => track.stop());
 
-            if (!this.shouldSendRecording) return;
+            if (!this.shouldSendRecording) {
+                console.log('[VN:6] shouldSendRecording=false — discarding');
+                return;
+            }
 
             if (this.audioChunks.length === 0) {
+                console.error('[VN:6] FAIL — audioChunks is empty!');
                 window.dispatchEvent(new CustomEvent('notify', { detail: { message: 'No audio recorded. Please try again.', type: 'error' } }));
                 return;
             }
@@ -415,26 +437,41 @@ export default (wire, conversationId, teamId, userId, showTransferModal, showInt
             const audioBlob = new Blob(this.audioChunks, { type: baseMime });
             const audioFile = new File([audioBlob], fileName, { type: baseMime });
 
-            // Show uploading state
+            console.log('[VN:7] File built:', {
+                name: audioFile.name,
+                size: audioFile.size,
+                type: audioFile.type,
+                blobSize: audioBlob.size,
+            });
+
+            if (audioFile.size < 100) {
+                console.error('[VN:7] FAIL — file is suspiciously tiny (<100 bytes). Recording may have failed.');
+            }
+
             window.dispatchEvent(new CustomEvent('notify', { detail: { message: 'Uploading voice note…', type: 'info' } }));
+            console.log('[VN:8] Starting wire.upload("voiceNote", ...)');
 
             wire.upload('voiceNote', audioFile,
                 (uploadedFilename) => {
-                    // Livewire sets $this->voiceNote automatically after upload.
-                    // Pass the temp path as fallback in case the property sync races.
+                    console.log('[VN:9] Upload complete! uploadedFilename:', uploadedFilename);
+                    console.log('[VN:10] Calling wire.sendVoiceNote(uploadedFilename)...');
                     wire.sendVoiceNote(uploadedFilename);
+                    console.log('[VN:11] wire.sendVoiceNote() called (Livewire roundtrip in flight)');
                 },
                 (error) => {
-                    console.error('Voice note upload failed:', error);
+                    console.error('[VN:9] FAIL — wire.upload error:', error);
                     window.dispatchEvent(new CustomEvent('notify', { detail: { message: 'Failed to upload voice note. Please try again.', type: 'error' } }));
+                },
+                (progress) => {
+                    console.log('[VN:upload-progress]', progress + '%');
                 }
             );
         };
 
-        // Request data every second so we get audio even for very short recordings
         this.mediaRecorder.start(1000);
         this.isRecording = true;
         this.shouldSendRecording = false;
+        console.log('[VN:4] Recording started. State:', this.mediaRecorder.state);
 
         let sec = 0;
         this.recInterval = setInterval(() => {
@@ -446,6 +483,7 @@ export default (wire, conversationId, teamId, userId, showTransferModal, showInt
     },
 
     stopRecording(send = true) {
+        console.log('[VN:stop] stopRecording() called. send:', send, '| recorder state:', this.mediaRecorder?.state);
         this.isRecording = false;
         this.shouldSendRecording = send;
         if (this.mediaRecorder && this.mediaRecorder.state !== 'inactive') {
