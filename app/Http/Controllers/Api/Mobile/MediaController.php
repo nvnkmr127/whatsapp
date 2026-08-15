@@ -92,7 +92,9 @@ class MediaController extends Controller
                         '-vn',
                         '-c:a', 'libopus',
                         '-b:a', '32k',
-                        '-ar', '16000',
+                        '-ar', '48000',
+                        '-ac', '1',
+                        '-application', 'voip',
                         '-f', 'ogg',
                         $tmpOgg
                     ]);
