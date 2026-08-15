@@ -92,9 +92,7 @@ class MediaController extends Controller
                         '-vn',
                         '-c:a', 'libopus',
                         '-b:a', '32k',
-                        '-ar', '48000',
-                        '-ac', '1',
-                        '-application', 'voip',
+                        '-ar', '16000',
                         '-f', 'ogg',
                         $tmpOgg
                     ]);
@@ -155,7 +153,7 @@ class MediaController extends Controller
 
         // Store in resolved disk ('voice-notes' directory for voice notes to match web, otherwise standard uploads path)
         $dir = $isVoiceNote ? 'voice-notes' : 'mobile/uploads/' . $type;
-        $path = $file->storeAs($dir, $fileName, $disk);
+        $path = Storage::disk($disk)->putFileAs($dir, $file, $fileName);
 
         if (isset($tmpOggFileToUnlink) && file_exists($tmpOggFileToUnlink)) {
             @unlink($tmpOggFileToUnlink);
