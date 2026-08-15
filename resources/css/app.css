@@ -203,6 +203,15 @@
     }
 }
 
+/* Touch devices have no hover, so hover-revealed message actions (reply, react,
+   star, copy, forward) would be unreachable. Keep them visible when the primary
+   pointer can't hover. Desktop keeps the hover-reveal behavior. */
+@media (hover: none) {
+    .msg-actions {
+        opacity: 1 !important;
+    }
+}
+
 [x-cloak] {
     display: none !important;
 }

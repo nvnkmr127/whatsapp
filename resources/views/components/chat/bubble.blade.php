@@ -14,7 +14,7 @@
             <!-- Chevron Button -->
             <button @click="showMenu = !showMenu; if(showMenu) $event.stopPropagation();"
                     aria-label="{{ __('Message options') }}" title="{{ __('Message options') }}"
-                    class="absolute top-1 right-1 p-0.5 rounded-full bg-black/10 dark:bg-white/20 text-white opacity-0 group-hover/msg:opacity-100 focus-visible:opacity-100 transition-opacity z-20 backdrop-blur-sm"
+                    class="msg-actions absolute top-1 right-1 p-0.5 rounded-full bg-black/10 dark:bg-white/20 text-white opacity-0 group-hover/msg:opacity-100 focus-visible:opacity-100 transition-opacity z-20 backdrop-blur-sm"
                     :class="message.is_outbound ? 'text-white bg-black/10 hover:bg-black/20' : 'text-slate-500 bg-slate-100 hover:bg-slate-200 dark:text-slate-300 dark:bg-slate-700 dark:hover:bg-slate-600'">
                 <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M19 9l-7 7-7-7" /></svg>
             </button>
@@ -312,7 +312,7 @@
     </div>
 
     <!-- Action Buttons (Hover) beside the bubble -->
-    <div class="opacity-0 group-hover/msg:opacity-100 transition-opacity flex items-center gap-1 z-10">
+    <div class="msg-actions opacity-0 group-hover/msg:opacity-100 transition-opacity flex items-center gap-1 z-10">
         <div class="relative">
             <button @click="showEmoji = !showEmoji" aria-label="{{ __('React to message') }}" title="{{ __('React to message') }}" class="p-1.5 text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 rounded-full hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors">
                 <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14.828 14.828a4 4 0 01-5.656 0M9 10h.01M15 10h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
