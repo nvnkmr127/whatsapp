@@ -792,7 +792,6 @@ class MessageWindow extends Component
             return;
         }
 
-        $messages = $this->conversation->messages()->orderBy('created_at', 'asc')->get();
         $filename = "conversation_{$this->conversation->id}_".now()->format('Y-m-d_H-i-s').'.csv';
 
         return response()->streamDownload(function () {
