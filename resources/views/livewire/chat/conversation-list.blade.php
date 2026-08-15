@@ -143,7 +143,7 @@
 
     <!-- Channel List with Enhanced Scrolling -->
     <div class="flex-1 overflow-y-auto space-y-2 px-4 pb-4 scroll-smooth"
-        style="max-height: calc(100vh - 280px); scrollbar-width: thin; scrollbar-color: rgb(20 184 166 / 0.3) transparent;">
+        style="max-height: calc(100dvh - 280px); scrollbar-width: thin; scrollbar-color: rgb(20 184 166 / 0.3) transparent;">
         <style>
             /* Custom Scrollbar for Webkit Browsers */
             .flex-1.overflow-y-auto::-webkit-scrollbar {

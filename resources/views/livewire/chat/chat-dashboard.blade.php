@@ -1,6 +1,6 @@
 <div x-data="{ mobilePane: '{{ $activeConversationId ? "messages" : "list" }}', showDetails: true }" @toggle-details.window="showDetails = !showDetails"
     @toggle-mobile-pane.window="mobilePane = $event.detail"
-    class="h-[calc(100vh-theme(spacing.32))] flex overflow-hidden bg-white dark:bg-slate-900 rounded-[2.5rem] shadow-2xl border border-slate-100 dark:border-slate-800 relative z-0">
+    class="h-[calc(100dvh-theme(spacing.32))] flex overflow-hidden bg-white dark:bg-slate-900 rounded-[2.5rem] shadow-2xl border border-slate-100 dark:border-slate-800 relative z-0">
 
     <!-- Left Sidebar: Active Channels -->
     <div :class="{ 'hidden': mobilePane !== 'list', 'flex': mobilePane === 'list' }"
