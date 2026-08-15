@@ -55,7 +55,7 @@ class ManagementClient
         }
 
         $url = 'https://graph.facebook.com/oauth/access_token';
-        $response = Http::get($url, [
+        $response = Http::timeout(30)->get($url, [
             'grant_type' => 'fb_exchange_token',
             'client_id' => $appId,
             'client_secret' => $appSecret,
@@ -164,7 +164,7 @@ class ManagementClient
             'has_appsecret_proof'=> array_key_exists('appsecret_proof', $queryParams),
         ]);
 
-        $response = Http::withToken($token)->post($url . '?' . http_build_query($queryParams));
+        $response = Http::withToken($token)->timeout(30)->post($url . '?' . http_build_query($queryParams));
 
         if ($response->failed()) {
             $error = $response->json('error') ?? [];
@@ -210,7 +210,7 @@ class ManagementClient
     public function getWabaStatus(string $wabaId, string $token): array
     {
         $url = 'https://graph.facebook.com/'.config('whatsapp.api_version', 'v21.0')."/{$wabaId}";
-        $response = Http::withToken($token)->get($url, [
+        $response = Http::withToken($token)->timeout(30)->get($url, [
             'fields' => 'id,name,account_review_status,business_verification_status',
         ]);
 
