@@ -65,7 +65,7 @@
                             <span
                                 class="text-sm font-bold text-{{ $integrationStateColor }}-700 dark:text-{{ $integrationStateColor }}-400 uppercase tracking-tight">{{ $is_whatsmark_connected ? 'Connected' : 'Disconnected' }}</span>
                             @if($tokenLastValidated)
-                                <span class="text-[9px] font-medium text-slate-400 uppercase tracking-widest mt-0.5">Validated
+                                <span class="text-nano font-medium text-slate-400 uppercase tracking-widest mt-0.5">Validated
                                     {{ $tokenLastValidated->diffForHumans() }}</span>
                             @endif
                         </div>
@@ -110,7 +110,7 @@
                             <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7"></path></svg>
                         @endif
                     </div>
-                    <span class="text-[10px] font-bold uppercase tracking-widest text-slate-500">Link Facebook</span>
+                    <span class="text-tiny font-bold uppercase tracking-widest text-slate-500">Link Facebook</span>
                 </div>
 
                 <!-- Step 2: Discover -->
@@ -126,7 +126,7 @@
                             <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7"></path></svg>
                         @endif
                     </div>
-                    <span class="text-[10px] font-bold uppercase tracking-widest {{ $isStep2Active ? 'text-wa-teal' : 'text-slate-500' }}">Discover Account</span>
+                    <span class="text-tiny font-bold uppercase tracking-widest {{ $isStep2Active ? 'text-wa-teal' : 'text-slate-500' }}">Discover Account</span>
                 </div>
 
                 <!-- Step 3: Activate -->
@@ -137,7 +137,7 @@
                     <div class="w-12 h-12 rounded-full flex items-center justify-center transition-all duration-300 {{ !$isStep3Active ? 'bg-white border-2 border-slate-200' : 'bg-wa-teal shadow-lg text-white font-bold' }}">
                         <span class="text-lg font-bold">3</span>
                     </div>
-                    <span class="text-[10px] font-bold uppercase tracking-widest {{ $isStep3Active ? 'text-wa-teal' : 'text-slate-500' }}">Activate Setup</span>
+                    <span class="text-tiny font-bold uppercase tracking-widest {{ $isStep3Active ? 'text-wa-teal' : 'text-slate-500' }}">Activate Setup</span>
                 </div>
             </div>
         </div>
@@ -233,7 +233,7 @@
                                             <span>
                                                 @if($tokenDaysUntilExpiry <= 0)
                                                     WhatsApp Access Token expires today. Re-connect immediately to restore service.
-                                                    <div class="mt-1 text-[10px] font-bold opacity-75 italic lowercase">(Hint: You might be using a temporary token)</div>
+                                                    <div class="mt-1 text-tiny font-bold opacity-75 italic lowercase">(Hint: You might be using a temporary token)</div>
                                                 @else
                                                     WhatsApp Access Token expires in {{ $tokenDaysUntilExpiry }}
                                                     {{ Str::plural('day', $tokenDaysUntilExpiry) }}. Re-connect soon.
@@ -348,7 +348,7 @@
                                                 d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
                                         </svg>
                                         <div
-                                            class="hidden group-hover:block absolute z-50 bottom-full left-1/2 -translate-x-1/2 mb-2 px-3 py-2 bg-slate-900 text-[10px] text-white rounded-lg w-48 shadow-xl">
+                                            class="hidden group-hover:block absolute z-50 bottom-full left-1/2 -translate-x-1/2 mb-2 px-3 py-2 bg-slate-900 text-tiny text-white rounded-lg w-48 shadow-xl">
                                             Meta limits the number of business-initiated conversations you can start in 24h.
                                             Tier 250, 1K (1,000), 10K, 100K, or Unlimited.
                                         </div>
@@ -472,7 +472,7 @@
                                         <p class="text-[11px] font-medium text-slate-500 mt-0.5">{{ $step['description'] }}
                                             @if($step['id'] === 'webhook_setup' && $step['status'] !== 'completed')
                                                 <button wire:click="setupWebhook" wire:loading.attr="disabled"
-                                                    class="ml-2 text-[10px] font-bold text-wa-teal uppercase hover:underline">
+                                                    class="ml-2 text-tiny font-bold text-wa-teal uppercase hover:underline">
                                                     Fix
                                                 </button>
                                             @endif
@@ -503,6 +503,7 @@
                                 </div>
                             </div>
                             <button wire:click="refreshHealth" wire:loading.attr="disabled"
+                                aria-label="{{ __('Refresh health') }}" title="{{ __('Refresh health') }}"
                                 class="p-2 text-slate-400 hover:text-wa-teal transition-colors">
                                 <svg wire:loading.class="animate-spin" class="w-5 h-5" fill="none" stroke="currentColor"
                                     viewBox="0 0 24 24">
@@ -525,7 +526,7 @@
                             <div class="absolute flex flex-col items-center">
                                 <span class="text-3xl font-black text-slate-900 dark:text-white">{{ $healthScore }}</span>
                                 <span
-                                    class="text-[9px] font-black uppercase tracking-widest text-slate-400">{{ $healthStatus }}</span>
+                                    class="text-nano font-black uppercase tracking-widest text-slate-400">{{ $healthStatus }}</span>
                             </div>
                         </div>
 
@@ -533,7 +534,7 @@
                             <!-- Token Health Score -->
                             <div>
                                 <div class="flex items-center justify-between mb-2">
-                                    <span class="text-[10px] font-black uppercase tracking-widest text-slate-500">Access
+                                    <span class="text-tiny font-black uppercase tracking-widest text-slate-500">Access
                                         Token</span>
                                     <span
                                         class="text-xs font-bold text-slate-900 dark:text-white">{{ $tokenHealthScore }}%</span>
@@ -547,7 +548,7 @@
                             <!-- Quality Rating Score -->
                             <div>
                                 <div class="flex items-center justify-between mb-2">
-                                    <span class="text-[10px] font-black uppercase tracking-widest text-slate-500">Quality
+                                    <span class="text-tiny font-black uppercase tracking-widest text-slate-500">Quality
                                         rating</span>
                                     <span
                                         class="text-xs font-bold text-slate-900 dark:text-white">{{ $qualityHealthScore }}%</span>
@@ -561,7 +562,7 @@
                             <!-- Messaging Usage Score -->
                             <div>
                                 <div class="flex items-center justify-between mb-2">
-                                    <span class="text-[10px] font-black uppercase tracking-widest text-slate-500">Messaging
+                                    <span class="text-tiny font-black uppercase tracking-widest text-slate-500">Messaging
                                         usage</span>
                                     <span
                                         class="text-xs font-bold text-slate-900 dark:text-white">{{ $messagingUsagePercent }}%</span>
@@ -703,6 +704,7 @@
                                                     class="flex-grow bg-slate-50 dark:bg-slate-800/50 rounded-2xl"
                                                     placeholder="https://..." />
                                                 <button type="button" wire:click="removeWebsite({{ $index }})"
+                                                    aria-label="{{ __('Remove website') }}" title="{{ __('Remove website') }}"
                                                     class="p-2 text-slate-400 hover:text-rose-500">
                                                     <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
@@ -1100,10 +1102,10 @@
                                                 <div class="flex items-center justify-between p-3 bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm transition-all hover:border-blue-400">
                                                     <div class="flex flex-col">
                                                         <span class="font-bold text-slate-900 dark:text-white">{{ $waba['name'] }}</span>
-                                                        <span class="text-[10px] text-slate-500 font-mono tracking-tight uppercase">ID: {{ $waba['id'] }}</span>
+                                                        <span class="text-tiny text-slate-500 font-mono tracking-tight uppercase">ID: {{ $waba['id'] }}</span>
                                                     </div>
                                                     <button wire:click="selectWaba('{{ $waba['id'] }}')"
-                                                        class="px-5 py-2 bg-blue-600 hover:bg-blue-700 text-white text-[10px] font-black rounded-xl uppercase tracking-widest transition-all hover:scale-105">
+                                                        class="px-5 py-2 bg-blue-600 hover:bg-blue-700 text-white text-tiny font-black rounded-xl uppercase tracking-widest transition-all hover:scale-105">
                                                         SELECT
                                                     </button>
                                                 </div>
@@ -1135,9 +1137,9 @@
                                                 <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
                                                 <span class="relative inline-flex rounded-full h-1.5 w-1.5 bg-emerald-500"></span>
                                             </span>
-                                            <span class="text-[9px] font-black uppercase tracking-widest">Heartbeat Pulse</span>
+                                            <span class="text-nano font-black uppercase tracking-widest">Heartbeat Pulse</span>
                                         </div>
-                                        <span class="text-[9px] font-bold opacity-60 uppercase">{{ $lastWebhookReceivedAt->diffForHumans() }}</span>
+                                        <span class="text-nano font-bold opacity-60 uppercase">{{ $lastWebhookReceivedAt->diffForHumans() }}</span>
                                     </div>
                                 @endif
                             </div>
@@ -1206,11 +1208,11 @@
                                     </div>
                                     <div>
                                         <h4 class="text-sm font-black text-rose-700 dark:text-rose-400 uppercase tracking-tight">Security Lock Engaged</h4>
-                                        <p class="text-[10px] text-rose-600/70 dark:text-rose-400/60 font-medium max-w-xs mx-auto mt-1 leading-relaxed">
+                                        <p class="text-tiny text-rose-600/70 dark:text-rose-400/60 font-medium max-w-xs mx-auto mt-1 leading-relaxed">
                                             Outbound traffic is suspended due to excessive delivery failures. Please verify your Meta account standing.
                                         </p>
                                     </div>
-                                    <button wire:click="resetCircuitBreaker" class="mt-2 px-6 py-2 bg-rose-600 hover:bg-rose-700 text-white text-[10px] font-black rounded-xl uppercase tracking-[0.2em] shadow-lg shadow-rose-200 dark:shadow-none transition-all hover:scale-105 active:scale-95">
+                                    <button wire:click="resetCircuitBreaker" class="mt-2 px-6 py-2 bg-rose-600 hover:bg-rose-700 text-white text-tiny font-black rounded-xl uppercase tracking-[0.2em] shadow-lg shadow-rose-200 dark:shadow-none transition-all hover:scale-105 active:scale-95">
                                         RESET SECURITY LOCK
                                     </button>
                                 </div>
@@ -1226,21 +1228,21 @@
                             @else
                                 <div
                                     class="flex flex-col items-end gap-3 p-4 bg-rose-50 dark:bg-rose-900/10 rounded-2xl border border-rose-200 dark:border-rose-800">
-                                    <label class="text-[10px] font-black text-rose-600 uppercase">Type 'DISCONNECT' to
+                                    <label class="text-tiny font-black text-rose-600 uppercase">Type 'DISCONNECT' to
                                         confirm</label>
                                     <div class="flex gap-2">
                                         <input type="text" wire:model="disconnectConfirmation" placeholder="Type here..."
                                             class="text-xs rounded-xl border-rose-200 dark:border-rose-800 bg-white dark:bg-slate-900 focus:ring-rose-500">
                                         <button wire:click="disconnect"
-                                            class="px-4 py-2 bg-rose-600 text-white text-[10px] font-black rounded-xl">CONFIRM</button>
-                                        <button wire:click="cancelDisconnect" class="text-slate-400 hover:text-slate-600">
+                                            class="px-4 py-2 bg-rose-600 text-white text-tiny font-black rounded-xl">CONFIRM</button>
+                                        <button wire:click="cancelDisconnect" aria-label="{{ __('Cancel') }}" title="{{ __('Cancel') }}" class="text-slate-400 hover:text-slate-600">
                                             <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                                                     d="M6 18L18 6M6 6l12 12"></path>
                                             </svg>
                                         </button>
                                     </div>
-                                    <p class="text-[9px] text-rose-500 italic mt-1 font-bold uppercase tracking-widest">Warning:
+                                    <p class="text-nano text-rose-500 italic mt-1 font-bold uppercase tracking-widest">Warning:
                                         This will stop all active bot automations instantly.</p>
                                 </div>
                             @endif
@@ -1257,7 +1259,7 @@
                                     <div class="flex-1 relative">
                                         <input type="text" wire:model="wm_test_message" placeholder="Phone with country code (e.g. 9198XXX)"
                                             class="w-full text-xs font-bold rounded-2xl border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 focus:ring-wa-teal px-5 py-3">
-                                        @error('wm_test_message') <span class="text-[10px] text-rose-500 mt-1 block px-2">{{ $message }}</span> @enderror
+                                        @error('wm_test_message') <span class="text-tiny text-rose-500 mt-1 block px-2">{{ $message }}</span> @enderror
                                     </div>
                                     <button wire:click="sendTestMessage" wire:loading.attr="disabled"
                                         class="px-8 py-3 bg-wa-teal hover:bg-wa-teal/90 text-white text-[11px] font-black rounded-2xl shadow-lg shadow-wa-teal/20 uppercase tracking-widest transition-all hover:scale-105 active:scale-95 flex items-center gap-2">
@@ -1371,7 +1373,7 @@
 
                             <button wire:click="registerNumber" wire:loading.attr="disabled"
                                 wire:confirm="Are you sure you want to register this number with the provided PIN?"
-                                class="px-4 py-2 bg-wa-teal hover:bg-green-600 text-white rounded-xl text-[10px] font-bold uppercase tracking-widest shadow-lg shadow-green-200 dark:shadow-none transition-all hover:scale-105 disabled:opacity-50 whitespace-nowrap">
+                                class="px-4 py-2 bg-wa-teal hover:bg-green-600 text-white rounded-xl text-tiny font-bold uppercase tracking-widest shadow-lg shadow-green-200 dark:shadow-none transition-all hover:scale-105 disabled:opacity-50 whitespace-nowrap">
                                 REGISTER PHONE
                             </button>
                         </div>
@@ -1395,7 +1397,7 @@
                     class="bg-blue-50/50 dark:bg-blue-900/10 rounded-[2rem] p-10 border border-blue-100 dark:border-blue-900/30 text-center relative overflow-hidden">
                     <div class="absolute top-0 right-0 p-4">
                         <span
-                            class="bg-blue-600 text-white text-[10px] font-bold px-3 py-1 rounded-full uppercase tracking-widest">Recommended</span>
+                            class="bg-blue-600 text-white text-tiny font-bold px-3 py-1 rounded-full uppercase tracking-widest">Recommended</span>
                     </div>
                     <h4 class="text-lg font-bold text-slate-800 dark:text-blue-100 mb-4 uppercase tracking-tighter">Embedded
                         Signup Flow</h4>
@@ -1422,7 +1424,7 @@
                                         <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-blue-400 opacity-75"></span>
                                         <span class="relative inline-flex rounded-full h-2 w-2 bg-blue-500"></span>
                                     </span>
-                                    <span class="text-[10px] font-black text-slate-600 dark:text-slate-400 uppercase tracking-[0.2em]">Incomplete Session Detected</span>
+                                    <span class="text-tiny font-black text-slate-600 dark:text-slate-400 uppercase tracking-[0.2em]">Incomplete Session Detected</span>
                                 </div>
                                 <button wire:click="resumeSetup" wire:loading.attr="disabled"
                                     class="text-xs font-black text-wa-teal hover:text-green-600 transition-colors uppercase tracking-widest flex items-center gap-2">
@@ -1445,7 +1447,7 @@
                 <div class="relative flex items-center">
                     <div class="flex-grow border-t border-slate-100 dark:border-slate-800"></div>
                     <span
-                        class="flex-shrink-0 mx-6 text-slate-300 dark:text-slate-600 text-[10px] font-bold uppercase tracking-[0.3em]">MANUAL
+                        class="flex-shrink-0 mx-6 text-slate-300 dark:text-slate-600 text-tiny font-bold uppercase tracking-[0.3em]">MANUAL
                         CONFIGURATION</span>
                     <div class="flex-grow border-t border-slate-100 dark:border-slate-800"></div>
                 </div>
@@ -1475,7 +1477,7 @@
                                 <x-label for="wm_business_account_id" value="WABA Account ID *"
                                     class="text-xs font-bold text-slate-500 uppercase" />
                                 <button type="button" wire:click="discoverManualAccounts" wire:loading.attr="disabled"
-                                    class="text-[10px] font-black text-blue-600 hover:text-blue-700 uppercase tracking-widest">
+                                    class="text-tiny font-black text-blue-600 hover:text-blue-700 uppercase tracking-widest">
                                     <span wire:loading.remove wire:target="discoverManualAccounts">↺ DISCOVER</span>
                                     <span wire:loading wire:target="discoverManualAccounts">...</span>
                                 </button>
@@ -1501,7 +1503,7 @@
                         <x-input id="wm_access_token" type="password" wire:model="wm_access_token"
                             class="w-full bg-slate-50 dark:bg-slate-800/50 rounded-2xl" placeholder="EAAB..." />
                         <x-input-error for="wm_access_token" class="mt-2" />
-                        <div class="mt-3 flex items-start gap-2 text-[10px] text-slate-400 font-medium">
+                        <div class="mt-3 flex items-start gap-2 text-tiny text-slate-400 font-medium">
                             <svg class="w-4 h-4 text-slate-300 mt-0.5" fill="none" stroke="currentColor"
                                 viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
@@ -1527,7 +1529,7 @@
                                 VALIDATING...
                             </span>
                         </x-button>
-                        <p class="mt-4 text-[10px] text-slate-400 uppercase tracking-widest font-bold">By connecting, you
+                        <p class="mt-4 text-tiny text-slate-400 uppercase tracking-widest font-bold">By connecting, you
                             agree to Meta's WhatsApp Terms.</p>
                     </div>
                 </form>
