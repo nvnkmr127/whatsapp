@@ -9,7 +9,7 @@
                 </div>
                 <div>
                    <h2 class="text-xl font-black text-slate-800 dark:text-white uppercase tracking-tight">{{ __('AI Assistant') }}</h2>
-                   <p class="text-[10px] font-black text-slate-400 uppercase tracking-widest">{{ __('Smart Reply Suggestions') }}</p>
+                   <p class="text-tiny font-black text-slate-400 uppercase tracking-widest">{{ __('Smart Reply Suggestions') }}</p>
                 </div>
             </div>
 
@@ -28,7 +28,7 @@
                         class="w-full p-4 text-left bg-slate-50 dark:bg-slate-900 border border-slate-100 dark:border-slate-800 rounded-xl hover:bg-indigo-50 dark:hover:bg-indigo-900/20 hover:border-indigo-200 transition-all duration-200 group">
                         <p class="text-xs font-bold text-slate-700 dark:text-slate-300 group-hover:text-indigo-700 leading-relaxed">{{ $suggestion }}</p>
                         <div class="mt-3 flex justify-end">
-                           <span class="text-[8px] font-black text-indigo-600 uppercase tracking-widest opacity-0 group-hover:opacity-100 transition-opacity">{{ __('Click to use') }}</span>
+                           <span class="text-micro font-black text-indigo-600 uppercase tracking-widest opacity-0 group-hover:opacity-100 transition-opacity">{{ __('Click to use') }}</span>
                         </div>
                     </button>
                   @endforeach
@@ -36,7 +36,7 @@
                   @if(empty($suggestions))
                     <div class="p-8 text-center bg-slate-50 dark:bg-slate-900/50 rounded-2xl border border-dashed border-slate-200 dark:border-slate-800">
                         <p class="text-xs font-bold text-slate-500 uppercase tracking-widest">{{ __('Failed to generate suggestions.') }}</p>
-                        <button wire:click="generateSuggestions" class="mt-4 text-[10px] font-black text-indigo-600 uppercase tracking-widest hover:underline">{{ __('Try Again') }}</button>
+                        <button wire:click="generateSuggestions" class="mt-4 text-tiny font-black text-indigo-600 uppercase tracking-widest hover:underline">{{ __('Try Again') }}</button>
                     </div>
                   @endif
                </div>

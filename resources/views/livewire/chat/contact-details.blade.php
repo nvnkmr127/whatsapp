@@ -26,7 +26,7 @@
         <div class="px-6 flex border-b border-slate-50 dark:border-slate-900 bg-slate-50/20 dark:bg-slate-950/20">
             @foreach(['profile' => 'Profile', 'timeline' => 'Timeline', 'files' => 'Files'] as $tab => $label)
                 <button wire:click="$set('activeTab', '{{ $tab }}')"
-                    class="px-4 py-3 text-[10px] font-black uppercase tracking-widest border-b-2 transition-all
+                    class="px-4 py-3 text-tiny font-black uppercase tracking-widest border-b-2 transition-all
                     {{ $activeTab === $tab ? 'border-wa-teal text-wa-teal' : 'border-transparent text-slate-400 hover:text-slate-600' }}">
                     {{ __($label) }}
                 </button>
@@ -47,29 +47,29 @@
                     @if($editing)
                         <div class="mt-4 w-full space-y-2">
                             <div>
-                                <label class="text-[9px] font-black text-slate-400 uppercase tracking-widest">{{ __('Name *') }}</label>
+                                <label class="text-nano font-black text-slate-400 uppercase tracking-widest">{{ __('Name *') }}</label>
                                 <input wire:model="editName" type="text"
                                     class="mt-1 w-full px-3 py-2 bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-xs font-semibold text-slate-900 dark:text-white focus:ring-wa-teal/30 focus:border-wa-teal outline-none transition" />
-                                @error('editName') <span class="text-[9px] text-rose-500">{{ $message }}</span> @enderror
+                                @error('editName') <span class="text-nano text-rose-500">{{ $message }}</span> @enderror
                             </div>
                             <div>
-                                <label class="text-[9px] font-black text-slate-400 uppercase tracking-widest">{{ __('Email') }}</label>
+                                <label class="text-nano font-black text-slate-400 uppercase tracking-widest">{{ __('Email') }}</label>
                                 <input wire:model="editEmail" type="email"
                                     class="mt-1 w-full px-3 py-2 bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-xs font-semibold text-slate-900 dark:text-white focus:ring-wa-teal/30 focus:border-wa-teal outline-none transition" />
-                                @error('editEmail') <span class="text-[9px] text-rose-500">{{ $message }}</span> @enderror
+                                @error('editEmail') <span class="text-nano text-rose-500">{{ $message }}</span> @enderror
                             </div>
                             <div>
-                                <label class="text-[9px] font-black text-slate-400 uppercase tracking-widest">{{ __('Notes') }}</label>
+                                <label class="text-nano font-black text-slate-400 uppercase tracking-widest">{{ __('Notes') }}</label>
                                 <textarea wire:model="editNotes" rows="2"
                                     class="mt-1 w-full px-3 py-2 bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-xs font-semibold text-slate-900 dark:text-white focus:ring-wa-teal/30 focus:border-wa-teal outline-none transition resize-none"></textarea>
                             </div>
                             <div class="flex gap-2 pt-1">
                                 <button wire:click="saveContact"
-                                    class="flex-1 py-2 bg-wa-teal text-white text-[10px] font-black uppercase tracking-widest rounded-xl hover:opacity-90 transition-all">
+                                    class="flex-1 py-2 bg-wa-teal text-white text-tiny font-black uppercase tracking-widest rounded-xl hover:opacity-90 transition-all">
                                     {{ __('Save') }}
                                 </button>
                                 <button wire:click="cancelEdit"
-                                    class="flex-1 py-2 bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400 text-[10px] font-black uppercase tracking-widest rounded-xl hover:opacity-90 transition-all">
+                                    class="flex-1 py-2 bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400 text-tiny font-black uppercase tracking-widest rounded-xl hover:opacity-90 transition-all">
                                     {{ __('Cancel') }}
                                 </button>
                             </div>
@@ -87,13 +87,13 @@
                                 </svg>
                             </button>
                         </div>
-                        <p class="text-[10px] font-bold text-slate-500 mt-1 uppercase tracking-wider">
+                        <p class="text-tiny font-bold text-slate-500 mt-1 uppercase tracking-wider">
                             {{ $contact->phone_number }}
                         </p>
                     @endif
 
                     <div class="mt-3 flex items-center gap-3">
-                        <button wire:click="toggleOptIn" wire:loading.attr="disabled" class="px-2 py-0.5 text-[9px] font-black uppercase tracking-widest rounded-md border transition-all hover:scale-105 active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed
+                        <button wire:click="toggleOptIn" wire:loading.attr="disabled" class="px-2 py-0.5 text-nano font-black uppercase tracking-widest rounded-md border transition-all hover:scale-105 active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed
                                                                 {{ $contact->opt_in_status === 'opted_in'
                 ? 'bg-wa-teal/10 text-wa-teal border-wa-teal/20 hover:bg-rose-50 hover:text-rose-500 hover:border-rose-200'
                 : 'bg-slate-100 dark:bg-slate-800 text-slate-500 border-slate-200 dark:border-slate-700 hover:bg-wa-teal/10 hover:text-wa-teal hover:border-wa-teal/20' 
@@ -105,7 +105,7 @@
 
                         <livewire:chat.whatsapp-call-button :contact="$contact" :key="'call-btn-' . $contact->id" />
 
-                        <button wire:click="downloadVCard" class="px-2 py-0.5 text-[9px] font-black uppercase tracking-widest rounded-md border border-slate-200 dark:border-slate-700 bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-200 transition-all flex items-center gap-1" title="{{ __('Download VCard (.vcf)') }}">
+                        <button wire:click="downloadVCard" class="px-2 py-0.5 text-nano font-black uppercase tracking-widest rounded-md border border-slate-200 dark:border-slate-700 bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-200 transition-all flex items-center gap-1" title="{{ __('Download VCard (.vcf)') }}">
                             <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg>
                             <span>{{ __('VCARD') }}</span>
                         </button>
@@ -138,7 +138,7 @@
                                     <div class="flex flex-col">
                                         <span
                                             class="text-xs font-black text-slate-900 dark:text-white">{{ $conversation->assignee->name }}</span>
-                                        <span class="text-[10px] font-bold text-slate-500 uppercase">{{ __('Agent') }}</span>
+                                        <span class="text-tiny font-bold text-slate-500 uppercase">{{ __('Agent') }}</span>
                                     </div>
                                 </div>
                                 <button wire:click="unassign"
@@ -151,7 +151,7 @@
                             @else
                                 <span class="text-xs font-black text-slate-400 italic uppercase tracking-wider">{{ __('Unassigned') }}</span>
                                 <button wire:click="assignToSelf"
-                                    class="px-4 py-2 bg-wa-teal text-white text-[10px] font-black uppercase tracking-widest rounded-xl shadow-lg shadow-wa-teal/20 hover:scale-105 transition-all">
+                                    class="px-4 py-2 bg-wa-teal text-white text-tiny font-black uppercase tracking-widest rounded-xl shadow-lg shadow-wa-teal/20 hover:scale-105 transition-all">
                                     {{ __('Assign to Me') }}
                                 </button>
                             @endif
@@ -170,7 +170,7 @@
                             <div class="flex flex-wrap gap-2">
                                 @forelse($this->activeTags as $tag)
                                     <span
-                                        class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-[10px] font-black uppercase tracking-wider group {{ $tag->color_code }}"
+                                        class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-tiny font-black uppercase tracking-wider group {{ $tag->color_code }}"
                                         >
                                         <span>{{ $tag->name }}</span>
                                         <button wire:click="toggleConversationTag({{ $tag->id }})"
@@ -185,7 +185,7 @@
                                 @empty
                                     <div
                                         class="w-full py-4 bg-slate-50 dark:bg-slate-900/50 rounded-xl border border-dashed border-slate-100 dark:border-slate-800 flex items-center justify-center">
-                                        <span class="text-[10px] font-black text-slate-400 uppercase tracking-widest opacity-40">{{ __('No tags assigned') }}</span>
+                                        <span class="text-tiny font-black text-slate-400 uppercase tracking-widest opacity-40">{{ __('No tags assigned') }}</span>
                                     </div>
                                 @endforelse
                             </div>
@@ -193,14 +193,14 @@
                             <!-- Tag Picker -->
                             @if(!$this->unassignedTags->isEmpty())
                                 <div class="mt-3" x-data="{ open: false }">
-                                    <button @click="open = !open" class="text-[9px] font-black text-wa-teal uppercase tracking-widest hover:underline flex items-center gap-1">
+                                    <button @click="open = !open" class="text-nano font-black text-wa-teal uppercase tracking-widest hover:underline flex items-center gap-1">
                                         <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M12 4v16m8-8H4" /></svg>
                                         {{ __('Add Conversation Tag') }}
                                     </button>
                                     <div x-show="open" @click.away="open = false" class="mt-2 p-2 bg-white dark:bg-slate-900 rounded-xl shadow-xl border border-slate-100 dark:border-slate-800 flex flex-wrap gap-1.5">
                                         @foreach($this->unassignedTags as $tag)
                                             <button wire:click="toggleConversationTag({{ $tag->id }})" 
-                                                class="px-2 py-1 rounded-lg text-[9px] font-black uppercase tracking-wider transition-all hover:scale-105 {{ $tag->color_code }}">
+                                                class="px-2 py-1 rounded-lg text-nano font-black uppercase tracking-wider transition-all hover:scale-105 {{ $tag->color_code }}">
                                                 {{ $tag->name }}
                                             </button>
                                         @endforeach
@@ -221,20 +221,20 @@
                         <div class="flex flex-wrap gap-2">
                             @if($contact->category)
                                 @php $catColor = $contact->category->color ?: '#64748b'; @endphp
-                                <span class="px-2.5 py-1 rounded-lg text-[10px] font-black uppercase tracking-wider"
+                                <span class="px-2.5 py-1 rounded-lg text-tiny font-black uppercase tracking-wider"
                                     style="background-color: {{ $catColor }}20; color: {{ $catColor }}; border: 1px solid {{ $catColor }}40;">
                                     {{ $contact->category->name }}
                                 </span>
                             @endif
                             @forelse($contact->tags as $tag)
                                 @php $tagColor = $tag->color ?: '#64748b'; @endphp
-                                <span class="px-2.5 py-1 rounded-lg text-[10px] font-black uppercase tracking-wider"
+                                <span class="px-2.5 py-1 rounded-lg text-tiny font-black uppercase tracking-wider"
                                     style="background-color: {{ $tagColor }}10; color: {{ $tagColor }}; border: 1px solid {{ $tagColor }}30;">
                                     {{ $tag->name }}
                                 </span>
                             @empty
                                 @if(!$contact->category)
-                                    <span class="text-[10px] font-bold text-slate-400 italic">{{ __('No permanent identity tags') }}</span>
+                                    <span class="text-tiny font-bold text-slate-400 italic">{{ __('No permanent identity tags') }}</span>
                                 @endif
                             @endforelse
                         </div>
@@ -251,14 +251,14 @@
                                 {{ __('Attributes') }}
                             </h5>
                             <button @click="showData = !showData"
-                                class="text-[10px] font-black text-wa-teal uppercase tracking-widest hover:underline transition-all">
+                                class="text-tiny font-black text-wa-teal uppercase tracking-widest hover:underline transition-all">
                                 <span x-show="!showData">{{ __('View JSON') }}</span>
                                 <span x-show="showData">{{ __('Hide') }}</span>
                             </button>
                         </div>
                         <div x-show="showData" x-collapse>
                             <div
-                                class="bg-slate-900 rounded-2xl p-4 text-[10px] font-mono text-slate-400 overflow-x-auto overflow-y-auto max-h-60 custom-scrollbar shadow-2xl">
+                                class="bg-slate-900 rounded-2xl p-4 text-tiny font-mono text-slate-400 overflow-x-auto overflow-y-auto max-h-60 custom-scrollbar shadow-2xl">
                                 @if($contact->custom_attributes)
                                     <pre
                                         class="p-0 m-0 text-wrap">{{ json_encode($contact->custom_attributes, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES) }}</pre>
@@ -280,14 +280,14 @@
                             @forelse($conversation->notes as $note)
                                 <div class="bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-100 dark:border-yellow-900/30 rounded-xl p-3">
                                     <div class="flex items-center justify-between mb-1">
-                                        <span class="text-[9px] font-black text-yellow-600 dark:text-yellow-500 uppercase">{{ $note->user->name ?? 'System' }}</span>
-                                        <span class="text-[9px] font-medium text-yellow-500/70">{{ $note->created_at->diffForHumans() }}</span>
+                                        <span class="text-nano font-black text-yellow-600 dark:text-yellow-500 uppercase">{{ $note->user->name ?? 'System' }}</span>
+                                        <span class="text-nano font-medium text-yellow-500/70">{{ $note->created_at->diffForHumans() }}</span>
                                     </div>
                                     <p class="text-[11px] font-medium text-slate-700 dark:text-slate-300 leading-relaxed">{{ $note->content }}</p>
                                 </div>
                             @empty
                                 <div class="text-center py-4 opacity-50">
-                                    <span class="text-[10px] font-medium text-slate-500">{{ __('No notes yet') }}</span>
+                                    <span class="text-tiny font-medium text-slate-500">{{ __('No notes yet') }}</span>
                                 </div>
                             @endforelse
                         </div>
@@ -316,15 +316,15 @@
                                 <div class="absolute left-[-5.5px] top-0 w-3 h-3 rounded-full bg-white dark:bg-slate-950 border-2 border-wa-teal shadow-sm"></div>
                                 <div class="bg-white dark:bg-slate-900 rounded-2xl p-4 border border-slate-100 dark:border-slate-800/50 shadow-sm">
                                     <div class="flex justify-between items-start mb-1">
-                                        <span class="text-[10px] font-black uppercase text-wa-teal tracking-widest">{{ __($item['title']) }}</span>
-                                        <span class="text-[9px] font-bold text-slate-400">{{ \Carbon\Carbon::parse($item['occurred_at'])->diffForHumans() }}</span>
+                                        <span class="text-tiny font-black uppercase text-wa-teal tracking-widest">{{ __($item['title']) }}</span>
+                                        <span class="text-nano font-bold text-slate-400">{{ \Carbon\Carbon::parse($item['occurred_at'])->diffForHumans() }}</span>
                                     </div>
                                     <p class="text-[11px] font-medium text-slate-700 dark:text-slate-300 leading-relaxed">{{ __($item['description']) }}</p>
                                 </div>
                             </div>
                         @empty
                             <div class="py-20 text-center opacity-30">
-                                <p class="text-[10px] font-black uppercase tracking-widest">{{ __('No timeline activity found') }}</p>
+                                <p class="text-tiny font-black uppercase tracking-widest">{{ __('No timeline activity found') }}</p>
                             </div>
                         @endforelse
                     </div>
@@ -339,7 +339,7 @@
                             @else
                                 <div class="w-full h-full flex flex-col items-center justify-center p-4">
                                     <svg class="w-8 h-8 text-slate-300 mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg>
-                                    <span class="text-[8px] font-black text-slate-400 uppercase text-center truncate w-full px-2">{{ $file['caption'] ?: 'Document' }}</span>
+                                    <span class="text-micro font-black text-slate-400 uppercase text-center truncate w-full px-2">{{ $file['caption'] ?: 'Document' }}</span>
                                 </div>
                             @endif
                             <div class="absolute inset-0 bg-slate-900/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
@@ -350,7 +350,7 @@
                         </div>
                     @empty
                         <div class="col-span-2 py-20 text-center opacity-30">
-                            <p class="text-[10px] font-black uppercase tracking-widest">{{ __('No media files found') }}</p>
+                            <p class="text-tiny font-black uppercase tracking-widest">{{ __('No media files found') }}</p>
                         </div>
                     @endforelse
                 </div>

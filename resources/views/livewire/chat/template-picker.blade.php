@@ -34,7 +34,7 @@
                         </div>
                         <p class="text-tiny font-bold text-slate-500 mt-1 uppercase tracking-widest">{{ $template->category }} • {{ $template->language }}</p>
                         <div class="mt-3 flex items-center justify-between w-full">
-                            <span class="px-2 py-0.5 bg-wa-teal/10 text-wa-teal rounded text-[9px] font-black uppercase">{{ $template->status }}</span>
+                            <span class="px-2 py-0.5 bg-wa-teal/10 text-wa-teal rounded text-nano font-black uppercase">{{ $template->status }}</span>
                             <svg class="w-4 h-4 text-slate-300 group-hover:text-wa-teal group-hover:translate-x-1 transition-all" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
                             </svg>
@@ -64,7 +64,7 @@
                         <div class="grid grid-cols-1 gap-4">
                             @foreach($templateVariables as $key => $value)
                                 <div class="space-y-1">
-                                    <label class="text-[10px] font-black text-slate-400 uppercase tracking-widest">
+                                    <label class="text-tiny font-black text-slate-400 uppercase tracking-widest">
                                         {{ str_starts_with($key, 'header') ? __('Header Asset URL') : __('Variable') . ' ' . $key }}
                                     </label>
                                     <input type="text" wire:model.live="templateVariables.{{ $key }}"

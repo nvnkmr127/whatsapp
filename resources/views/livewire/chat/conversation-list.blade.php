@@ -14,16 +14,16 @@
         </div>
         <div class="flex items-center gap-3">
             <div class="hidden sm:flex flex-col items-end border-r border-slate-100 dark:border-slate-800 pr-3 mr-1">
-                <span class="text-[8px] font-black uppercase text-slate-400 leading-none mb-0.5">{{ __('Active') }}</span>
+                <span class="text-micro font-black uppercase text-slate-400 leading-none mb-0.5">{{ __('Active') }}</span>
                 <span class="text-xs font-black text-wa-teal leading-none">{{ $stats['active'] }}</span>
             </div>
             <div class="hidden sm:flex flex-col items-end border-r border-slate-100 dark:border-slate-800 pr-3 mr-1">
-                <span class="text-[8px] font-black uppercase text-slate-400 leading-none mb-0.5">{{ __('Response') }}</span>
+                <span class="text-micro font-black uppercase text-slate-400 leading-none mb-0.5">{{ __('Response') }}</span>
                 <span
                     class="text-xs font-black text-slate-800 dark:text-white leading-none">{{ $stats['avg_response'] }}</span>
             </div>
             <div class="hidden sm:flex flex-col items-end">
-                <span class="text-[8px] font-black uppercase text-slate-400 leading-none mb-0.5">{{ __('Pending') }}</span>
+                <span class="text-micro font-black uppercase text-slate-400 leading-none mb-0.5">{{ __('Pending') }}</span>
                 <span
                     class="text-xs font-black {{ $stats['unassigned'] > $pendingWarningLimit ? 'text-rose-500' : 'text-slate-800 dark:text-white' }} leading-none">{{ $stats['unassigned'] }}</span>
             </div>
@@ -36,15 +36,15 @@
         <!-- Assignment Filter Pills -->
         <div class="flex items-center gap-1 p-1 bg-slate-100 dark:bg-slate-900 rounded-xl">
             <button type="button" wire:click="$set('filterAssignment', 'all')"
-                class="flex-1 py-1.5 text-[10px] font-black uppercase tracking-wider rounded-lg transition-all {{ $filterAssignment === 'all' ? 'bg-white dark:bg-slate-800 text-wa-teal shadow-sm' : 'text-slate-500 hover:text-slate-800 dark:hover:text-slate-200' }}">
+                class="flex-1 py-1.5 text-tiny font-black uppercase tracking-wider rounded-lg transition-all {{ $filterAssignment === 'all' ? 'bg-white dark:bg-slate-800 text-wa-teal shadow-sm' : 'text-slate-500 hover:text-slate-800 dark:hover:text-slate-200' }}">
                 {{ __('All') }}
             </button>
             <button type="button" wire:click="$set('filterAssignment', 'mine')"
-                class="flex-1 py-1.5 text-[10px] font-black uppercase tracking-wider rounded-lg transition-all {{ $filterAssignment === 'mine' ? 'bg-white dark:bg-slate-800 text-wa-teal shadow-sm' : 'text-slate-500 hover:text-slate-800 dark:hover:text-slate-200' }}">
+                class="flex-1 py-1.5 text-tiny font-black uppercase tracking-wider rounded-lg transition-all {{ $filterAssignment === 'mine' ? 'bg-white dark:bg-slate-800 text-wa-teal shadow-sm' : 'text-slate-500 hover:text-slate-800 dark:hover:text-slate-200' }}">
                 {{ __('Mine') }}
             </button>
             <button type="button" wire:click="$set('filterAssignment', 'unassigned')"
-                class="flex-1 py-1.5 text-[10px] font-black uppercase tracking-wider rounded-lg transition-all {{ $filterAssignment === 'unassigned' ? 'bg-white dark:bg-slate-800 text-wa-teal shadow-sm' : 'text-slate-500 hover:text-slate-800 dark:hover:text-slate-200' }}">
+                class="flex-1 py-1.5 text-tiny font-black uppercase tracking-wider rounded-lg transition-all {{ $filterAssignment === 'unassigned' ? 'bg-white dark:bg-slate-800 text-wa-teal shadow-sm' : 'text-slate-500 hover:text-slate-800 dark:hover:text-slate-200' }}">
                 {{ __('Unassigned') }}
             </button>
         </div>
@@ -63,11 +63,12 @@
             </div>
             <button type="button" wire:click="$toggle('filterStarred')"
                 class="p-3 rounded-xl transition-all shadow-sm hover:shadow-md border font-bold text-xs flex items-center gap-1 {{ $filterStarred ? 'bg-amber-500 text-white border-amber-500 shadow-md' : 'bg-slate-50 dark:bg-slate-900 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 border-transparent' }}"
-                title="{{ __('Toggle Starred Messages Filter') }}">
+                aria-label="{{ __('Toggle Starred Messages Filter') }}" title="{{ __('Toggle Starred Messages Filter') }}">
                 <svg class="w-5 h-5 {{ $filterStarred ? 'fill-white' : '' }}" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11.049 2.927c.3-.921 1.603-.921 1.902 0l1.519 4.674a1 1 0 00.95.69h4.915c.969 0 1.371 1.24.588 1.81l-3.976 2.888a1 1 0 00-.363 1.118l1.518 4.674c.3.922-.755 1.688-1.538 1.118l-3.976-2.888a1 1 0 00-1.176 0l-3.976 2.888c-.783.57-1.838-.197-1.538-1.118l1.518-4.674a1 1 0 00-.363-1.118l-3.976-2.888c-.784-.57-.38-1.81.588-1.81h4.914a1 1 0 00.951-.69l1.519-4.674z"/></svg>
             </button>
             <button @click="showFilters = !showFilters"
                 :class="showFilters ? 'bg-wa-teal text-white shadow-wa-teal/20' : 'bg-slate-50 dark:bg-slate-900 text-slate-400 hover:text-wa-teal'"
+                aria-label="{{ __('Toggle filters') }}" title="{{ __('Toggle filters') }}"
                 class="p-3 rounded-xl shadow-sm transition-all hover:shadow-md">
                 <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
@@ -77,7 +78,7 @@
         </div>
 
         @if(mb_strlen($search) > 0 && mb_strlen($search) < 3)
-            <p class="px-1 text-[9px] font-bold text-slate-400 uppercase tracking-widest">
+            <p class="px-1 text-nano font-bold text-slate-400 uppercase tracking-widest">
                 {{ __('Searching names and numbers — type 3 characters to include message text') }}
             </p>
         @endif
@@ -88,7 +89,7 @@
             <div class="grid grid-cols-1 gap-3">
                 <!-- Read Status -->
                 <div class="space-y-1">
-                    <label class="text-[9px] font-black text-slate-400 uppercase tracking-widest">{{ __('Read Status') }}</label>
+                    <label class="text-nano font-black text-slate-400 uppercase tracking-widest">{{ __('Read Status') }}</label>
                     <select wire:model.live="filterReadStatus"
                         class="w-full bg-slate-50 dark:bg-slate-900 border-none rounded-lg text-xs font-bold text-slate-700 dark:text-slate-300 focus:ring-2 focus:ring-wa-teal/20 py-2">
                         <option value="all">{{ __('All') }}</option>
@@ -99,7 +100,7 @@
 
                 <!-- Opt-In -->
                 <div class="space-y-1">
-                    <label class="text-[9px] font-black text-slate-400 uppercase tracking-widest">{{ __('Subscription Status') }}</label>
+                    <label class="text-nano font-black text-slate-400 uppercase tracking-widest">{{ __('Subscription Status') }}</label>
                     <select wire:model.live="filterOptIn"
                         class="w-full bg-slate-50 dark:bg-slate-900 border-none rounded-lg text-xs font-bold text-slate-700 dark:text-slate-300 focus:ring-2 focus:ring-wa-teal/20 py-2">
                         <option value="all">{{ __('Any') }}</option>
@@ -110,7 +111,7 @@
 
                 <!-- Blocked -->
                 <div class="space-y-1">
-                    <label class="text-[9px] font-black text-slate-400 uppercase tracking-widest">{{ __('Contact Status') }}</label>
+                    <label class="text-nano font-black text-slate-400 uppercase tracking-widest">{{ __('Contact Status') }}</label>
                     <select wire:model.live="filterBlocked"
                         class="w-full bg-slate-50 dark:bg-slate-900 border-none rounded-lg text-xs font-bold text-slate-700 dark:text-slate-300 focus:ring-2 focus:ring-wa-teal/20 py-2">
                         <option value="all">{{ __('All') }}</option>
@@ -121,7 +122,7 @@
 
                 <!-- Tag -->
                 <div class="space-y-1">
-                    <label class="text-[9px] font-black text-slate-400 uppercase tracking-widest">{{ __('Tag') }}</label>
+                    <label class="text-nano font-black text-slate-400 uppercase tracking-widest">{{ __('Tag') }}</label>
                     <select wire:model.live="filterTagId"
                         class="w-full bg-slate-50 dark:bg-slate-900 border-none rounded-lg text-xs font-bold text-slate-700 dark:text-slate-300 focus:ring-2 focus:ring-wa-teal/20 py-2">
                         <option value="">{{ __('All Tags') }}</option>
@@ -133,7 +134,7 @@
             </div>
 
             <button wire:click="resetFilters"
-                class="w-full py-2 bg-slate-50 dark:bg-slate-900 text-slate-500 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg text-[10px] font-black uppercase tracking-widest transition-colors">
+                class="w-full py-2 bg-slate-50 dark:bg-slate-900 text-slate-500 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg text-tiny font-black uppercase tracking-widest transition-colors">
                 {{ __('Clear Filters') }}
             </button>
         </div>
@@ -204,7 +205,7 @@
                     @if($unreadCount > 0)
                         <div
                             class="absolute -top-1 -right-1 h-5 min-w-[20px] px-1.5 flex items-center justify-center rounded-full bg-wa-teal border-2 border-white dark:border-slate-800 shadow-sm animate-pulse">
-                            <span class="text-[9px] font-black text-white leading-none">{{ $unreadCount }}</span>
+                            <span class="text-nano font-black text-white leading-none">{{ $unreadCount }}</span>
                         </div>
                     @endif
                 </div>
@@ -217,7 +218,7 @@
                             {{ $displayName }}
                         </h3>
                         <div class="flex flex-col items-end">
-                            <span class="text-[9px] font-mono font-bold text-slate-400">
+                            <span class="text-nano font-mono font-bold text-slate-400">
                                 {{ $this->formatTime($lastMsgAt ? ($lastMsgAt instanceof \Carbon\Carbon ? $lastMsgAt : \Carbon\Carbon::parse($lastMsgAt)) : null) }}
                             </span>
                             @if($slaDueCarbon && $status !== 'closed')
@@ -238,7 +239,7 @@
                                     }
                                 }" class="mt-0.5">
                                     <span :class="countdown === 'BREACH' ? 'text-rose-500' : 'text-amber-500'" 
-                                          class="text-[8px] font-black uppercase tracking-tighter" x-text="countdown"></span>
+                                          class="text-micro font-black uppercase tracking-tighter" x-text="countdown"></span>
                                 </div>
                             @endif
                         </div>
@@ -249,7 +250,7 @@
                     @if(count($tags) > 0)
                         <div class="flex flex-wrap gap-1 mt-1">
                             @foreach($tags as $tag)
-                                <span class="px-1.5 py-0.5 rounded-md text-[8px] font-black uppercase tracking-wider {{ $tag->color_code }}">
+                                <span class="px-1.5 py-0.5 rounded-md text-micro font-black uppercase tracking-wider {{ $tag->color_code }}">
                                     {{ $tag->name }}
                                 </span>
                             @endforeach
@@ -278,7 +279,7 @@
                             d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636" />
                     </svg>
                 </div>
-                <p class="text-[10px] font-black text-slate-400 uppercase tracking-widest">{{ __('No conversations found') }}</p>
+                <p class="text-tiny font-black text-slate-400 uppercase tracking-widest">{{ __('No conversations found') }}</p>
             </div>
         @endforelse
 
@@ -304,7 +305,7 @@
                 <button wire:click="bulkClose" class="px-2.5 py-1.5 bg-rose-600/80 hover:bg-rose-600 text-white text-micro font-black uppercase rounded-lg transition-colors" title="{{ __('Close') }}">
                     {{ __('Close') }}
                 </button>
-                <button wire:click="$set('selectedConversationIds', [])" class="p-1.5 text-slate-400 hover:text-white transition-colors">
+                <button wire:click="$set('selectedConversationIds', [])" aria-label="{{ __('Clear selection') }}" title="{{ __('Clear selection') }}" class="p-1.5 text-slate-400 hover:text-white transition-colors">
                     <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" /></svg>
                 </button>
             </div>

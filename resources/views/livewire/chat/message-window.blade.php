@@ -27,7 +27,7 @@
             <!-- Avatar Section -->
             <div class="relative group">
                 <div
-                    class="absolute -inset-1 bg-gradient-to-tr from-wa-teal to-emerald-400 rounded-2xl opacity-0 group-hover:opacity-20 transition-opacity blur-sm">
+                    class="absolute -inset-1 bg-gradient-to-tr from-wa-teal to-wa-green rounded-2xl opacity-0 group-hover:opacity-20 transition-opacity blur-sm">
                 </div>
                 <img src="https://api.dicebear.com/9.x/micah/svg?seed={{ $conversation?->contact?->name ?? 'Unknown' }}"
                     class="relative h-11 w-11 rounded-2xl bg-slate-100 dark:bg-slate-800 shadow-sm border border-slate-200 dark:border-slate-700 object-cover transition-transform duration-300 group-hover:scale-105">
@@ -68,6 +68,7 @@
             <!-- Sound Mute Toggle -->
             <button type="button" @click="$store.chat.toggleSoundMute()" 
                 class="p-2 text-slate-400 hover:text-wa-teal rounded-xl transition-all"
+                :aria-label="$store.chat.soundMuted ? '{{ __('Unmute Sounds') }}' : '{{ __('Mute Sounds') }}'"
                 :title="$store.chat.soundMuted ? '{{ __('Unmute Sounds') }}' : '{{ __('Mute Sounds') }}'">
                 <template x-if="!$store.chat.soundMuted">
                     <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.536 8.464a5 5 0 010 7.072m2.828-9.9a9 9 0 010 12.728M5.586 15H4a1 1 0 01-1-1v-4a1 1 0 011-1h1.586l4.707-4.707C10.923 3.663 12 4.109 12 5v14c0 .891-1.077 1.337-1.707.707L5.586 15z" /></svg>
@@ -200,17 +201,17 @@
 
                 @if($conversation?->contact?->is_bot_paused)
                     <div class="absolute top-full left-1/2 -translate-x-1/2 mt-2 w-48 bg-white dark:bg-slate-800 p-2 rounded-xl shadow-2xl border border-slate-100 dark:border-slate-700 opacity-0 group-hover/bot-status:opacity-100 transition-opacity z-50 pointer-events-none">
-                        <p class="text-[9px] text-slate-500 uppercase font-black tracking-widest mb-1">{{ __('Pause Info') }}</p>
-                        <p class="text-[10px] text-slate-700 dark:text-slate-300 font-bold">
+                        <p class="text-nano text-slate-500 uppercase font-black tracking-widest mb-1">{{ __('Pause Info') }}</p>
+                        <p class="text-tiny text-slate-700 dark:text-slate-300 font-bold">
                             {{ __('Reason') }}: <span class="capitalize">{{ $conversation?->contact?->bot_paused_reason ?? 'Manual' }}</span>
                         </p>
                         @if($conversation?->contact?->bot_paused_at)
-                            <p class="text-[10px] text-slate-700 dark:text-slate-300 font-bold">
+                            <p class="text-tiny text-slate-700 dark:text-slate-300 font-bold">
                                 {{ __('Paused') }}: <span>{{ $conversation?->contact?->bot_paused_at->diffForHumans() }}</span>
                             </p>
                         @endif
                         @if($conversation?->contact?->bot_paused_until)
-                            <p class="text-[10px] text-wa-teal font-bold mt-1">
+                            <p class="text-tiny text-wa-teal font-bold mt-1">
                                 {{ __('Resumes') }}: <span>{{ $conversation?->contact?->bot_paused_until->diffForHumans() }}</span>
                             </p>
                         @endif
@@ -246,7 +247,7 @@
             <div class="relative" x-data="{ showMore: false }">
                 <button @click="showMore = !showMore"
                     class="p-2.5 text-slate-400 hover:text-slate-600 hover:bg-slate-50 dark:hover:bg-slate-800 rounded-xl transition-all"
-                    title="{{ __('More Actions') }}">
+                    aria-label="{{ __('More Actions') }}" title="{{ __('More Actions') }}">
                     <svg class="w-6 h-6" fill="currentColor" viewBox="0 0 20 20">
                         <path
                             d="M10 6a2 2 0 110-4 2 2 0 010 4zM10 12a2 2 0 110-4 2 2 0 010 4zM10 18a2 2 0 110-4 2 2 0 010 4z" />
@@ -341,7 +342,7 @@
 
             <button @click="$dispatch('toggle-details')"
                 class="p-2.5 text-slate-400 hover:text-wa-teal hover:bg-wa-teal/5 rounded-xl transition-all group"
-                title="{{ __('View Profile Info') }}">
+                aria-label="{{ __('View Profile Info') }}" title="{{ __('View Profile Info') }}">
                 <svg class="w-6 h-6 transition-transform group-hover:scale-110" fill="none" stroke="currentColor"
                     viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
@@ -436,12 +437,13 @@
                 <div>
                     <h4 class="text-xs font-black text-slate-800 dark:text-white uppercase tracking-tight truncate max-w-[200px]"
                         x-text="attachmentName"></h4>
-                    <span class="text-[10px] font-bold text-slate-400 uppercase tracking-widest"
+                    <span class="text-tiny font-bold text-slate-400 uppercase tracking-widest"
                         x-text="$wire.newAttachmentData ? 'Ready to send' : 'Uploading…'"></span>
                 </div>
             </div>
 
             <button type="button" @click="clearAttachment()"
+                aria-label="{{ __('Remove attachment') }}" title="{{ __('Remove attachment') }}"
                 class="p-2.5 rounded-xl bg-rose-50 hover:bg-rose-100 text-rose-500 transition-all hover:scale-110 active:scale-95 border border-rose-100/50">
                 <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M6 18L18 6M6 6l12 12" />
@@ -495,6 +497,7 @@
 
                 <div class="flex items-center gap-3 z-10">
                     <button @click="stopRecording(false)"
+                        aria-label="{{ __('Cancel recording') }}" title="{{ __('Cancel recording') }}"
                         class="p-3 bg-white/10 hover:bg-white/20 rounded-full transition-all hover:rotate-90">
                         <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5"
@@ -528,6 +531,7 @@
                     accept="image/*,video/*,audio/*,.pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx">
 
                 <button type="button" @click="$refs.fileInput.click()"
+                    aria-label="{{ __('Attach file') }}" title="{{ __('Attach file') }}"
                     class="p-3 bg-slate-50 dark:bg-slate-900 text-slate-400 hover:text-wa-teal hover:bg-wa-teal/5 rounded-xl transition-all hover:scale-110 active:scale-95 shadow-sm border border-slate-100/50 dark:border-slate-800/50">
                     <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5"
@@ -538,12 +542,12 @@
                 <!-- Input Field Container Box -->
                 <div class="flex-1 relative group bg-slate-50 dark:bg-slate-800/90 rounded-2xl border border-slate-200 dark:border-slate-700/80 p-2 shadow-sm transition-all focus-within:ring-2 focus-within:ring-wa-teal/20 focus-within:border-wa-teal/50">
                     <template x-if="replyingTo">
-                        <div class="mb-2 p-2.5 bg-slate-200/60 dark:bg-slate-900/60 rounded-xl border-l-4 border-[#d95a2b] flex justify-between items-center transition-all">
+                        <div class="mb-2 p-2.5 bg-slate-200/60 dark:bg-slate-900/60 rounded-xl border-l-4 border-brand-600 flex justify-between items-center transition-all">
                             <div class="overflow-hidden min-w-0 pr-2">
-                                <p class="text-[13px] font-semibold text-[#d95a2b] mb-0.5 truncate" x-text="replyingTo.is_outbound ? 'You' : {{ \Illuminate\Support\Js::from($conversation->contact->name ?? $conversation->contact->phone_number) }}"></p>
+                                <p class="text-wa-caption font-semibold text-brand-600 mb-0.5 truncate" x-text="replyingTo.is_outbound ? 'You' : {{ \Illuminate\Support\Js::from($conversation->contact->name ?? $conversation->contact->phone_number) }}"></p>
                                 <p class="text-xs text-slate-600 dark:text-slate-300 line-clamp-2 whitespace-pre-line break-words leading-snug" x-text="replyingTo.content || (replyingTo.type ? replyingTo.type.charAt(0).toUpperCase() + replyingTo.type.slice(1) : '')"></p>
                             </div>
-                            <button type="button" @click="clearReply()" class="p-1.5 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 transition-colors shrink-0">
+                            <button type="button" @click="clearReply()" aria-label="{{ __('Cancel reply') }}" title="{{ __('Cancel reply') }}" class="p-1.5 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 transition-colors shrink-0">
                                 <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
                             </button>
                         </div>
@@ -592,6 +596,7 @@
                 </div>
 
                 <button type="submit" :disabled="$store.chat.isLockedForMe()"
+                    :aria-label="(canSend || isNoteMode) ? '{{ __('Send message') }}' : '{{ __('Record voice message') }}'"
                     class="h-14 w-14 flex items-center justify-center text-white rounded-[1.5rem] transition-all group"
                     :class="canSend ? 'bg-wa-teal shadow-wa-teal/20' : 'bg-slate-900 shadow-slate-900/10 hover:scale-105 active:scale-95'">
                     <template x-if="canSend || isNoteMode">
@@ -767,7 +772,7 @@
 
                     <div class="p-4 pt-8">
                         <p
-                            class="text-[13px] text-slate-800 dark:text-slate-200 whitespace-pre-wrap leading-tight font-sans">
+                            class="text-wa-caption text-slate-800 dark:text-slate-200 whitespace-pre-wrap leading-tight font-sans">
                             {!! $this->livePreviewText !!}
                         </p>
                     </div>

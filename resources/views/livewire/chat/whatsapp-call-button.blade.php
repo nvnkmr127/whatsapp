@@ -32,7 +32,7 @@
                 </svg>
 
                 @if($eligibility && ($eligibility['eligible'] ?? false) && !$isLoading)
-                    <span class="text-[10px] font-black uppercase tracking-widest hidden group-hover:block ml-1">Call</span>
+                    <span class="text-tiny font-black uppercase tracking-widest hidden group-hover:block ml-1">Call</span>
                 @endif
             </div>
         </button>
@@ -41,7 +41,7 @@
         @if(!$isLoading && $eligibility && !($eligibility['eligible'] ?? false))
             <div x-show="showTooltip" x-transition:enter="transition ease-out duration-200"
                 x-transition:enter-start="opacity-0 scale-95" x-transition:enter-end="opacity-100 scale-100" x-cloak
-                class="absolute z-50 top-full translate-y-2 left-1/2 -translate-x-1/2 w-48 p-2 bg-slate-900 text-white text-[10px] rounded-lg shadow-xl text-center leading-tight font-medium">
+                class="absolute z-50 top-full translate-y-2 left-1/2 -translate-x-1/2 w-48 p-2 bg-slate-900 text-white text-tiny rounded-lg shadow-xl text-center leading-tight font-medium">
                 <div class="mb-1 text-rose-400 font-black uppercase flex items-center justify-center gap-1">
                     <svg class="w-3 h-3" fill="currentColor" viewBox="0 0 20 20">
                         <path fill-rule="evenodd"
@@ -68,7 +68,7 @@
         <!-- Tooltip for Ready State (Optional) -->
         @if(!$isLoading && $eligibility && ($eligibility['eligible'] ?? false))
             <div x-show="showTooltip" x-transition:enter="transition ease-out duration-200" x-cloak
-                class="absolute z-50 top-full translate-y-2 left-1/2 -translate-x-1/2 px-2 py-1 bg-wa-teal text-white text-[9px] font-black uppercase tracking-widest rounded shadow-lg whitespace-nowrap">
+                class="absolute z-50 top-full translate-y-2 left-1/2 -translate-x-1/2 px-2 py-1 bg-wa-teal text-white text-nano font-black uppercase tracking-widest rounded shadow-lg whitespace-nowrap">
                 Start WhatsApp Call
                 <div
                     class="absolute bottom-full left-1/2 -translate-x-1/2 -mb-1 border-4 border-transparent border-b-wa-teal">

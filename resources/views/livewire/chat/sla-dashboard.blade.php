@@ -53,7 +53,7 @@
                                 <h4 class="font-bold text-gray-900 flex items-center">
                                     {{ $policy->name }}
                                     @if($policy->is_default)
-                                        <span class="ml-2 px-1.5 py-0.5 bg-indigo-100 text-indigo-700 text-[10px] uppercase font-black rounded">Default</span>
+                                        <span class="ml-2 px-1.5 py-0.5 bg-indigo-100 text-indigo-700 text-tiny uppercase font-black rounded">Default</span>
                                     @endif
                                 </h4>
                                 <div class="mt-2 space-y-1">
@@ -112,7 +112,7 @@
                                         {{ $conv->slaPolicy?->name ?? '--' }}
                                     </td>
                                     <td class="px-6 py-4 whitespace-nowrap">
-                                        <span class="px-2 py-1 text-[10px] font-black uppercase bg-red-100 text-red-700 rounded-full">Breached</span>
+                                        <span class="px-2 py-1 text-tiny font-black uppercase bg-red-100 text-red-700 rounded-full">Breached</span>
                                     </td>
                                 </tr>
                             @empty
@@ -139,7 +139,7 @@
                                     <p class="text-sm font-bold text-gray-900">{{ $conv->contact?->name }}</p>
                                     <p class="text-xs text-gray-500">Assigned: {{ $conv->assignee?->name ?? 'Unassigned' }}</p>
                                 </div>
-                                <span class="text-[10px] font-black text-yellow-700 uppercase bg-yellow-100 px-2 py-0.5 rounded-full">Warn</span>
+                                <span class="text-tiny font-black text-yellow-700 uppercase bg-yellow-100 px-2 py-0.5 rounded-full">Warn</span>
                             </div>
                         @endforeach
                     </div>

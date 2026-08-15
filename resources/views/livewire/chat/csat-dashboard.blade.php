@@ -60,12 +60,12 @@
                     <div class="flex-1 flex flex-col items-center">
                         <div class="w-full bg-indigo-50 rounded-t-lg relative group" style="height: {{ ($t['avg'] ?? 0) * 20 }}%">
                             @if($t['avg'])
-                                <div class="absolute -top-8 left-1/2 -translate-x-1/2 bg-gray-800 text-white px-2 py-1 rounded text-[10px] opacity-0 group-hover:opacity-100 transition-opacity">
+                                <div class="absolute -top-8 left-1/2 -translate-x-1/2 bg-gray-800 text-white px-2 py-1 rounded text-tiny opacity-0 group-hover:opacity-100 transition-opacity">
                                     {{ $t['avg'] }}★ ({{ $t['count'] }})
                                 </div>
                             @endif
                         </div>
-                        <span class="text-[10px] text-gray-400 mt-2">{{ $t['week'] }}</span>
+                        <span class="text-tiny text-gray-400 mt-2">{{ $t['week'] }}</span>
                     </div>
                 @endforeach
             </div>
@@ -145,7 +145,7 @@
                                     <span class="font-bold mr-1">{{ $r->rating }}</span>
                                     <div class="flex text-yellow-400">
                                         @for($i=1; $i<=5; $i++)
-                                            <span class="text-[10px]">{{ $i <= $r->rating ? '★' : '☆' }}</span>
+                                            <span class="text-tiny">{{ $i <= $r->rating ? '★' : '☆' }}</span>
                                         @endfor
                                     </div>
                                 </div>

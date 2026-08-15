@@ -25,7 +25,7 @@
             <div>
                 <h2 class="text-lg font-black text-slate-900 dark:text-white uppercase tracking-tight">Quick <span
                         class="text-wa-teal">Inbox</span></h2>
-                <p class="text-[10px] font-black text-slate-400 uppercase tracking-widest">{{ $unreadCount }} Unread
+                <p class="text-tiny font-black text-slate-400 uppercase tracking-widest">{{ $unreadCount }} Unread
                     Signals</p>
             </div>
             <div class="flex items-center gap-2">
@@ -75,8 +75,8 @@
             x-transition:enter-start="opacity-0 translate-x-4" x-transition:enter-end="opacity-100 translate-x-0"
             class="absolute right-[calc(100%+16px)] top-1/2 -translate-y-1/2 bg-white dark:bg-slate-900 px-4 py-3 rounded-2xl shadow-2xl border border-slate-100 dark:border-slate-800 w-48 pointer-events-none"
             x-cloak>
-            <p class="text-[8px] font-black text-wa-teal uppercase tracking-widest mb-1">Latest Signal</p>
-            <p class="text-[10px] font-bold text-slate-700 dark:text-slate-300 truncate">
+            <p class="text-micro font-black text-wa-teal uppercase tracking-widest mb-1">Latest Signal</p>
+            <p class="text-tiny font-bold text-slate-700 dark:text-slate-300 truncate">
                 {{ $latestMessage ? $latestMessage->content : 'No signals' }}
             </p>
         </div>

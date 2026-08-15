@@ -11,6 +11,19 @@
 @tailwind utilities;
 
 @layer base {
+    /* Keyboard focus visibility (a11y). :focus-visible only renders during
+       keyboard navigation, never on mouse/touch — zero change for pointer users. */
+    a:focus-visible,
+    button:focus-visible,
+    [role="button"]:focus-visible,
+    input:focus-visible,
+    select:focus-visible,
+    textarea:focus-visible,
+    [tabindex]:focus-visible {
+        outline: 2px solid theme('colors.wa.teal');
+        outline-offset: 2px;
+    }
+
     :root {
         --wa-brand: theme('colors.wa.brand');
         --wa-teal: theme('colors.wa.teal');
