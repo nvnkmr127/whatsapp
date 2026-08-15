@@ -155,6 +155,10 @@ class MediaController extends Controller
         $dir = $isVoiceNote ? 'voice-notes' : 'mobile/uploads/' . $type;
         $path = Storage::disk($disk)->putFileAs($dir, $file, $fileName);
 
+        // Capture size before deleting the temp file — $file points at the transcoded
+        // /tmp ogg for voice notes, so getSize() after unlink would stat a missing file.
+        $sizeBytes = $file->getSize();
+
         if (isset($tmpOggFileToUnlink) && file_exists($tmpOggFileToUnlink)) {
             @unlink($tmpOggFileToUnlink);
         }
@@ -176,7 +180,7 @@ class MediaController extends Controller
             'disk' => $disk,
             'path' => $path,
             'full_url' => $fullUrl,
-            'size_bytes' => $file->getSize(),
+            'size_bytes' => $sizeBytes,
         ]);
 
         return response()->json([
@@ -185,7 +189,7 @@ class MediaController extends Controller
             'path' => $path,
             'fileName' => $originalName,
             'mime' => $mime,
-            'size' => $file->getSize(),
+            'size' => $sizeBytes,
             'type' => $type
         ]);
     }
