@@ -51,6 +51,7 @@ use Illuminate\Queue\Events\JobProcessing;
 use Illuminate\Support\Facades\Broadcast;
 use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Facades\Gate;
+use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Queue;
 use Illuminate\Support\Facades\RateLimiter;
@@ -87,6 +88,16 @@ class AppServiceProvider extends ServiceProvider
         if ($this->app->environment('testing')) {
             Model::preventAccessingMissingAttributes(false);
         }
+
+        // ── Bound every outbound HTTP call ──────────────────────────────
+        // Guzzle defaults to no timeout, so a slow/unresponsive endpoint
+        // (Meta, FCM, etc.) can pin an Octane worker forever. A per-call
+        // ->timeout() still overrides this default when a longer bound is
+        // genuinely needed.
+        Http::globalOptions([
+            'timeout' => 60,
+            'connect_timeout' => 10,
+        ]);
 
         // ── Make silent data loss observable in production ──────────────
         // Outside production, writing an attribute missing from $fillable
