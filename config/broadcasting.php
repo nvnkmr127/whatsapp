@@ -79,4 +79,21 @@ return [
 
     ],
 
+    /*
+    |--------------------------------------------------------------------------
+    | Public Client Websocket Config
+    |--------------------------------------------------------------------------
+    |
+    | The PUBLIC client-facing Reverb/Pusher values handed to the mobile app.
+    | Defined here (not read via env() at runtime) so they survive config:cache
+    | under Octane — env() outside config returns null once config is cached.
+    |
+    */
+    'client' => [
+        'key'    => env('REVERB_APP_KEY') ?? env('PUSHER_APP_KEY'),
+        'host'   => env('REVERB_HOST') ?? env('PUSHER_HOST') ?? '127.0.0.1',
+        'port'   => env('REVERB_PORT') ?? env('PUSHER_PORT') ?? 443,
+        'scheme' => env('REVERB_SCHEME') ?? env('PUSHER_SCHEME') ?? 'https',
+    ],
+
 ];

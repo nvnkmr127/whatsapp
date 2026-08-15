@@ -340,14 +340,9 @@ class AuthController extends Controller
 
     private function getWebsocketConfig()
     {
-        // Return the PUBLIC client-facing Reverb/Pusher config, not the internal
-        // server-binding config (REVERB_SERVER_HOST/PORT are for the Reverb process).
-        return [
-            'key'    => env('REVERB_APP_KEY') ?? env('PUSHER_APP_KEY'),
-            'host'   => env('REVERB_HOST') ?? env('PUSHER_HOST') ?? '127.0.0.1',
-            'port'   => env('REVERB_PORT') ?? env('PUSHER_PORT') ?? 443,
-            'scheme' => env('REVERB_SCHEME') ?? env('PUSHER_SCHEME') ?? 'https',
-        ];
+        // PUBLIC client-facing Reverb/Pusher config, read from config (cache-safe)
+        // rather than env() at runtime, which returns null under config:cache + Octane.
+        return config('broadcasting.client');
     }
 }
 
