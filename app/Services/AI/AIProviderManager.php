@@ -129,7 +129,22 @@ class AIProviderManager
         }
 
         if (! isset($options['model'])) {
-            $options['model'] = get_setting("ai_model_{$team->id}");
+            $model = get_setting("ai_model_{$team->id}");
+
+            // Guard against a stale/invalid stored model id (e.g. a nonexistent or
+            // renamed model) silently failing every AI request. Only pass it through
+            // if the provider recognizes it; otherwise let the provider use its default.
+            if ($model) {
+                $known = method_exists($provider, 'getAvailableModels')
+                    ? array_keys($provider->getAvailableModels())
+                    : [];
+
+                if (! $known || in_array($model, $known, true)) {
+                    $options['model'] = $model;
+                } else {
+                    Log::warning("Ignoring unknown AI model '{$model}' for team {$team->id}; using {$providerName} default.");
+                }
+            }
         }
 
         $result = $provider->chat($messages, $options);
