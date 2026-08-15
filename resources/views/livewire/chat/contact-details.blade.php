@@ -13,6 +13,7 @@
         </div>
         <div class="flex items-center gap-2">
             <button @click="$dispatch('toggle-details')"
+                aria-label="{{ __('Close details') }}" title="{{ __('Close details') }}"
                 class="p-2 text-slate-400 hover:text-rose-500 transition-colors bg-slate-50 dark:bg-slate-800/50 rounded-lg">
                 <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
@@ -79,7 +80,7 @@
                             <h4 class="text-sm font-black text-slate-800 dark:text-white tracking-tight text-center">
                                 {{ $contact->name }}
                             </h4>
-                            <button wire:click="startEdit" title="{{ __('Edit Contact') }}"
+                            <button wire:click="startEdit" aria-label="{{ __('Edit Contact') }}" title="{{ __('Edit Contact') }}"
                                 class="p-1 text-slate-400 hover:text-wa-teal transition-colors rounded-lg hover:bg-wa-teal/10">
                                 <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5"
@@ -142,6 +143,7 @@
                                     </div>
                                 </div>
                                 <button wire:click="unassign"
+                                    aria-label="{{ __('Unassign agent') }}" title="{{ __('Unassign agent') }}"
                                     class="p-2 text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-500/10 rounded-xl transition-all">
                                     <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5"
@@ -174,6 +176,7 @@
                                         >
                                         <span>{{ $tag->name }}</span>
                                         <button wire:click="toggleConversationTag({{ $tag->id }})"
+                                            aria-label="{{ __('Remove tag') }}: {{ $tag->name }}" title="{{ __('Remove tag') }}"
                                             class="opacity-60 hover:opacity-100 transition-opacity">
                                             <svg class="w-3 h-3" fill="currentColor" viewBox="0 0 20 20">
                                                 <path fill-rule="evenodd"
@@ -297,6 +300,7 @@
                                 placeholder="{{ __('Add an internal note...') }}"></textarea>
                             <div class="absolute right-3 bottom-3">
                                 <button type="submit"
+                                    aria-label="{{ __('Add note') }}" title="{{ __('Add note') }}"
                                     class="p-2 bg-slate-900 dark:bg-wa-teal text-white rounded-xl shadow-lg hover:scale-110 active:scale-95 transition-all">
                                     <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5"

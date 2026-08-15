@@ -68,8 +68,8 @@
                                 </div>
                             </div>
                             <div class="flex space-x-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                                <button wire:click="editPolicy({{ $policy->id }})" class="p-1 text-gray-400 hover:text-indigo-600"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"></path></svg></button>
-                                <button wire:confirm="Are you sure you want to delete this policy?" wire:click="deletePolicy({{ $policy->id }})" class="p-1 text-gray-400 hover:text-red-600"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg></button>
+                                <button wire:click="editPolicy({{ $policy->id }})" aria-label="{{ __('Edit policy') }}" title="{{ __('Edit policy') }}" class="p-1 text-gray-400 hover:text-indigo-600"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"></path></svg></button>
+                                <button wire:confirm="Are you sure you want to delete this policy?" wire:click="deletePolicy({{ $policy->id }})" aria-label="{{ __('Delete policy') }}" title="{{ __('Delete policy') }}" class="p-1 text-gray-400 hover:text-red-600"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg></button>
                             </div>
                         </div>
                     </div>
@@ -117,7 +117,7 @@
                                 </tr>
                             @empty
                                 <tr>
-                                    <td colspan="4" class="px-6 py-8 text-center text-gray-500 text-sm">No active breaches. Great job! 🚀</td>
+                                    <td colspan="4" class="px-6 py-8 text-center text-gray-500 text-sm">No active breaches. Great job!</td>
                                 </tr>
                             @endforelse
                         </tbody>
@@ -154,7 +154,7 @@
             <div class="bg-white rounded-2xl shadow-2xl w-full max-w-md overflow-hidden">
                 <div class="p-6 border-b border-gray-100 flex justify-between items-center">
                     <h2 class="text-xl font-bold text-gray-800">{{ $editingPolicyId ? 'Edit' : 'New' }} SLA Policy</h2>
-                    <button wire:click="resetPolicyForm" class="text-gray-400 hover:text-gray-600"><svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg></button>
+                    <button wire:click="resetPolicyForm" aria-label="{{ __('Close') }}" title="{{ __('Close') }}" class="text-gray-400 hover:text-gray-600"><svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg></button>
                 </div>
                 <div class="p-6 space-y-4">
                     <div>

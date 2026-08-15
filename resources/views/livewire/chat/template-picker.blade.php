@@ -5,7 +5,7 @@
             <div class="flex justify-between items-center mb-6">
                 <h2 class="text-xl font-black text-slate-800 dark:text-white uppercase tracking-tight">
                     {{ __('Select') }} <span class="text-wa-teal">{{ __('Template') }}</span></h2>
-                <button @click="$wire.showTemplateListModal = false" class="text-slate-400 hover:text-slate-600">
+                <button @click="$wire.showTemplateListModal = false" aria-label="{{ __('Close') }}" title="{{ __('Close') }}" class="text-slate-400 hover:text-slate-600">
                     <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
                     </svg>

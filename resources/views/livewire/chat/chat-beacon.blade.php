@@ -38,6 +38,7 @@
                     </svg>
                 </a>
                 <button @click="showPanel = false"
+                    aria-label="{{ __('Close chat panel') }}" title="{{ __('Close chat panel') }}"
                     class="p-2 hover:bg-rose-50 dark:hover:bg-rose-900/10 rounded-xl transition-colors text-slate-400 hover:text-rose-500">
                     <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5"
@@ -52,6 +53,7 @@
             @if($activeConversationId)
                 <div class="flex-1 overflow-hidden relative">
                     <button @click="$set('activeConversationId', null)"
+                        aria-label="{{ __('Back to conversations') }}" title="{{ __('Back to conversations') }}"
                         class="absolute top-4 left-4 z-10 p-2 bg-white/80 dark:bg-slate-800/80 backdrop-blur-sm rounded-lg shadow-sm border border-slate-100 dark:border-slate-700 text-slate-500 hover:text-wa-teal transition-all">
                         <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M15 19l-7-7 7-7" />
@@ -83,6 +85,7 @@
 
         <!-- Main Button -->
         <button @click="showPanel = !showPanel"
+            :aria-label="showPanel ? '{{ __('Close chat') }}' : '{{ __('Open chat') }}'"
             class="relative h-16 w-16 bg-white dark:bg-slate-900 rounded-[1.5rem] shadow-2xl border border-slate-100 dark:border-slate-800 flex items-center justify-center transition-all duration-300 hover:scale-110 active:scale-95 group-hover:shadow-wa-teal/20"
             :class="showPanel ? 'bg-wa-teal border-wa-teal text-white' : 'text-wa-teal'">
 

@@ -63,7 +63,7 @@
                 <input type="text" wire:model="messageBody" @keyup="whisperTyping"
                     class="flex-1 rounded-full border-gray-300 focus:border-green-500 focus:ring-green-500 text-sm py-2 px-4 bg-gray-50"
                     placeholder="Type a message...">
-                <button type="submit" class="p-2 bg-green-500 text-white rounded-full hover:bg-green-600">
+                <button type="submit" aria-label="{{ __('Send message') }}" title="{{ __('Send message') }}" class="p-2 bg-green-500 text-white rounded-full hover:bg-green-600">
                     <svg class="w-5 h-5 transform rotate-90 translate-x-[1px]" fill="currentColor" viewBox="0 0 20 20">
                         <path
                             d="M10.894 2.553a1 1 0 00-1.788 0l-7 14a1 1 0 001.169 1.409l5-1.429A1 1 0 009 15.571V11a1 1 0 112 0v4.571a1 1 0 00.725.962l5 1.428a1 1 0 001.17-1.408l-7-14z">

@@ -7,7 +7,7 @@
 
     <!-- Button Container -->
     <div @mouseenter="showTooltip = true" @mouseleave="showTooltip = false" class="relative">
-        <button wire:click="initiateCall" wire:loading.attr="disabled" @if($isLoading || ($eligibility && !($eligibility['eligible'] ?? false))) disabled @endif class="group relative flex items-center justify-center p-2.5 rounded-xl transition-all duration-300
+        <button wire:click="initiateCall" wire:loading.attr="disabled" aria-label="{{ __('Start WhatsApp call') }}" title="{{ __('Start WhatsApp call') }}" @if($isLoading || ($eligibility && !($eligibility['eligible'] ?? false))) disabled @endif class="group relative flex items-center justify-center p-2.5 rounded-xl transition-all duration-300
                 {{ $isLoading ? 'bg-slate-100 dark:bg-slate-800 animate-pulse cursor-wait' : '' }}
                 {{ !$isLoading && $eligibility && ($eligibility['eligible'] ?? false) ? 'bg-wa-teal text-white hover:scale-105 active:scale-95 shadow-lg shadow-wa-teal/20' : '' }}
                 {{ !$isLoading && $eligibility && !($eligibility['eligible'] ?? false) ? 'bg-slate-100 dark:bg-slate-800 text-slate-400 cursor-not-allowed opacity-60' : '' }}
