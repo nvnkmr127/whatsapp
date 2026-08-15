@@ -14,7 +14,7 @@
         </div>
         <div class="flex flex-wrap items-center gap-4">
             <div class="hidden md:flex flex-col items-end mr-2">
-                <span class="text-[10px] font-black uppercase tracking-widest text-slate-400 dark:text-zinc-500">Last Updated</span>
+                <span class="text-tiny font-black uppercase tracking-widest text-slate-400 dark:text-zinc-500">Last Updated</span>
                 <span class="text-xs font-bold text-orange-400 flex items-center gap-1">
                     <span class="w-1.5 h-1.5 rounded-full bg-orange-500 animate-pulse"></span>
                     Stats Updated: {{ $lastUpdated->diffForHumans() }}
@@ -22,6 +22,7 @@
             </div>
 
             <button wire:click="refreshData" wire:loading.class="animate-spin"
+                aria-label="{{ __('Refresh data') }}" title="{{ __('Refresh data') }}"
                 class="p-2.5 bg-white dark:bg-zinc-900 text-slate-400 dark:text-zinc-400 hover:text-orange-400 rounded-2xl border border-black/[0.06] dark:border-zinc-800 shadow-sm transition-all">
                 <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
@@ -128,7 +129,7 @@
                         </div>
                         <div class="text-right">
                             <span
-                                class="text-[10px] uppercase font-black tracking-widest text-slate-400 group-hover:text-slate-500 transition-colors">
+                                class="text-tiny uppercase font-black tracking-widest text-slate-400 group-hover:text-slate-500 transition-colors">
                                 Total {{ $stat['header'] }}
                             </span>
                             <div class="text-2xl font-black text-slate-900 dark:text-white tabular-nums">
