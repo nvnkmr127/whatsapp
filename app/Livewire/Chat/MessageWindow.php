@@ -587,10 +587,11 @@ class MessageWindow extends Component
                     '-i', $srcTmp,
                     '-vn',
                     '-c:a', 'libopus',
-                    '-b:a', '32k',
-                    '-ar', '48000',
+                    '-b:a', '16k',
+                    '-ar', '16000',
                     '-ac', '1',
                     '-application', 'voip',
+                    '-map_metadata', '-1',
                     '-f', 'ogg',
                     $tmpOgg
                 ]);

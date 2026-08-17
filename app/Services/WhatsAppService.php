@@ -572,7 +572,7 @@ class WhatsAppService
                 $ffprobeBin = $ffprobeBin ?: ($finder->find('ffprobe', 'ffprobe', array_values(array_unique($extraDirs))) ?: 'ffprobe');
             }
 
-            // WhatsApp voice notes require 48kHz mono Opus; anything else delivers as 131053.
+            // WhatsApp voice notes strictly require 16kHz mono Opus; anything else delivers as 131053.
             $probeCmd = escapeshellarg($ffprobeBin) . ' -v error -select_streams a:0 -show_entries stream=codec_name,sample_rate,channels -of csv=p=0 '
                 . escapeshellarg($path) . ' 2>/dev/null';
             $probe = trim((string) @shell_exec($probeCmd));
@@ -582,17 +582,17 @@ class WhatsAppService
 
                 return $path;
             }
-            if ($probe === 'opus,48000,1') {
+            if ($probe === 'opus,16000,1') {
                 return $path; // already exactly the WhatsApp voice-note spec
             }
 
             $out = sys_get_temp_dir() . '/' . \Illuminate\Support\Str::random(20) . '.ogg';
             $ffmpegCmd = escapeshellarg($ffmpegBin) . ' -y -i ' . escapeshellarg($path)
-                . ' -vn -c:a libopus -b:a 32k -ar 48000 -ac 1 -application voip -f ogg ' . escapeshellarg($out) . ' 2>/dev/null';
+                . ' -vn -c:a libopus -b:a 16k -ar 16000 -ac 1 -application voip -map_metadata -1 -f ogg ' . escapeshellarg($out) . ' 2>/dev/null';
             @shell_exec($ffmpegCmd);
 
             if (file_exists($out) && filesize($out) > 0) {
-                Log::info("ensureOpus: normalized voice note '{$probe}' -> opus,48000,1 ({$path} -> {$out})");
+                Log::info("ensureOpus: normalized voice note '{$probe}' -> opus,16000,1 ({$path} -> {$out})");
 
                 return $out;
             }

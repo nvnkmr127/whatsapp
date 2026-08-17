@@ -130,10 +130,17 @@ class UpdateMessageStatusJob implements ShouldQueue
         if ($status === 'failed') {
             $error = $details['errors'][0] ?? [];
             $updateData['error_message'] = $error['message'] ?? 'WhatsApp API Error';
+            $errorDetail = $error['error_data']['details'] ?? $error['details'] ?? null;
+            if ($errorDetail) {
+                $updateData['error_message'] .= " ({$errorDetail})";
+            }
             Log::warning("UpdateMessageStatusJob: Delivery failed for '{$providerMessageId}'", [
                 'code' => $error['code'] ?? null,
                 'title' => $error['title'] ?? null,
                 'message' => $updateData['error_message'],
+                'details' => $errorDetail,
+                'error_data' => $error['error_data'] ?? null,
+                'raw_error' => $error,
             ]);
         }
 
