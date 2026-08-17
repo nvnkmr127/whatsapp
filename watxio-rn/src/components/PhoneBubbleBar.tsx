@@ -205,10 +205,17 @@ export function Composer({
             {/* 3. Right: WhatsApp Emerald Send Button */}
             <Pressable
               onPress={onSendRecording}
-              style={({ pressed }) => [
-                styles.sendAudioButton,
-                pressed && { opacity: 0.85, transform: [{ scale: 0.95 }] },
-              ]}
+              className="w-[42px] h-[42px] rounded-full bg-[#2F8F6F] dark:bg-[#6CBFA0] items-center justify-center active:opacity-85 flex-shrink-0 shadow-sm"
+              style={{
+                backgroundColor: '#2F8F6F',
+                width: 42,
+                height: 42,
+                borderRadius: 21,
+                alignItems: 'center',
+                justifyContent: 'center',
+                flexShrink: 0,
+              }}
+              hitSlop={8}
             >
               <Send size={18} color="#FFFFFF" strokeWidth={2.4} style={{ marginLeft: 2 }} />
             </Pressable>
@@ -311,15 +318,18 @@ const styles = StyleSheet.create({
     borderRadius: 20,
     alignItems: 'center',
     justifyContent: 'center',
+    flexShrink: 0,
   },
   recordingCapsule: {
     flex: 1,
+    flexShrink: 1,
+    minWidth: 0,
     height: 44,
     borderRadius: 22,
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: 12,
-    gap: 8,
+    paddingHorizontal: 10,
+    gap: 6,
   },
   pulsingDot: {
     width: 10,
@@ -335,6 +345,8 @@ const styles = StyleSheet.create({
   },
   waveformContainer: {
     flex: 1,
+    flexShrink: 1,
+    minWidth: 0,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
@@ -359,11 +371,12 @@ const styles = StyleSheet.create({
     borderRadius: 21,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: '#00A884',
-    shadowColor: '#00A884',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.25,
-    shadowRadius: 3,
+    backgroundColor: '#2F8F6F',
+    flexShrink: 0,
+    shadowColor: '#000000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.18,
+    shadowRadius: 2,
     elevation: 3,
   },
   micWrapper: {

@@ -98,6 +98,7 @@ export default function ChatScreen({ navigation, route }: any) {
   const [isRecordingPaused, setIsRecordingPaused] = useState(false);
   const [recordingSeconds, setRecordingSeconds] = useState(0);
   const recordingRef = useRef<Audio.Recording | null>(null);
+  const isStartingRecordingRef = useRef(false);
 
   // Network Status
   const isOnline = useNetworkStatus();
@@ -1037,18 +1038,6 @@ export default function ChatScreen({ navigation, route }: any) {
     return () => clearInterval(interval);
   }, [isCalling]);
 
-  // Voice recording timer effect
-  useEffect(() => {
-    let interval: NodeJS.Timeout;
-    if (isRecording) {
-      setRecordingSeconds(0);
-      interval = setInterval(() => {
-        setRecordingSeconds((s) => s + 1);
-      }, 1000);
-    }
-    return () => clearInterval(interval);
-  }, [isRecording]);
-
   const fetchTags = async () => {
     setLoadingTags(true);
     try {
@@ -1807,6 +1796,8 @@ export default function ChatScreen({ navigation, route }: any) {
               isPaused={isRecordingPaused}
               recordingSeconds={recordingSeconds}
               onStartRecording={async () => {
+                if (isStartingRecordingRef.current) return;
+                isStartingRecordingRef.current = true;
                 try {
                   // Clean up any stale recording reference to prevent Expo lockups
                   if (recordingRef.current) {
@@ -1835,6 +1826,8 @@ export default function ChatScreen({ navigation, route }: any) {
                 } catch (err) {
                   console.error('Failed to start recording', err);
                   showDialog('Error', 'Could not start recording audio.');
+                } finally {
+                  isStartingRecordingRef.current = false;
                 }
               }}
               onTogglePause={async () => {

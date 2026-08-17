@@ -12,7 +12,7 @@
  */
 
 import { useEffect, useRef } from 'react';
-import { Platform, Alert } from 'react-native';
+import { Platform } from 'react-native';
 import * as Notifications from 'expo-notifications';
 import * as Device from 'expo-device';
 import { api } from '@/services/api';
@@ -21,7 +21,6 @@ import { api } from '@/services/api';
 // Show banner + sound even when the app is open (like WhatsApp).
 Notifications.setNotificationHandler({
   handleNotification: async () => ({
-    shouldShowAlert: true,
     shouldPlaySound: true,
     shouldSetBadge: true,
     shouldShowBanner: true,
@@ -98,7 +97,7 @@ export async function registerForPushNotifications(): Promise<string | null> {
   }
 
   if (finalStatus !== 'granted') {
-    console.warn('[FCM DEBUG] ❌ Permission DENIED — notifications will not work. Go to Settings > Apps > Watxio > Notifications and enable.');
+    console.warn('[FCM DEBUG] ❌ Permission DENIED — notifications will not work.');
     return null;
   }
 
@@ -118,19 +117,19 @@ export async function registerForPushNotifications(): Promise<string | null> {
 
     if (!fcmToken) {
       console.error('[FCM DEBUG] ❌ Could not extract token string from tokenData:', JSON.stringify(tokenData));
-      Alert.alert('Push Error', 'Got empty FCM token from device. Check Firebase SHA-1 fingerprint is registered in Firebase Console.');
       return null;
     }
 
     console.log('[FCM DEBUG] ✅ Token obtained (first 30 chars):', fcmToken.substring(0, 30) + '...');
 
-    // Register token with backend — this throws if it fails
-    const backendOk = await sendTokenToBackend(fcmToken);
-    if (!backendOk) {
-      Alert.alert(
-        'Push Setup Incomplete',
-        'Device token was generated but could not be saved to the server.\n\nCheck that your backend API is reachable and the /v1/mobile/auth/fcm-token route exists.',
-      );
+    // Register token with backend if user is authenticated
+    if (api.getToken()) {
+      const backendOk = await sendTokenToBackend(fcmToken);
+      if (!backendOk) {
+        console.warn('[FCM DEBUG] ⚠️ Device token was generated but could not be saved to the server.');
+      }
+    } else {
+      console.log('[FCM DEBUG] User not authenticated yet — backend token registration deferred until login.');
     }
 
     return fcmToken;
@@ -141,10 +140,7 @@ export async function registerForPushNotifications(): Promise<string | null> {
     // Ignore transient SERVICE_NOT_AVAILABLE errors as push notifications 
     // often still work due to previous successful token registrations.
     if (!errorMessage.includes('SERVICE_NOT_AVAILABLE')) {
-      Alert.alert(
-        'Push Notification Error',
-        `Failed to generate device token.\n\nError: ${errorMessage}`,
-      );
+      console.warn('[FCM DEBUG] ⚠️ Push notification token generation error:', errorMessage);
     }
     return null;
   }
@@ -153,6 +149,12 @@ export async function registerForPushNotifications(): Promise<string | null> {
 // ── Send token to Laravel backend ────────────────────────────────────────────
 // Returns true on success, false on failure. Never throws.
 async function sendTokenToBackend(token: string): Promise<boolean> {
+  const authToken = api.getToken();
+  if (!authToken) {
+    console.log('[FCM DEBUG] Skipping sendTokenToBackend — no auth token available.');
+    return false;
+  }
+
   const payload = {
     token,
     platform: Platform.OS,
