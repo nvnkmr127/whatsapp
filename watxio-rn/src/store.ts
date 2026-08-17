@@ -139,7 +139,7 @@ function schedulePersist() {
 export const store = {
   get: (): GlobalState => state,
   set: (updates: Partial<GlobalState>) => {
-    if (!updates.baseUrl && (!__DEV__ || updates.token === null)) {
+    if (!updates.baseUrl && (updates.token === null || !state.baseUrl)) {
       updates.baseUrl = defaultBaseUrl;
     }
     Object.assign(state, updates);
@@ -211,13 +211,11 @@ export const store = {
           let activeBaseUrl = data.baseUrl || defaultBaseUrl;
 
           if (__DEV__ && data.baseUrl) {
-            const devIp = getDevMachineIp();
-            activeBaseUrl = data.baseUrl
-              .replace('localhost', devIp)
-              .replace('127.0.0.1', devIp)
-              .replace('flow.watxio.com', devIp);
-            if (!activeBaseUrl.includes(':8000') && !activeBaseUrl.includes(':8081')) {
-              activeBaseUrl = `http://${devIp}:8000/api`;
+            if (data.baseUrl.includes('localhost') || data.baseUrl.includes('127.0.0.1')) {
+              const devIp = getDevMachineIp();
+              activeBaseUrl = data.baseUrl
+                .replace('localhost', devIp)
+                .replace('127.0.0.1', devIp);
             }
           }
 

@@ -74,7 +74,7 @@ describe('Global Store', () => {
     expect(listener).toHaveBeenCalledTimes(1); // Not called after unsubscribe
   });
 
-  test('loadSession overrides stale cached URL in __DEV__ mode', async () => {
+  test('loadSession preserves production baseUrl in __DEV__ mode', async () => {
     mockStorage['@watxio_session'] = JSON.stringify({
       token: 'cached-token',
       baseUrl: 'https://flow.watxio.com/api',
@@ -85,8 +85,20 @@ describe('Global Store', () => {
 
     expect(hasSession).toBe(true);
     expect(store.get().token).toBe('cached-token');
-    // In __DEV__, flow.watxio.com is overridden with http://192.168.31.52:8000/api
-    expect(store.get().baseUrl).toContain('192.168.31.52');
+    expect(store.get().baseUrl).toBe('https://flow.watxio.com/api');
+  });
+
+  test('loadSession translates localhost to dev machine IP in __DEV__ mode', async () => {
+    mockStorage['@watxio_session'] = JSON.stringify({
+      token: 'cached-token',
+      baseUrl: 'http://localhost:8000/api',
+      activeTeamId: 1,
+    });
+
+    const hasSession = await store.loadSession();
+
+    expect(hasSession).toBe(true);
+    expect(store.get().baseUrl).toBe('http://192.168.31.52:8000/api');
   });
 
   test('clearSession resets token and removes storage key', async () => {

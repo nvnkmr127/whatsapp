@@ -17,6 +17,7 @@ import AppNavigator from '@/navigation/AppNavigator';
 import { useTokens, ThemeProvider } from '@/theme';
 import { useColorScheme as useNWColorScheme } from 'nativewind';
 import { CallOverlayManager } from '@/components/CallOverlayManager';
+import { DeveloperModeGuard } from '@/components/DeveloperModeGuard';
 import { ErrorBoundary } from '@/components/ErrorBoundary';
 import { useGlobalState } from '@/store';
 import { registerForPushNotifications } from '@/services/notifications';
@@ -73,6 +74,7 @@ function Root() {
       <StatusBar style={scheme === 'dark' ? 'light' : 'dark'} />
       <AppNavigator />
       <CallOverlayManager />
+      <DeveloperModeGuard />
     </NavigationContainer>
   );
 }
