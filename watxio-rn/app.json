@@ -2,7 +2,7 @@
   "expo": {
     "name": "Watxio",
     "slug": "watxio-rn",
-    "version": "1.0.0",
+    "version": "1.1.0",
     "icon": "./src/assets/appicon.png",
     "orientation": "portrait",
     "userInterfaceStyle": "automatic",
@@ -11,6 +11,7 @@
     "ios": {
       "supportsTablet": false,
       "bundleIdentifier": "com.watxio.app",
+      "buildNumber": "2",
       "googleServicesFile": "./GoogleService-Info.plist",
       "infoPlist": {
         "NSMicrophoneUsageDescription": "Watxio needs microphone access to make and receive WhatsApp Business calls."
@@ -19,6 +20,7 @@
     },
     "android": {
       "package": "com.watxio.app",
+      "versionCode": 2,
       "googleServicesFile": "./google-services.json",
       "adaptiveIcon": {
         "foregroundImage": "./src/assets/appicon.png",
