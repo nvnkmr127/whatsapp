@@ -65,7 +65,12 @@ class MessageController extends Controller
                 $data['media_url'] = $msg->content;
                 $data['full_media_url'] = $msg->content;
             }
-            if (empty($data['media_type'])) {
+
+            // Ensure media_type is accurate (and fix legacy video records where media_type was mistakenly audio/mp4)
+            $urlExt = strtolower(pathinfo(strtok($data['media_url'] ?? '', '?'), PATHINFO_EXTENSION));
+            if ($msg->type === 'video' || in_array($urlExt, ['mp4', 'mov', 'avi', 'mkv', '3gp', 'webm'])) {
+                $data['media_type'] = ($urlExt === 'mov' ? 'video/quicktime' : ($urlExt === '3gp' ? 'video/3gpp' : 'video/mp4'));
+            } elseif (empty($data['media_type'])) {
                 $data['media_type'] = $msg->media_type ?: ($msg->type !== 'text' && $msg->type !== 'template' ? $msg->type : null);
             }
             return $data;
@@ -132,24 +137,62 @@ class MessageController extends Controller
             $cleanMediaUrl = ltrim($cleanMediaUrl, '/');
         }
 
+        $msgType = $request->input('type', 'text');
+        $isMedia = in_array($msgType, ['image', 'document', 'video', 'audio']);
+
+        $computedMediaType = null;
+        if ($isMedia && $cleanMediaUrl) {
+            $ext = strtolower(pathinfo($cleanMediaUrl, PATHINFO_EXTENSION));
+            if ($msgType === 'video') {
+                $computedMediaType = match($ext) {
+                    'mov' => 'video/quicktime',
+                    '3gp' => 'video/3gpp',
+                    'avi' => 'video/x-msvideo',
+                    'webm' => 'video/webm',
+                    default => 'video/mp4',
+                };
+            } elseif ($msgType === 'audio') {
+                $computedMediaType = match($ext) {
+                    'ogg', 'opus' => 'audio/ogg; codecs=opus',
+                    'mp3' => 'audio/mpeg',
+                    'wav' => 'audio/wav',
+                    'aac' => 'audio/aac',
+                    default => 'audio/mp4',
+                };
+            } elseif ($msgType === 'image') {
+                $computedMediaType = match($ext) {
+                    'png' => 'image/png',
+                    'webp' => 'image/webp',
+                    'gif' => 'image/gif',
+                    'svg' => 'image/svg+xml',
+                    default => 'image/jpeg',
+                };
+            } elseif ($msgType === 'document') {
+                $computedMediaType = match($ext) {
+                    'pdf' => 'application/pdf',
+                    'doc' => 'application/msword',
+                    'docx' => 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+                    'xls' => 'application/vnd.ms-excel',
+                    'xlsx' => 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+                    'csv' => 'text/csv',
+                    'txt' => 'text/plain',
+                    default => 'application/octet-stream',
+                };
+            } else {
+                $computedMediaType = $msgType;
+            }
+        }
+
         $message = Message::create([
             'team_id' => $team->id,
             'contact_id' => $conversation->contact_id,
             'conversation_id' => $conversation->id,
             'direction' => 'outbound',
-            'type' => $request->input('type', 'text'),
+            'type' => $msgType,
             'content' => $request->input('content'),
             'caption' => $isMedia ? $request->input('content') : null,
             'media_url' => $cleanMediaUrl,
-            'media_type' => $isMedia ? (
-                str_ends_with(strtolower($cleanMediaUrl), '.ogg') || str_ends_with(strtolower($cleanMediaUrl), '.opus')
-                    ? 'audio/ogg; codecs=opus'
-                    : (str_ends_with(strtolower($cleanMediaUrl), '.m4a') || str_ends_with(strtolower($cleanMediaUrl), '.mp4')
-                        ? 'audio/mp4'
-                        : (\Illuminate\Support\Facades\Storage::disk(config('filesystems.default', 'public'))->exists($cleanMediaUrl) 
-                            ? \Illuminate\Support\Facades\Storage::disk(config('filesystems.default', 'public'))->mimeType($cleanMediaUrl) 
-                            : ($request->input('type') === 'image' ? 'image/jpeg' : ($request->input('type') === 'video' ? 'video/mp4' : ($request->input('type') === 'audio' ? 'audio/ogg; codecs=opus' : $request->input('type'))))))
-            ) : null,
+            'media_type' => $computedMediaType,
             'reply_to_message_id' => $replyToId,
             'metadata' => empty($metadata) ? null : $metadata,
             'status' => 'queued',
@@ -200,7 +243,10 @@ class MessageController extends Controller
             $data['full_media_url'] = $message->full_media_url;
             $data['media_url'] = $message->full_media_url ?: $message->media_url;
         }
-        if (empty($data['media_type'])) {
+        $urlExt = strtolower(pathinfo(strtok($data['media_url'] ?? '', '?'), PATHINFO_EXTENSION));
+        if ($message->type === 'video' || in_array($urlExt, ['mp4', 'mov', 'avi', 'mkv', '3gp', 'webm'])) {
+            $data['media_type'] = ($urlExt === 'mov' ? 'video/quicktime' : ($urlExt === '3gp' ? 'video/3gpp' : 'video/mp4'));
+        } elseif (empty($data['media_type'])) {
             $data['media_type'] = $message->media_type ?: ($message->type !== 'text' && $message->type !== 'template' ? $message->type : null);
         }
 

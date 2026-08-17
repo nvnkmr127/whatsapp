@@ -5,7 +5,7 @@ import { useTokens } from '@/theme';
 import { VideoThumbnailPreview } from './VideoThumbnailPreview';
 import type { ChatMessage } from '@/types';
 import { safeExtractText } from '@/utils/text';
-import { resolveMediaUrl } from '@/utils/media';
+import { resolveMediaUrl, detectMediaType } from '@/utils/media';
 
 interface ReplyPreviewProps {
   message: ChatMessage | null | undefined;
@@ -25,12 +25,15 @@ export function ReplyPreview({ message, contactName, onPress, onCancel, inBubble
   const nameColor = isOut ? (tokens.accent || '#06CF9C') : '#34B7F1';
 
   const resolvedMediaUrl = resolveMediaUrl(message.media_url);
-  const rawType = (message.media_type || '').toLowerCase();
-  const isImage = rawType === 'image' || rawType === 'photo' || rawType === 'sticker';
-  const isVideo = rawType === 'video';
-  const isAudio = rawType === 'audio' || rawType === 'voice' || rawType === 'ptt';
-  const isDoc = rawType === 'document' || rawType === 'file';
-  const hasMedia = isImage || isVideo || isAudio || isDoc || !!resolvedMediaUrl;
+  const mediaCategory = (message.media_type || resolvedMediaUrl)
+    ? detectMediaType(message.media_type, resolvedMediaUrl)
+    : null;
+
+  const isVideo = mediaCategory === 'video';
+  const isImage = mediaCategory === 'image';
+  const isAudio = mediaCategory === 'audio';
+  const isDoc   = mediaCategory === 'document';
+  const hasMedia = !!mediaCategory || !!resolvedMediaUrl;
 
   let previewText = safeExtractText(message.text);
   if (!previewText && hasMedia) {

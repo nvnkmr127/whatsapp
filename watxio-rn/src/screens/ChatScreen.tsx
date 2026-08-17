@@ -1221,7 +1221,7 @@ export default function ChatScreen({ navigation, route }: any) {
 
     // Prepend locally for immediate UX with a unique temp ID
     const tempId = `temp_${Date.now()}`;
-    const displayStr = selectedMedia ? (text || `📄 ${selectedMedia.name}`) : text;
+    const displayStr = selectedMedia ? (text || (selectedMedia.type === 'document' ? `📄 ${selectedMedia.name}` : '')) : text;
     const nowTime = new Date().toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit', hour12: false });
     const newMsg: ChatMessage = { 
       id: tempId as any,

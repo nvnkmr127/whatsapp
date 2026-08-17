@@ -6,14 +6,14 @@ import {
 import { useVideoPlayer, VideoView } from 'expo-video';
 import { useEvent } from 'expo';
 import { X, Download, Share2 } from 'lucide-react-native';
-import { resolveMediaUrl } from '@/utils/media';
+import { resolveMediaUrl, detectMediaType } from '@/utils/media';
 
 const { width: SW, height: SH } = Dimensions.get('window');
 
 interface Props {
   visible: boolean;
   uri: string;
-  type: 'image' | 'video' | 'audio' | 'document';
+  type: 'image' | 'video' | 'audio' | 'document' | string;
   onClose: () => void;
 }
 
@@ -21,21 +21,12 @@ export function MediaViewer({ visible, uri, type, onClose }: Props) {
   const [imageLoading, setImageLoading] = useState(true);
   const resolvedUri = resolveMediaUrl(uri) || uri;
 
-  const rawType = (type || '').toLowerCase();
-  const urlLower = (resolvedUri || uri || '').toLowerCase();
+  const mediaCategory = detectMediaType(type, resolvedUri);
 
-  let isImage = rawType === 'image' || rawType === 'photo' || rawType === 'sticker';
-  let isVideo = rawType === 'video';
-  let isAudio = rawType === 'audio' || rawType === 'voice' || rawType === 'ptt';
-  let isDoc   = rawType === 'document' || rawType === 'file';
-
-  if (!isImage && !isVideo && !isAudio && !isDoc && urlLower) {
-    if (urlLower.match(/\.(jpg|jpeg|png|gif|webp|heic)(\?|$)/i)) isImage = true;
-    else if (urlLower.match(/\.(mp4|mov|avi|mkv|3gp|webm)(\?|$)/i)) isVideo = true;
-    else if (urlLower.match(/\.(mp3|m4a|aac|wav|ogg|opus)(\?|$)/i)) isAudio = true;
-    else if (urlLower.match(/\.(pdf|doc|docx|xls|xlsx|csv|zip|rar|txt)(\?|$)/i)) isDoc = true;
-    else isImage = true;
-  }
+  const isImage = mediaCategory === 'image';
+  const isVideo = mediaCategory === 'video';
+  const isAudio = mediaCategory === 'audio';
+  const isDoc   = mediaCategory === 'document';
 
   // Setup the video player
   const player = useVideoPlayer(isVideo && visible ? resolvedUri : null, (playerInstance) => {
