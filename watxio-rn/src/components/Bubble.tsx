@@ -335,20 +335,30 @@ export function Bubble({
 
         {/* ── Text caption / body (hidden for voice note placeholders) ── */}
         {childText && (!isAudio || (!childText.startsWith('Voice message') && !childText.startsWith('🎙️ Voice message') && !childText.startsWith('Voice note'))) ? (
-          <View className="py-2 px-3">
+          <View className="px-3 pt-2 pb-1.5">
             <Text className="text-ink dark:text-d-ink text-[14.5px] leading-5 font-normal">{childText}</Text>
+            <View className="flex-row items-center justify-end gap-1 mt-0.5 self-end">
+              {isStarred ? <Star size={9} color="#EAB308" fill="#EAB308" style={{ marginRight: 1 }} /> : null}
+              {time ? <Text className="text-muted dark:text-d-muted text-[10.5px] font-medium leading-none">{time}</Text> : null}
+              {renderStatusIcon()}
+            </View>
           </View>
         ) : (!hasMedia && childText) ? (
-          <View className="py-2 px-3">
+          <View className="px-3 pt-2 pb-1.5">
             <Text className="text-ink dark:text-d-ink text-[14.5px] leading-5 font-normal">{childText}</Text>
+            <View className="flex-row items-center justify-end gap-1 mt-0.5 self-end">
+              {isStarred ? <Star size={9} color="#EAB308" fill="#EAB308" style={{ marginRight: 1 }} /> : null}
+              {time ? <Text className="text-muted dark:text-d-muted text-[10.5px] font-medium leading-none">{time}</Text> : null}
+              {renderStatusIcon()}
+            </View>
           </View>
         ) : null}
 
-        {/* ── Standard Timestamp row (when text or document is rendered, but not bare audio/media which already renders it inside) ── */}
-        {(!hasMedia || (hasMedia && !isImage && !isVideo && !isAudio) || (hasMedia && (isImage || isVideo) && childText)) && (
-          <View className={`flex-row items-center justify-end gap-1 ${hasMedia ? 'px-2.5 pb-1.5' : 'px-3 pb-2'}`}>
-            {isStarred ? <Star size={10} color="#EAB308" fill="#EAB308" style={{ marginRight: 2 }} /> : null}
-            {time ? <Text className="text-muted dark:text-d-muted text-[10.5px] font-medium">{time}</Text> : null}
+        {/* ── Document timestamp row (when document is rendered without child text) ── */}
+        {hasMedia && isDoc && !childText && (
+          <View className="flex-row items-center justify-end gap-1 px-3 pb-1.5 -mt-1">
+            {isStarred ? <Star size={9} color="#EAB308" fill="#EAB308" style={{ marginRight: 1 }} /> : null}
+            {time ? <Text className="text-muted dark:text-d-muted text-[10.5px] font-medium leading-none">{time}</Text> : null}
             {renderStatusIcon()}
           </View>
         )}
