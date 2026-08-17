@@ -1,7 +1,7 @@
 // src/screens/SettingsScreen.tsx — profile, workspace, prefs, devices.
 
 import React, { useState, useEffect, useCallback } from 'react';
-import { View, Text, ScrollView, Pressable, Modal, TextInput, ActivityIndicator } from 'react-native';
+import { View, Text, ScrollView, Pressable, Modal, TextInput, ActivityIndicator, Linking } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
@@ -185,7 +185,12 @@ export default function SettingsScreen({ navigation }: any) {
           label: 'Privacy',
           Icon: Shield,
           value: '',
-          onPress: () => showDialog('Privacy', 'Privacy settings and policy.'),
+          onPress: () => {
+            Linking.openURL('https://watxio.com/privacy').catch((err) => {
+              console.warn('Failed to open privacy URL:', err);
+              showDialog('Privacy Policy', 'Could not open https://watxio.com/privacy.');
+            });
+          },
         },
         {
           label: 'Message Bots',
