@@ -1,7 +1,7 @@
 // src/components/PhoneBubbleBar.tsx — keyboard-aware bottom composer used by Chat.
 
 import React, { useState, useRef, useEffect } from 'react';
-import { View, TextInput, Pressable, Keyboard, PanResponder, Animated, Text, StyleSheet } from 'react-native';
+import { View, TextInput, Pressable, Keyboard, Animated, Text, StyleSheet } from 'react-native';
 import { Paperclip, Smile, Send, Mic, X, Trash2, Pause, Play } from 'lucide-react-native';
 import { useTokens } from '@/theme';
 import { IconButton } from './Button';
@@ -29,10 +29,61 @@ interface Props {
   onTogglePause?: () => void;
 }
 
-// Dynamic Animated Waveform visualizer for WhatsApp Voice Recording
-function WaveformVisualizer({ isRecording, isPaused }: { isRecording: boolean; isPaused: boolean }) {
+// WhatsApp Live Pulsing Red Recording Indicator
+function PulsingDot() {
+  const pulseAnim = useRef(new Animated.Value(1)).current;
+
+  useEffect(() => {
+    const pulse = Animated.loop(
+      Animated.sequence([
+        Animated.timing(pulseAnim, {
+          toValue: 0.25,
+          duration: 550,
+          useNativeDriver: true,
+        }),
+        Animated.timing(pulseAnim, {
+          toValue: 1,
+          duration: 550,
+          useNativeDriver: true,
+        }),
+      ])
+    );
+    pulse.start();
+    return () => pulse.stop();
+  }, [pulseAnim]);
+
+  return (
+    <Animated.View
+      style={[
+        styles.pulsingDot,
+        {
+          opacity: pulseAnim,
+          transform: [
+            {
+              scale: pulseAnim.interpolate({
+                inputRange: [0.25, 1],
+                outputRange: [0.85, 1.15],
+              }),
+            },
+          ],
+        },
+      ]}
+    />
+  );
+}
+
+// WhatsApp Live Dynamic Audio Waveform Spectrum
+function WaveformVisualizer({
+  isRecording,
+  isPaused,
+  barColor,
+}: {
+  isRecording: boolean;
+  isPaused: boolean;
+  barColor?: string;
+}) {
   const [bars, setBars] = useState<number[]>([
-    4, 8, 14, 22, 12, 18, 26, 14, 8, 16, 24, 10, 18, 14, 20, 12, 8, 16, 22, 14, 10, 18, 12, 6
+    4, 8, 14, 20, 10, 16, 22, 12, 6, 14, 24, 16, 10, 18, 12, 20, 14, 8, 16, 22, 12, 8, 14, 6
   ]);
 
   useEffect(() => {
@@ -40,9 +91,9 @@ function WaveformVisualizer({ isRecording, isPaused }: { isRecording: boolean; i
 
     const interval = setInterval(() => {
       setBars((prev) =>
-        prev.map(() => Math.floor(Math.random() * 20) + 4)
+        prev.map(() => Math.floor(Math.random() * 18) + 4)
       );
-    }, 120);
+    }, 110);
 
     return () => clearInterval(interval);
   }, [isRecording, isPaused]);
@@ -54,7 +105,11 @@ function WaveformVisualizer({ isRecording, isPaused }: { isRecording: boolean; i
           key={i}
           style={[
             styles.waveformBar,
-            { height: h }
+            {
+              height: h,
+              backgroundColor: barColor || '#8696A0',
+              opacity: isPaused ? 0.45 : 0.9,
+            },
           ]}
         />
       ))}
@@ -87,8 +142,6 @@ export function Composer({
     onChange(value + emojiData.emoji);
   };
 
-  const pan = useRef(new Animated.ValueXY()).current;
-
   const formatTime = (seconds: number) => {
     return `${Math.floor(seconds / 60)}:${(seconds % 60).toString().padStart(2, '0')}`;
   };
@@ -97,56 +150,68 @@ export function Composer({
     <>
       <View style={[styles.composerContainer, { backgroundColor: tokens.bg }]}>
         {isRecording ? (
-          // ── Native WhatsApp Voice Recording Bar ──
-          <View style={styles.recordingOuter}>
-            {/* Top Row: Duration Timer (left) + Live Waveform Visualizer (right) */}
-            <View style={styles.recordingTopRow}>
+          // ── WhatsApp Native Single-Row Voice Recording Bar ──
+          <View style={styles.recordingRow}>
+            {/* 1. Left: Trash / Cancel Button */}
+            <Pressable
+              onPress={onCancelRecording}
+              style={({ pressed }) => [
+                styles.trashActionBtn,
+                pressed && { opacity: 0.6, transform: [{ scale: 0.92 }] },
+              ]}
+              hitSlop={10}
+            >
+              <Trash2 size={22} color="#EF4444" strokeWidth={2} />
+            </Pressable>
+
+            {/* 2. Middle: WhatsApp Voice Recording Capsule */}
+            <View style={[styles.recordingCapsule, { backgroundColor: tokens.surface2 }]}>
+              {/* Red Recording Indicator */}
+              {!isPaused ? (
+                <PulsingDot />
+              ) : (
+                <View style={[styles.pulsingDot, { opacity: 0.35 }]} />
+              )}
+
+              {/* Duration Timer */}
               <Text style={[styles.timerText, { color: tokens.ink }]}>
                 {formatTime(recordingSeconds)}
               </Text>
-              <WaveformVisualizer isRecording={isRecording} isPaused={isPaused} />
-            </View>
 
-            {/* Bottom Row: Trash (left) | Pause/Resume Pill (center) | Green Send (right) */}
-            <View style={styles.recordingBottomRow}>
-              {/* Trash / Delete Button */}
-              <Pressable
-                onPress={onCancelRecording}
-                style={({ pressed }) => [styles.trashButton, pressed && { opacity: 0.8 }]}
-              >
-                <Trash2 size={20} color="#F87171" />
-              </Pressable>
+              {/* Dynamic Animated Waveform Spectrum */}
+              <WaveformVisualizer
+                isRecording={isRecording}
+                isPaused={isPaused}
+                barColor={isPaused ? tokens.muted : (tokens.accent || '#00A884')}
+              />
 
-              {/* Pause / Resume Pill Button */}
+              {/* Pause / Resume Control */}
               <Pressable
                 onPress={onTogglePause}
                 style={({ pressed }) => [
-                  styles.pausePill,
-                  { backgroundColor: tokens.surface2 || '#202c33' },
-                  pressed && { opacity: 0.85 }
+                  styles.pauseResumeBtn,
+                  pressed && { opacity: 0.65, transform: [{ scale: 0.92 }] },
                 ]}
+                hitSlop={10}
               >
                 {isPaused ? (
-                  <>
-                    <Play size={18} color={tokens.ink} fill={tokens.ink} />
-                    <Text style={[styles.pausePillText, { color: tokens.ink }]}>Resume</Text>
-                  </>
+                  <Play size={18} color="#EF4444" fill="#EF4444" />
                 ) : (
-                  <>
-                    <Pause size={18} color={tokens.ink} fill={tokens.ink} />
-                    <Text style={[styles.pausePillText, { color: tokens.ink }]}>Pause</Text>
-                  </>
+                  <Pause size={18} color="#EF4444" fill="#EF4444" />
                 )}
               </Pressable>
-
-              {/* Green Send Button */}
-              <Pressable
-                onPress={onSendRecording}
-                style={({ pressed }) => [styles.sendAudioButton, pressed && { opacity: 0.85 }]}
-              >
-                <Send size={18} color="#FFFFFF" strokeWidth={2.2} style={{ marginLeft: 2 }} />
-              </Pressable>
             </View>
+
+            {/* 3. Right: WhatsApp Emerald Send Button */}
+            <Pressable
+              onPress={onSendRecording}
+              style={({ pressed }) => [
+                styles.sendAudioButton,
+                pressed && { opacity: 0.85, transform: [{ scale: 0.95 }] },
+              ]}
+            >
+              <Send size={18} color="#FFFFFF" strokeWidth={2.4} style={{ marginLeft: 2 }} />
+            </Pressable>
           </View>
         ) : (
           // ── Normal Input State ──
@@ -227,79 +292,82 @@ export function Composer({
 
 const styles = StyleSheet.create({
   composerContainer: {
-    paddingHorizontal: 12,
-    paddingVertical: 10,
-    flexDirection: 'row',
-    alignItems: 'flex-end',
-    gap: 8,
-    overflow: 'hidden',
-  },
-  recordingOuter: {
-    flex: 1,
-    paddingHorizontal: 4,
-    paddingVertical: 2,
-  },
-  recordingTopRow: {
+    paddingHorizontal: 10,
+    paddingVertical: 8,
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: 8,
-    marginBottom: 12,
+    gap: 8,
+  },
+  recordingRow: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    minHeight: 44,
+  },
+  trashActionBtn: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  recordingCapsule: {
+    flex: 1,
+    height: 44,
+    borderRadius: 22,
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 12,
+    gap: 8,
+  },
+  pulsingDot: {
+    width: 10,
+    height: 10,
+    borderRadius: 5,
+    backgroundColor: '#EF4444',
   },
   timerText: {
-    fontFamily: 'monospace',
-    fontSize: 18,
-    fontWeight: '600',
-  },
-  waveformContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 2,
-    height: 28,
-  },
-  waveformBar: {
-    width: 2.5,
-    borderRadius: 2,
-    backgroundColor: '#8696a0',
-  },
-  recordingBottomRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    gap: 10,
-  },
-  trashButton: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: '#3B1C24',
-  },
-  pausePill: {
-    flex: 1,
-    height: 44,
-    borderRadius: 22,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 8,
-    paddingHorizontal: 16,
-  },
-  pausePillText: {
     fontSize: 14,
     fontWeight: '600',
+    fontVariant: ['tabular-nums'],
+    minWidth: 34,
   },
-  sendAudioButton: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
+  waveformContainer: {
+    flex: 1,
+    flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: '#00a884',
+    gap: 2,
+    height: 24,
+    overflow: 'hidden',
+  },
+  waveformBar: {
+    width: 2.2,
+    borderRadius: 1.5,
+  },
+  pauseResumeBtn: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  sendAudioButton: {
+    width: 42,
+    height: 42,
+    borderRadius: 21,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#00A884',
+    shadowColor: '#00A884',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.25,
+    shadowRadius: 3,
+    elevation: 3,
   },
   micWrapper: {
-    marginBottom: 2,
+    marginBottom: 1,
   },
   micButton: {
     width: 42,

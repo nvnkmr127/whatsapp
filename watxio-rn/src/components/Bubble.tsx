@@ -180,9 +180,13 @@ export function Bubble({
     return `${m}:${s < 10 ? '0' : ''}${s}`;
   };
 
+  // Extract duration from message text if available (e.g. "Voice message (0:02)")
+  const textDurationMatch = childText ? childText.match(/\((\d+:\d+)\)/) : null;
+  const textDurationStr = textDurationMatch ? textDurationMatch[1] : null;
+
   const audioTimeStr = isPlaying || playbackPosition > 0
     ? formatTime(playbackPosition)
-    : (duration > 0 ? formatTime(duration) : '0:15');
+    : (duration > 0 ? formatTime(duration) : (textDurationStr || '0:00'));
 
   return (
     <View className={`max-w-[85%] ${replyTo ? 'min-w-[190px]' : ''} ${isOut ? 'self-end' : 'self-start'} ${reactionEmoji ? 'mb-3' : ''} relative`}>
@@ -333,12 +337,12 @@ export function Bubble({
           </Pressable>
         )}
 
-        {/* ── Text caption / body ── */}
-        {childText ? (
+        {/* ── Text caption / body (hidden for voice note placeholders) ── */}
+        {childText && (!isAudio || (!childText.startsWith('Voice message') && !childText.startsWith('🎙️ Voice message') && !childText.startsWith('Voice note'))) ? (
           <View className="py-2 px-3">
             <Text className="text-ink dark:text-d-ink text-[14.5px] leading-5 font-normal">{childText}</Text>
           </View>
-        ) : !hasMedia ? (
+        ) : (!hasMedia && childText) ? (
           <View className="py-2 px-3">
             <Text className="text-ink dark:text-d-ink text-[14.5px] leading-5 font-normal">{childText}</Text>
           </View>
