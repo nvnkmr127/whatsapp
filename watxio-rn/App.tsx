@@ -11,6 +11,7 @@ import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { KeyboardProvider } from 'react-native-keyboard-controller';
 
 import { NavigationContainer, DefaultTheme, DarkTheme } from '@react-navigation/native';
+import * as Clarity from '@microsoft/react-native-clarity';
 import { navigationRef } from '@/navigation/navigationRef';
 import AppNavigator from '@/navigation/AppNavigator';
 import { useTokens, ThemeProvider } from '@/theme';
@@ -19,6 +20,10 @@ import { CallOverlayManager } from '@/components/CallOverlayManager';
 import { ErrorBoundary } from '@/components/ErrorBoundary';
 import { useGlobalState } from '@/store';
 import { registerForPushNotifications } from '@/services/notifications';
+
+Clarity.initialize('y245efnvkv', {
+  logLevel: Clarity.LogLevel.None, // Note: Use "LogLevel.Verbose" value while testing to debug initialization issues.
+});
 
 function Root() {
   const { scheme, tokens } = useTokens();
