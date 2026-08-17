@@ -45,6 +45,7 @@ import {
   loadCachedMessages, loadCachedMeta,
 } from '@/services/chatCache';
 import { safeExtractText } from '@/utils/text';
+import { safeGoBack } from '@/navigation/navigationRef';
 
 export default function ChatScreen({ navigation, route }: any) {
   const { tokens } = useTokens();
@@ -258,7 +259,8 @@ export default function ChatScreen({ navigation, route }: any) {
         }
 
         const msgTime = msgDate.toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit', hour12: false });
-        const apiStatus = (m.status || '').toLowerCase();
+        const rawStatus = m.status || (m.read_at ? 'read' : (m.delivered_at ? 'delivered' : 'sent'));
+        const apiStatus = (rawStatus || '').toLowerCase();
 
         const rawReplyContent = m.reply_to_content ?? m.reply_to_message?.content ?? m.metadata?.reply_to_content ?? m.metadata?.reply_to_message?.content ?? m.reply_to_text;
         const replyContent = safeExtractText(rawReplyContent);
@@ -271,12 +273,14 @@ export default function ChatScreen({ navigation, route }: any) {
         const rawMediaUrl = m.full_media_url || m.media_url || m.metadata?.media_url || m.metadata?.file_path || m.media_path || (m.type && m.type !== 'text' && m.type !== 'template' && m.content && (m.content.startsWith('http://') || m.content.startsWith('https://') || m.content.startsWith('/storage/') || m.content.startsWith('storage/')) ? m.content : null);
         const rawMediaType = m.media_type || m.metadata?.media_type || ((m.type && m.type !== 'text' && m.type !== 'template') ? m.type : (rawMediaUrl ? 'image' : null));
 
+        const isOutbound = m.is_outbound !== undefined ? m.is_outbound : (m.direction === 'outbound' || m.direction !== 'inbound');
+
         mapped.push({
           id: m.id,
-          kind: m.direction === 'inbound' ? 'in' : 'out',
+          kind: isOutbound ? 'out' : 'in',
           text: safeExtractText(m.content),
           time: msgTime,
-          status: apiStatus === 'read' || apiStatus === 'seen' ? 'read' : apiStatus === 'delivered' ? 'delivered' : apiStatus === 'failed' ? 'failed' : apiStatus === 'sent' ? 'sent' : 'queued',
+          status: apiStatus === 'read' || apiStatus === 'seen' ? 'read' : apiStatus === 'delivered' ? 'delivered' : apiStatus === 'failed' ? 'failed' : (apiStatus === 'queued' || apiStatus === 'sending' || apiStatus === 'pending') ? 'queued' : 'sent',
           isStarred: !!m.is_starred,
           media_url: rawMediaUrl,
           media_type: rawMediaType,
@@ -426,7 +430,8 @@ export default function ChatScreen({ navigation, route }: any) {
         }
 
         const msgTime = msgDate.toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit', hour12: false });
-        const apiStatus = (m.status || '').toLowerCase();
+        const rawStatus = m.status || (m.read_at ? 'read' : (m.delivered_at ? 'delivered' : 'sent'));
+        const apiStatus = (rawStatus || '').toLowerCase();
 
         const rawReplyContent = m.reply_to_content ?? m.reply_to_message?.content ?? m.metadata?.reply_to_content ?? m.metadata?.reply_to_message?.content ?? m.reply_to_text;
         const replyContent = safeExtractText(rawReplyContent);
@@ -439,12 +444,14 @@ export default function ChatScreen({ navigation, route }: any) {
         const rawMediaUrl = m.full_media_url || m.media_url || m.metadata?.media_url || m.metadata?.file_path || m.media_path || (m.type && m.type !== 'text' && m.type !== 'template' && m.content && (m.content.startsWith('http://') || m.content.startsWith('https://') || m.content.startsWith('/storage/') || m.content.startsWith('storage/')) ? m.content : null);
         const rawMediaType = m.media_type || m.metadata?.media_type || ((m.type && m.type !== 'text' && m.type !== 'template') ? m.type : (rawMediaUrl ? 'image' : null));
 
+        const isOutbound = m.is_outbound !== undefined ? m.is_outbound : (m.direction === 'outbound' || m.direction !== 'inbound');
+
         mapped.push({
           id: m.id,
-          kind: m.direction === 'inbound' ? 'in' : 'out',
+          kind: isOutbound ? 'out' : 'in',
           text: safeExtractText(m.content),
           time: msgTime,
-          status: apiStatus === 'read' || apiStatus === 'seen' ? 'read' : apiStatus === 'delivered' ? 'delivered' : apiStatus === 'failed' ? 'failed' : apiStatus === 'sent' ? 'sent' : 'queued',
+          status: apiStatus === 'read' || apiStatus === 'seen' ? 'read' : apiStatus === 'delivered' ? 'delivered' : apiStatus === 'failed' ? 'failed' : (apiStatus === 'queued' || apiStatus === 'sending' || apiStatus === 'pending') ? 'queued' : 'sent',
           isStarred: !!m.is_starred,
           media_url: rawMediaUrl,
           media_type: rawMediaType,
@@ -1000,11 +1007,13 @@ export default function ChatScreen({ navigation, route }: any) {
     }
   };
 
+  const isGoingBackRef = useRef(false);
+
   const handleBack = () => {
+    if (isGoingBackRef.current) return;
+    isGoingBackRef.current = true;
     Keyboard.dismiss();
-    setTimeout(() => {
-      nav.goBack();
-    }, 150);
+    safeGoBack(nav, 'Main');
   };
 
   useEffect(() => {
@@ -1453,7 +1462,7 @@ export default function ChatScreen({ navigation, route }: any) {
     try {
       await api.post(`/v1/mobile/conversations/${conversationId}/close`);
       showDialog('Conversation Resolved', 'Closed this ticket and sent customer CSAT survey.', [
-        { text: 'OK', onPress: () => nav.goBack() }
+        { text: 'OK', onPress: () => safeGoBack(nav, 'Main') }
       ]);
     } catch (err: any) {
       showDialog('Error Closing', err.message || 'Could not close conversation.');

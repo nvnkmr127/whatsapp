@@ -12,6 +12,7 @@ import { Avatar } from '@/components/Avatar';
 import { api } from '@/services/api';
 import { CustomDialog } from '@/components/Dialog';
 import { ActivitiesListSkeleton } from '@/components/ListItemSkeleton';
+import { safeGoBack } from '@/navigation/navigationRef';
 
 export default function ActivitiesScreen() {
   const { tokens } = useTokens();
@@ -88,7 +89,7 @@ export default function ActivitiesScreen() {
     <View className="flex-1 bg-bg dark:bg-d-bg" style={{ paddingTop: insets.top }}>
       {/* Header */}
       <View className="flex-row items-center gap-[10px] px-3 pb-3 border-b border-hairline dark:border-d-hairline">
-        <IconButton icon={ChevronLeft} onPress={() => nav.goBack()} />
+        <IconButton icon={ChevronLeft} onPress={() => safeGoBack(nav, 'Main')} />
         <Text className="text-[17px] font-bold text-ink dark:text-d-ink flex-1">Activity Logs</Text>
       </View>
 

@@ -12,6 +12,7 @@ import { Avatar } from '@/components/Avatar';
 import { StarredListSkeleton } from '@/components/ListItemSkeleton';
 import { api } from '@/services/api';
 import { CustomDialog } from '@/components/Dialog';
+import { safeGoBack } from '@/navigation/navigationRef';
 
 export default function StarredMessagesScreen() {
   const { tokens } = useTokens();
@@ -142,7 +143,7 @@ export default function StarredMessagesScreen() {
       {/* Header */}
       <View className="flex-row items-center justify-between px-3 pb-3 border-b border-hairline dark:border-d-hairline">
         <View className="flex-row items-center gap-[10px]">
-          <IconButton icon={ChevronLeft} onPress={() => nav.goBack()} />
+          <IconButton icon={ChevronLeft} onPress={() => safeGoBack(nav, 'Main')} />
           <Text className="text-[17px] font-bold text-ink dark:text-d-ink">Starred Messages</Text>
         </View>
         <View className="pr-3">

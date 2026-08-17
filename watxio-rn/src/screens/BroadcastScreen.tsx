@@ -15,6 +15,7 @@ import type { Template } from '@/types';
 import { ListSkeleton, CampaignsListSkeleton } from '@/components/ListItemSkeleton';
 import { CustomDialog } from '@/components/Dialog';
 import { api } from '@/services/api';
+import { safeGoBack } from '@/navigation/navigationRef';
 
 interface TagItem {
   id: number;
@@ -214,7 +215,7 @@ export default function BroadcastScreen({ navigation }: any) {
       {/* Header */}
       {mode === 'list' ? (
         <View className="px-3 py-2.5 flex-row items-center gap-2 border-b border-hairline dark:border-d-hairline">
-          <IconButton icon={X} onPress={() => nav.goBack()} />
+          <IconButton icon={X} onPress={() => safeGoBack(nav, 'Main')} />
           <Text className="flex-1 text-base font-bold text-ink dark:text-d-ink">
             Broadcast Campaigns
           </Text>

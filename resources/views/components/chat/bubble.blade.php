@@ -245,32 +245,32 @@
                 <p class="text-xs font-bold italic opacity-80 mt-1 whitespace-pre-wrap break-words" x-text="message.caption"></p>
             </template>
 
-            <!-- Metadata -->
-            <div
-                class="text-[9px] font-black uppercase tracking-widest mt-2 flex items-center justify-end gap-1.5 opacity-60">
+            <!-- Metadata (Time & WhatsApp Status Ticks) -->
+            <div class="text-[10px] mt-1.5 flex items-center justify-end gap-1 select-none leading-none"
+                 :class="message.is_outbound ? 'text-white/80 dark:text-white/80' : 'text-slate-500 dark:text-slate-400'">
                 <span x-text="message.pretty_time"></span>
 
                 <template x-if="message.is_outbound">
-                    <span class="inline-flex items-center">
+                    <span class="inline-flex items-center ml-0.5">
                         <template x-if="message.status === 'read' || message.status === 'seen'">
                             <!-- Double Blue Tick (WhatsApp Cyan Blue #53BDEB) -->
-                            <svg class="w-4 h-3 text-[#53bdeb]" viewBox="0 0 18 12" fill="none" stroke="currentColor">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                    d="M1.5 6.5L5 10L12.5 2.5M6 6.5L9.5 10L17 2.5" />
+                            <svg class="w-4 h-3 text-[#53bdeb] shrink-0" viewBox="0 0 16 11" fill="none" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8"
+                                    d="M9.05 1.5L2.85 7.7L0.95 5.8M14.05 1.5L7.85 7.7L5.45 5.3" />
                             </svg>
                         </template>
                         <template x-if="message.status === 'delivered'">
                             <!-- Double Grey Tick -->
-                            <svg class="w-4 h-3 text-slate-400 dark:text-slate-400" viewBox="0 0 18 12" fill="none" stroke="currentColor">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                    d="M1.5 6.5L5 10L12.5 2.5M6 6.5L9.5 10L17 2.5" />
+                            <svg class="w-4 h-3 opacity-80 shrink-0" viewBox="0 0 16 11" fill="none" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8"
+                                    d="M9.05 1.5L2.85 7.7L0.95 5.8M14.05 1.5L7.85 7.7L5.45 5.3" />
                             </svg>
                         </template>
                         <template x-if="message.status === 'sent'">
                             <!-- Single Grey Tick -->
-                            <svg class="w-3.5 h-3 text-slate-400 dark:text-slate-400" viewBox="0 0 16 12" fill="none" stroke="currentColor">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                    d="M2.5 6.5L6 10L13.5 2.5" />
+                            <svg class="w-3.5 h-3 opacity-80 shrink-0" viewBox="0 0 16 11" fill="none" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8"
+                                    d="M11.05 1.5L4.85 7.7L1.95 4.8" />
                             </svg>
                         </template>
                         <template x-if="message.status === 'failed'">
@@ -286,7 +286,7 @@
                             </div>
                         </template>
                         <template x-if="['queued', 'sending', 'pending'].includes(message.status)">
-                            <svg class="w-3 h-3 text-slate-400 animate-pulse" fill="none" stroke="currentColor"
+                            <svg class="w-3 h-3 opacity-70 animate-pulse" fill="none" stroke="currentColor"
                                 viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                                     d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />

@@ -28,6 +28,9 @@ class MessageController extends Controller
         $paginatorArray['data'] = collect($messages->items())->map(function($msg) use ($conversation, $request) {
             $data = $msg->toArray();
             $data['is_outbound'] = $msg->direction === 'outbound';
+            if ($data['is_outbound']) {
+                $data['status'] = $msg->status ?: (!empty($msg->read_at) ? 'read' : (!empty($msg->delivered_at) ? 'delivered' : 'sent'));
+            }
             if ($msg->relationLoaded('replyTo') && $msg->replyTo) {
                 $reply = $msg->replyTo;
                 $replyContent = $reply->content ?: ucfirst($reply->type);

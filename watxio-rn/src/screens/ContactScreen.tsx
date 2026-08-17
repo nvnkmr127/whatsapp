@@ -17,6 +17,7 @@ import { CustomDialog } from '@/components/Dialog';
 import { Toggle } from '@/components/Toggle';
 import { ListSkeleton } from '@/components/ListItemSkeleton';
 import { api } from '@/services/api';
+import { safeGoBack } from '@/navigation/navigationRef';
 
 export default function ContactScreen({ navigation, route }: any) {
   const { tokens } = useTokens();
@@ -307,7 +308,7 @@ export default function ContactScreen({ navigation, route }: any) {
     <View className="flex-1 bg-bg dark:bg-d-bg" style={{ paddingTop: insets.top }}>
       {/* Header */}
       <View className="flex-row items-center justify-between px-3 py-2">
-        <IconButton icon={ChevronLeft} onPress={() => nav.goBack()} />
+        <IconButton icon={ChevronLeft} onPress={() => safeGoBack(nav, 'Main')} />
         <Text className="text-muted dark:text-d-muted text-[13px] font-semibold">Contact</Text>
         <IconButton
           icon={MoreHorizontal}
@@ -393,7 +394,7 @@ export default function ContactScreen({ navigation, route }: any) {
             {
               Icon: Send,
               label: 'Message',
-              onPress: () => nav.goBack(),
+              onPress: () => safeGoBack(nav, 'Main'),
               active: false,
             },
             {

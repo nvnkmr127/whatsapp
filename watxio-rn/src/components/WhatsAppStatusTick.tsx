@@ -24,15 +24,13 @@ export const WA_MUTED = '#8696A0';
  * - Failed: Red alert icon with exclamation (!)
  */
 export function WhatsAppStatusTick({
-  status,
+  status = 'sent',
   size = 16,
   colorOverride,
 }: WhatsAppStatusTickProps) {
   const { tokens } = useTokens();
 
-  if (!status) return null;
-
-  const normalizedStatus = String(status).toLowerCase();
+  const normalizedStatus = String(status || 'sent').toLowerCase();
 
   // Read status ALWAYS uses official WhatsApp Cyan Blue unless explicitly styled
   const isRead = normalizedStatus === 'read' || normalizedStatus === 'seen';
@@ -41,11 +39,13 @@ export function WhatsAppStatusTick({
 
   if (normalizedStatus === 'failed') {
     return (
-      <AlertCircle
-        size={Math.max(12, size - 2)}
-        color={tokens.danger || '#EF4444'}
-        strokeWidth={2}
-      />
+      <View style={{ width: 15, height: 13, justifyContent: 'center', alignItems: 'center' }}>
+        <AlertCircle
+          size={Math.max(12, size - 2)}
+          color={tokens.danger || '#EF4444'}
+          strokeWidth={2}
+        />
+      </View>
     );
   }
 
@@ -55,25 +55,24 @@ export function WhatsAppStatusTick({
     normalizedStatus === 'pending'
   ) {
     return (
-      <Clock
-        size={Math.max(11, size - 4)}
-        color={defaultMutedColor}
-        strokeWidth={1.8}
-      />
+      <View style={{ width: 15, height: 13, justifyContent: 'center', alignItems: 'center' }}>
+        <Clock
+          size={Math.max(11, size - 4)}
+          color={defaultMutedColor}
+          strokeWidth={1.8}
+        />
+      </View>
     );
   }
 
   if (normalizedStatus === 'sent') {
-    const svgWidth = size;
-    const svgHeight = Math.round(size * 0.75);
-
     return (
-      <View style={{ width: svgWidth, height: svgHeight, justifyContent: 'center', alignItems: 'center' }}>
-        <Svg width={svgWidth} height={svgHeight} viewBox="0 0 16 12" fill="none">
+      <View style={{ width: 15, height: 13, justifyContent: 'center', alignItems: 'center' }}>
+        <Svg width={15} height={11} viewBox="0 0 16 11" fill="none">
           <Path
-            d="M2.5 6.5L6 10L13.5 2.5"
+            d="M11.05 1.5L4.85 7.7L1.95 4.8"
             stroke={strokeColor}
-            strokeWidth={1.9}
+            strokeWidth={1.85}
             strokeLinecap="round"
             strokeLinejoin="round"
           />
@@ -83,25 +82,22 @@ export function WhatsAppStatusTick({
   }
 
   // Delivered or Read (Double Ticks)
-  const doubleSvgWidth = Math.round(size * 1.15);
-  const doubleSvgHeight = Math.round(size * 0.75);
-
   return (
-    <View style={{ width: doubleSvgWidth, height: doubleSvgHeight, justifyContent: 'center', alignItems: 'center' }}>
-      <Svg width={doubleSvgWidth} height={doubleSvgHeight} viewBox="0 0 18 12" fill="none">
+    <View style={{ width: 17, height: 13, justifyContent: 'center', alignItems: 'center' }}>
+      <Svg width={17} height={11} viewBox="0 0 16 11" fill="none">
         {/* First Checkmark */}
         <Path
-          d="M1.5 6.5L5 10L12.5 2.5"
+          d="M9.05 1.5L2.85 7.7L0.95 5.8"
           stroke={strokeColor}
-          strokeWidth={1.9}
+          strokeWidth={1.85}
           strokeLinecap="round"
           strokeLinejoin="round"
         />
-        {/* Second Checkmark (Interlocked with 4.5px offset) */}
+        {/* Second Checkmark (Interlocked with offset) */}
         <Path
-          d="M6 6.5L9.5 10L17 2.5"
+          d="M14.05 1.5L7.85 7.7L5.45 5.3"
           stroke={strokeColor}
-          strokeWidth={1.9}
+          strokeWidth={1.85}
           strokeLinecap="round"
           strokeLinejoin="round"
         />

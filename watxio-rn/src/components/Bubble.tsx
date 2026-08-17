@@ -159,8 +159,8 @@ export function Bubble({
 
   // Helper for Status Checkmarks (Native WhatsApp SVGs)
   const renderStatusIcon = (colorOverride?: string) => {
-    if (!isOut || !status) return null;
-    return <WhatsAppStatusTick status={status} size={15} colorOverride={colorOverride} />;
+    if (!isOut) return null;
+    return <WhatsAppStatusTick status={status || 'sent'} size={16} colorOverride={colorOverride} />;
   };
 
   // Format audio seconds display
