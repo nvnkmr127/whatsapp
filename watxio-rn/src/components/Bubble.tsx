@@ -1,11 +1,12 @@
 // src/components/Bubble.tsx — chat bubble (in or out) with WhatsApp native media previews.
 import React from 'react';
 import { View, Text, Image, Pressable, ActivityIndicator } from 'react-native';
-import { Check, CheckCheck, Star, Play, Pause, FileText, Mic, Clock, AlertCircle, Download, Camera, Image as ImageIcon, Video as VideoIcon } from 'lucide-react-native';
+import { Star, Play, Pause, FileText, Mic, Download, Camera, Image as ImageIcon, Video as VideoIcon } from 'lucide-react-native';
 import { Audio } from 'expo-av';
 import { useTokens } from '@/theme';
 import { ReplyPreview } from './ReplyPreview';
 import { VideoThumbnailPreview } from './VideoThumbnailPreview';
+import { WhatsAppStatusTick } from './WhatsAppStatusTick';
 import type { MessageStatus, ChatMessage } from '@/types';
 import { safeExtractText } from '@/utils/text';
 import { resolveMediaUrl } from '@/utils/media';
@@ -156,20 +157,10 @@ export function Bubble({
 
   const docInfo = getDocumentInfo();
 
-  // Helper for Status Checkmarks
+  // Helper for Status Checkmarks (Native WhatsApp SVGs)
   const renderStatusIcon = (colorOverride?: string) => {
     if (!isOut || !status) return null;
-    const checkColor = colorOverride || (status === 'read' ? '#34B7F1' : tokens.muted);
-    if (status === 'read' || status === 'delivered') {
-      return <CheckCheck size={15} color={checkColor} strokeWidth={2} />;
-    }
-    if (status === 'sent') {
-      return <Check size={15} color={checkColor} strokeWidth={2} />;
-    }
-    if (status === 'failed') {
-      return <AlertCircle size={13} color={tokens.danger} strokeWidth={2} />;
-    }
-    return <Clock size={12} color={checkColor} strokeWidth={2} />;
+    return <WhatsAppStatusTick status={status} size={15} colorOverride={colorOverride} />;
   };
 
   // Format audio seconds display
@@ -300,11 +291,16 @@ export function Bubble({
                   })}
                 </View>
 
-                {/* Duration & Mic indicator */}
-                <View className="flex-row items-center justify-between">
+                {/* Duration & Mic indicator + Timestamp & Status */}
+                <View className="flex-row items-center justify-between mt-1">
                   <View className="flex-row items-center gap-1">
                     <Mic size={12} color={tokens.accent} />
                     <Text className="text-muted dark:text-d-muted text-[11px] font-medium">{audioTimeStr}</Text>
+                  </View>
+                  <View className="flex-row items-center gap-1">
+                    {isStarred ? <Star size={9} color="#EAB308" fill="#EAB308" style={{ marginRight: 1 }} /> : null}
+                    {time ? <Text className="text-muted dark:text-d-muted text-[10px] font-medium">{time}</Text> : null}
+                    {renderStatusIcon()}
                   </View>
                 </View>
               </View>
@@ -348,8 +344,8 @@ export function Bubble({
           </View>
         ) : null}
 
-        {/* ── Standard Timestamp row (when text or document/audio is rendered) ── */}
-        {(!hasMedia || (hasMedia && !isImage && !isVideo) || (hasMedia && (isImage || isVideo) && childText)) && (
+        {/* ── Standard Timestamp row (when text or document is rendered, but not bare audio/media which already renders it inside) ── */}
+        {(!hasMedia || (hasMedia && !isImage && !isVideo && !isAudio) || (hasMedia && (isImage || isVideo) && childText)) && (
           <View className={`flex-row items-center justify-end gap-1 ${hasMedia ? 'px-2.5 pb-1.5' : 'px-3 pb-2'}`}>
             {isStarred ? <Star size={10} color="#EAB308" fill="#EAB308" style={{ marginRight: 2 }} /> : null}
             {time ? <Text className="text-muted dark:text-d-muted text-[10.5px] font-medium">{time}</Text> : null}

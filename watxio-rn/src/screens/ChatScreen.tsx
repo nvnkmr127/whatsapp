@@ -1221,12 +1221,15 @@ export default function ChatScreen({ navigation, route }: any) {
     // Reset reply navigation state so screen auto scrolls to sent message
     isUserNavigatingReplyRef.current = false;
 
-    // Prepend locally for immediate UX
+    // Prepend locally for immediate UX with a unique temp ID
+    const tempId = `temp_${Date.now()}`;
     const displayStr = selectedMedia ? (text || `📄 ${selectedMedia.name}`) : text;
+    const nowTime = new Date().toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit', hour12: false });
     const newMsg: ChatMessage = { 
+      id: tempId as any,
       kind: 'out', 
       text: displayStr, 
-      time: 'now', 
+      time: nowTime, 
       status: 'queued',
       media_url: selectedMedia ? selectedMedia.uri : null,
       media_type: selectedMedia ? selectedMedia.type : null,
@@ -1352,10 +1355,45 @@ export default function ChatScreen({ navigation, route }: any) {
       if (__DEV__) {
         console.log('[VIDEO_SEND] Message sent successfully:', sendRes);
       }
+
+      // Immediately flip from 'queued' clock -> 'sent' single tick in local state
+      if (sendRes && sendRes.id) {
+        const rawResStatus = (sendRes.status || 'sent').toLowerCase();
+        const resStatus = rawResStatus === 'read' || rawResStatus === 'seen'
+          ? 'read'
+          : rawResStatus === 'delivered'
+            ? 'delivered'
+            : rawResStatus === 'failed'
+              ? 'failed'
+              : 'sent';
+
+        setMessages((prev) =>
+          prev.map((msg) =>
+            msg === newMsg || (msg.id && String(msg.id) === String(tempId))
+              ? {
+                  ...msg,
+                  id: sendRes.id,
+                  status: resStatus,
+                  time: sendRes.created_at
+                    ? new Date(sendRes.created_at).toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit', hour12: false })
+                    : msg.time,
+                }
+              : msg
+          )
+        );
+      }
+
       fetchConversationDetailsRef.current(true).catch((e) =>
         console.warn('[Send] fetchConversationDetails failed:', e)
       );
     } catch (err: any) {
+      setMessages((prev) =>
+        prev.map((msg) =>
+          msg === newMsg || (msg.id && String(msg.id) === String(tempId))
+            ? { ...msg, status: 'failed' }
+            : msg
+        )
+      );
       showDialog('Failed to Send Message', err.message || 'Error occurred while sending.');
     } finally {
       setIsSending(false);

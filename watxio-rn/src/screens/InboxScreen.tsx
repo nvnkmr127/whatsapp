@@ -15,6 +15,7 @@ import { useTokens } from '@/theme';
 import type { Conversation, RootStackParamList } from '@/types';
 import { Avatar } from '@/components/Avatar';
 import { Chip } from '@/components/Chip';
+import { WhatsAppStatusTick } from '@/components/WhatsAppStatusTick';
 import { useGlobalState } from '@/store';
 import { CustomDialog } from '@/components/Dialog';
 import { api } from '@/services/api';
@@ -108,7 +109,7 @@ export default function InboxScreen({ navigation }: any) {
           last: c.last_message ? c.last_message.content : 'No messages yet',
           time: c.last_message ? c.last_message.pretty_time : '',
           unread: c.unread_count || 0,
-          status: c.status === 'closed' ? 'delivered' : 'read',
+          status: (c.last_message?.status || (c.status === 'closed' ? 'delivered' : 'read')) as any,
           tag: c.tags && c.tags.length > 0 ? c.tags[0].name : undefined,
           tagColor: c.tags && c.tags.length > 0 ? c.tags[0].color : undefined,
           online: c.is_within_24_hours || false,
@@ -658,7 +659,7 @@ function Row({ c, divider, onPress }: RowProps) {
         </View>
         <View className="flex-row items-center gap-1.5 mt-[3px]">
           {c.reply === 'me' ? (
-            <Text className="text-[12.5px] text-muted dark:text-d-muted font-medium">You:</Text>
+            <WhatsAppStatusTick status={c.status || 'sent'} size={14} />
           ) : null}
           <Text
             numberOfLines={1}

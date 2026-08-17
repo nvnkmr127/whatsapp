@@ -96,6 +96,7 @@ class ConversationController extends Controller
                         'content' => $conv->lastMessage->content,
                         'type' => $conv->lastMessage->type,
                         'is_outbound' => $conv->lastMessage->direction === 'outbound',
+                        'status' => $conv->lastMessage->status,
                         'timestamp' => $conv->lastMessage->created_at->timestamp,
                         'pretty_time' => $conv->lastMessage->created_at->format('H:i'),
                     ] : null,

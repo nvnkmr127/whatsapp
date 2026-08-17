@@ -251,23 +251,26 @@
                 <span x-text="message.pretty_time"></span>
 
                 <template x-if="message.is_outbound">
-                    <span>
-                        <template x-if="message.status === 'read'">
-                            <svg class="w-3 h-3 text-sky-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="3"
-                                    d="M5 13l4 4L19 7M5 7l4 4 10-10" />
+                    <span class="inline-flex items-center">
+                        <template x-if="message.status === 'read' || message.status === 'seen'">
+                            <!-- Double Blue Tick (WhatsApp Cyan Blue #53BDEB) -->
+                            <svg class="w-4 h-3 text-[#53bdeb]" viewBox="0 0 18 12" fill="none" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                    d="M1.5 6.5L5 10L12.5 2.5M6 6.5L9.5 10L17 2.5" />
                             </svg>
                         </template>
                         <template x-if="message.status === 'delivered'">
-                            <svg class="w-3 h-3 text-white/70" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="3"
-                                    d="M5 13l4 4L19 7M5 7l4 4 10-10" />
+                            <!-- Double Grey Tick -->
+                            <svg class="w-4 h-3 text-slate-400 dark:text-slate-400" viewBox="0 0 18 12" fill="none" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                    d="M1.5 6.5L5 10L12.5 2.5M6 6.5L9.5 10L17 2.5" />
                             </svg>
                         </template>
                         <template x-if="message.status === 'sent'">
-                            <svg class="w-3 h-3 text-white/50" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="3"
-                                    d="M5 13l4 4L19 7" />
+                            <!-- Single Grey Tick -->
+                            <svg class="w-3.5 h-3 text-slate-400 dark:text-slate-400" viewBox="0 0 16 12" fill="none" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                    d="M2.5 6.5L6 10L13.5 2.5" />
                             </svg>
                         </template>
                         <template x-if="message.status === 'failed'">
@@ -275,15 +278,15 @@
                                 <span
                                     class="text-[8px] font-black text-rose-300 uppercase cursor-pointer hover:underline"
                                     @click="$store.chat.retryMessage(message.id)">Retry</span>
-                                <svg class="w-3 h-3 text-rose-300 cursor-help" fill="none" stroke="currentColor"
+                                <svg class="w-3 h-3 text-rose-400 cursor-help" fill="none" stroke="currentColor"
                                     viewBox="0 0 24 24">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                                         d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
                                 </svg>
                             </div>
                         </template>
-                        <template x-if="['queued', 'sending'].includes(message.status)">
-                            <svg class="w-3 h-3 text-white/40 animate-pulse" fill="none" stroke="currentColor"
+                        <template x-if="['queued', 'sending', 'pending'].includes(message.status)">
+                            <svg class="w-3 h-3 text-slate-400 animate-pulse" fill="none" stroke="currentColor"
                                 viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                                     d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
