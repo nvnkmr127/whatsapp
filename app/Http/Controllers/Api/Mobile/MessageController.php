@@ -139,13 +139,13 @@ class MessageController extends Controller
             'caption' => $isMedia ? $request->input('content') : null,
             'media_url' => $cleanMediaUrl,
             'media_type' => $isMedia ? (
-                str_ends_with(strtolower($cleanMediaUrl), '.ogg')
-                    ? 'audio/ogg'
+                str_ends_with(strtolower($cleanMediaUrl), '.ogg') || str_ends_with(strtolower($cleanMediaUrl), '.opus')
+                    ? 'audio/ogg; codecs=opus'
                     : (str_ends_with(strtolower($cleanMediaUrl), '.m4a') || str_ends_with(strtolower($cleanMediaUrl), '.mp4')
                         ? 'audio/mp4'
                         : (\Illuminate\Support\Facades\Storage::disk(config('filesystems.default', 'public'))->exists($cleanMediaUrl) 
                             ? \Illuminate\Support\Facades\Storage::disk(config('filesystems.default', 'public'))->mimeType($cleanMediaUrl) 
-                            : ($request->input('type') === 'image' ? 'image/jpeg' : ($request->input('type') === 'video' ? 'video/mp4' : ($request->input('type') === 'audio' ? 'audio/ogg' : $request->input('type'))))))
+                            : ($request->input('type') === 'image' ? 'image/jpeg' : ($request->input('type') === 'video' ? 'video/mp4' : ($request->input('type') === 'audio' ? 'audio/ogg; codecs=opus' : $request->input('type'))))))
             ) : null,
             'reply_to_message_id' => $replyToId,
             'metadata' => empty($metadata) ? null : $metadata,

@@ -352,7 +352,7 @@ class WhatsAppService
         $localPath = $cleanPath ? \Illuminate\Support\Facades\Storage::disk($disk)->path($cleanPath) : null;
         if ($localPath && file_exists($localPath)) {
             $mimeType = match($type) {
-                'audio' => 'audio/ogg',
+                'audio' => 'audio/ogg; codecs=opus',
                 'image' => 'image/jpeg',
                 'video' => 'video/mp4',
                 default => 'application/octet-stream',
@@ -360,13 +360,13 @@ class WhatsAppService
             $detectedMime = function_exists('mime_content_type') ? (@mime_content_type($localPath) ?: '') : '';
             if ($type === 'audio') {
                 if (str_contains($detectedMime, 'webm') || str_contains($detectedMime, 'matroska') || str_contains($detectedMime, 'ogg') || str_contains($detectedMime, 'octet-stream') || str_ends_with(strtolower($localPath), '.ogg') || str_ends_with(strtolower($localPath), '.opus')) {
-                    $mimeType = 'audio/ogg';
+                    $mimeType = 'audio/ogg; codecs=opus';
                 } elseif (str_contains($detectedMime, 'mp4') || str_contains($detectedMime, 'm4a') || str_ends_with(strtolower($localPath), '.m4a')) {
                     $mimeType = 'audio/mp4';
                 } elseif (str_contains($detectedMime, 'mpeg') || str_contains($detectedMime, 'mp3') || str_ends_with(strtolower($localPath), '.mp3')) {
                     $mimeType = 'audio/mpeg';
                 } else {
-                    $mimeType = 'audio/ogg';
+                    $mimeType = 'audio/ogg; codecs=opus';
                 }
             } elseif ($detectedMime) {
                 $mimeType = $detectedMime;
@@ -374,6 +374,9 @@ class WhatsAppService
 
             Log::info("Attempting Direct Meta Media Upload for local file: {$localPath} (mime: {$mimeType})");
             $uploadPath = ($type === 'audio' && $isVoice) ? $this->ensureOpus($localPath) : $localPath;
+            if ($type === 'audio' && ($isVoice || str_ends_with(strtolower($uploadPath), '.ogg') || str_ends_with(strtolower($uploadPath), '.opus'))) {
+                $mimeType = 'audio/ogg; codecs=opus';
+            }
             $uploadRes = $this->client->uploadMedia($uploadPath, $mimeType);
             if ($uploadPath !== $localPath) {
                 @unlink($uploadPath);
@@ -393,7 +396,7 @@ class WhatsAppService
                 if (\Illuminate\Support\Facades\Storage::disk($disk)->exists($cleanPath)) {
                     $ext = strtolower(pathinfo($cleanPath, PATHINFO_EXTENSION));
                     $mimeType = match($ext) {
-                        'ogg', 'opus' => 'audio/ogg',
+                        'ogg', 'opus' => 'audio/ogg; codecs=opus',
                         'm4a'         => 'audio/mp4',
                         'mp3'         => 'audio/mpeg',
                         'aac'         => 'audio/aac',
@@ -406,7 +409,7 @@ class WhatsAppService
                         default       => 'application/octet-stream',
                     };
                     if ($type === 'audio') {
-                        $mimeType = in_array($ext, ['ogg', 'opus']) ? 'audio/ogg' : ($ext === 'm4a' ? 'audio/mp4' : ($ext === 'mp3' ? 'audio/mpeg' : 'audio/ogg'));
+                        $mimeType = in_array($ext, ['ogg', 'opus']) ? 'audio/ogg; codecs=opus' : ($ext === 'm4a' ? 'audio/mp4' : ($ext === 'mp3' ? 'audio/mpeg' : 'audio/ogg; codecs=opus'));
                     }
 
                     $tmpFile = sys_get_temp_dir() . '/' . \Illuminate\Support\Str::random(20) . '.' . $ext;
@@ -424,6 +427,9 @@ class WhatsAppService
                         if (file_exists($tmpFile) && filesize($tmpFile) > 0) {
                             Log::info("Attempting Direct Meta Media Upload for remote R2/S3 file: {$cleanPath} (mime: {$mimeType}, size: " . filesize($tmpFile) . "b, temp: {$tmpFile})");
                             $uploadPath = ($type === 'audio' && $isVoice) ? $this->ensureOpus($tmpFile) : $tmpFile;
+                            if ($type === 'audio' && ($isVoice || str_ends_with(strtolower($uploadPath), '.ogg') || str_ends_with(strtolower($uploadPath), '.opus'))) {
+                                $mimeType = 'audio/ogg; codecs=opus';
+                            }
                             $uploadRes = $this->client->uploadMedia($uploadPath, $mimeType);
                             if ($uploadPath !== $tmpFile) {
                                 @unlink($uploadPath);
@@ -535,11 +541,41 @@ class WhatsAppService
     private function ensureOpus(string $path): string
     {
         try {
+            $ffmpegBin = env('FFMPEG_PATH');
+            $ffprobeBin = env('FFPROBE_PATH');
+
+            if (! $ffmpegBin || ! $ffprobeBin) {
+                $extraDirs = [
+                    '/opt/homebrew/bin', '/usr/local/bin', '/usr/bin', '/bin',
+                    'C:/ffmpeg/bin', 'C:/ProgramData/chocolatey/bin',
+                    'C:/Program Files/ffmpeg/bin', 'C:/tools/ffmpeg/bin',
+                ];
+                $userProfile = getenv('USERPROFILE') ?: getenv('HOME');
+                if ($userProfile && is_dir($userProfile . '/AppData/Local/Microsoft/WinGet/Packages')) {
+                    $winGetPkgs = glob($userProfile . '/AppData/Local/Microsoft/WinGet/Packages/Gyan.FFmpeg*');
+                    if ($winGetPkgs) {
+                        foreach ($winGetPkgs as $pkg) {
+                            $subDirs = glob($pkg . '/ffmpeg-*');
+                            if ($subDirs) {
+                                foreach ($subDirs as $sd) {
+                                    if (is_dir($sd . '/bin')) {
+                                        $extraDirs[] = $sd . '/bin';
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+
+                $finder = new \Symfony\Component\Process\ExecutableFinder;
+                $ffmpegBin = $ffmpegBin ?: ($finder->find('ffmpeg', 'ffmpeg', array_values(array_unique($extraDirs))) ?: 'ffmpeg');
+                $ffprobeBin = $ffprobeBin ?: ($finder->find('ffprobe', 'ffprobe', array_values(array_unique($extraDirs))) ?: 'ffprobe');
+            }
+
             // WhatsApp voice notes require 48kHz mono Opus; anything else delivers as 131053.
-            $probe = trim((string) @shell_exec(
-                'ffprobe -v error -select_streams a:0 -show_entries stream=codec_name,sample_rate,channels -of csv=p=0 '
-                . escapeshellarg($path) . ' 2>/dev/null'
-            ));
+            $probeCmd = escapeshellarg($ffprobeBin) . ' -v error -select_streams a:0 -show_entries stream=codec_name,sample_rate,channels -of csv=p=0 '
+                . escapeshellarg($path) . ' 2>/dev/null';
+            $probe = trim((string) @shell_exec($probeCmd));
 
             if ($probe === '') {
                 Log::warning("ensureOpus: could not probe {$path}; uploading as-is");
@@ -551,10 +587,9 @@ class WhatsAppService
             }
 
             $out = sys_get_temp_dir() . '/' . \Illuminate\Support\Str::random(20) . '.ogg';
-            @shell_exec(
-                'ffmpeg -y -i ' . escapeshellarg($path)
-                . ' -vn -c:a libopus -b:a 32k -ar 48000 -ac 1 -application voip -f ogg ' . escapeshellarg($out) . ' 2>/dev/null'
-            );
+            $ffmpegCmd = escapeshellarg($ffmpegBin) . ' -y -i ' . escapeshellarg($path)
+                . ' -vn -c:a libopus -b:a 32k -ar 48000 -ac 1 -application voip -f ogg ' . escapeshellarg($out) . ' 2>/dev/null';
+            @shell_exec($ffmpegCmd);
 
             if (file_exists($out) && filesize($out) > 0) {
                 Log::info("ensureOpus: normalized voice note '{$probe}' -> opus,48000,1 ({$path} -> {$out})");

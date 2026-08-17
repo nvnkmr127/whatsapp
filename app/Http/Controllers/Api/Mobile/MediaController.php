@@ -54,7 +54,7 @@ class MediaController extends Controller
             // Always transcode voice notes to WhatsApp's canonical spec (48kHz mono Opus).
             // A recorded .ogg can be Vorbis or an off-spec Opus sample rate — both are accepted
             // by Meta's /media upload but rejected on delivery with 131053 "Media upload error".
-            {
+            try {
                 $ffmpegBin = env('FFMPEG_PATH');
 
                 if (!$ffmpegBin) {
@@ -92,7 +92,9 @@ class MediaController extends Controller
                         '-vn',
                         '-c:a', 'libopus',
                         '-b:a', '32k',
-                        '-ar', '16000',
+                        '-ar', '48000',
+                        '-ac', '1',
+                        '-application', 'voip',
                         '-f', 'ogg',
                         $tmpOgg
                     ]);
@@ -127,19 +129,25 @@ class MediaController extends Controller
                     \Log::error('[MOBILE_MEDIA_UPLOAD] ffmpeg not found — cannot convert voice note.');
                     return response()->json(['error' => 'Voice notes require server audio conversion support (FFmpeg). Please contact support.'], 422);
                 }
+            } catch (\Throwable $e) {
+                \Log::error('[MOBILE_MEDIA_UPLOAD] Voice note transcoding exception', [
+                    'error' => $e->getMessage(),
+                    'trace' => $e->getTraceAsString(),
+                ]);
+                return response()->json(['error' => 'Failed to process voice note: ' . $e->getMessage()], 422);
             }
         }
         
         // Determine type based on mime or extension
         $mime = strtolower((string) $file->getMimeType());
         if ($extension === 'ogg' || str_contains($mime, 'ogg')) {
-            $mime = 'audio/ogg';
+            $mime = 'audio/ogg; codecs=opus';
         }
         $type = 'document';
         if (str_contains($mime, 'audio') || in_array($extension, ['mp3','ogg','wav','m4a','aac','opus','3gp'])) {
             $type = 'audio';
-            if ($extension === 'ogg') {
-                $mime = 'audio/ogg';
+            if ($extension === 'ogg' || $extension === 'opus') {
+                $mime = 'audio/ogg; codecs=opus';
             }
         } elseif (str_contains($mime, 'image') || in_array($extension, ['jpg','jpeg','png','gif','webp','heic','heif'])) {
             $type = 'image';

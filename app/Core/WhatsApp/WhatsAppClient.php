@@ -76,10 +76,16 @@ class WhatsAppClient
     /**
      * Upload a local media file directly to Meta Cloud API to obtain a media_id.
      */
-    public function uploadMedia(string $filePath, string $mimeType = 'audio/ogg'): array
+    public function uploadMedia(string $filePath, string $mimeType = 'audio/ogg; codecs=opus'): array
     {
         if (! $this->phoneId) {
             return ['success' => false, 'error' => 'Phone ID not configured', 'status_code' => 400];
+        }
+
+        // WhatsApp Cloud API strictly requires "audio/ogg; codecs=opus" for OGG/Opus voice notes.
+        // Generic "audio/ogg" or "audio/opus" is accepted during upload but fails upon delivery with error 131053.
+        if ($mimeType === 'audio/ogg' || $mimeType === 'audio/opus' || $mimeType === 'audio/ogg;codecs=opus') {
+            $mimeType = 'audio/ogg; codecs=opus';
         }
 
         // Sandbox Mode Interceptor

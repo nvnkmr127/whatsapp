@@ -1861,7 +1861,7 @@ export default function ChatScreen({ navigation, route }: any) {
                   formData.append('file', {
                     uri,
                     name: 'voice.m4a',
-                    type: 'audio/m4a',
+                    type: 'audio/mp4',
                   } as any);
                   formData.append('is_voice_note', 'true');
 

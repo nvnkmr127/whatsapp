@@ -546,7 +546,7 @@ class MessageWindow extends Component
         // We must convert webm → ogg before uploading to avoid silent failures.
         $srcPath  = $file->getRealPath();
         $ext      = $srcExt;
-        $mimeType = 'audio/ogg';
+        $mimeType = 'audio/ogg; codecs=opus';
         $convertedTmp = null;
 
         if ($srcExt === 'webm') {
@@ -588,7 +588,9 @@ class MessageWindow extends Component
                     '-vn',
                     '-c:a', 'libopus',
                     '-b:a', '32k',
-                    '-ar', '16000',
+                    '-ar', '48000',
+                    '-ac', '1',
+                    '-application', 'voip',
                     '-f', 'ogg',
                     $tmpOgg
                 ]);
@@ -602,7 +604,7 @@ class MessageWindow extends Component
                     ]);
                     $srcPath      = $tmpOgg;
                     $ext          = 'ogg';
-                    $mimeType     = 'audio/ogg';
+                    $mimeType     = 'audio/ogg; codecs=opus';
                     $convertedTmp = $tmpOgg;
                 } else {
                     Log::error('[VN:B5a] FFmpeg process failed', [
@@ -625,10 +627,10 @@ class MessageWindow extends Component
             }
         } else {
             $mimeType = match($ext) {
-                'ogg'  => 'audio/ogg',
+                'ogg'  => 'audio/ogg; codecs=opus',
                 'mp3'  => 'audio/mpeg',
                 'm4a'  => 'audio/mp4',
-                default => 'audio/ogg',
+                default => 'audio/ogg; codecs=opus',
             };
         }
 
