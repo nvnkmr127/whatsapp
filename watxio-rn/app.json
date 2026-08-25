@@ -34,8 +34,8 @@
       "allowBackup": false,
       "googleServicesFile": "./google-services.json",
       "adaptiveIcon": {
-        "foregroundImage": "./src/assets/appicon.png",
-        "backgroundColor": "#2F8F6F"
+        "foregroundImage": "./src/assets/adaptive-icon.png",
+        "backgroundColor": "#FFFFFF"
       },
       "splash": {
         "image": "./src/assets/applogo.png",
