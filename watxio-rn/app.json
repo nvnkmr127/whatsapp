@@ -8,6 +8,11 @@
     "userInterfaceStyle": "automatic",
     "scheme": "watxio",
     "newArchEnabled": true,
+    "splash": {
+      "image": "./src/assets/applogo.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#FFFFFF"
+    },
     "ios": {
       "supportsTablet": false,
       "bundleIdentifier": "com.watxio.app",
@@ -16,15 +21,26 @@
       "infoPlist": {
         "NSMicrophoneUsageDescription": "Watxio needs microphone access to make and receive WhatsApp Business calls."
       },
-      "bitcode": false
+      "bitcode": false,
+      "splash": {
+        "image": "./src/assets/applogo.png",
+        "resizeMode": "contain",
+        "backgroundColor": "#FFFFFF"
+      }
     },
     "android": {
       "package": "com.watxio.app",
       "versionCode": 2,
+      "allowBackup": false,
       "googleServicesFile": "./google-services.json",
       "adaptiveIcon": {
         "foregroundImage": "./src/assets/appicon.png",
         "backgroundColor": "#2F8F6F"
+      },
+      "splash": {
+        "image": "./src/assets/applogo.png",
+        "resizeMode": "contain",
+        "backgroundColor": "#FFFFFF"
       },
       "permissions": [
         "android.permission.RECORD_AUDIO",

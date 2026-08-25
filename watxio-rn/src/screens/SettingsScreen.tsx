@@ -20,6 +20,7 @@ import { IconButton } from '@/components/Button';
 import { useGlobalState, store } from '@/store';
 import { CustomDialog } from '@/components/Dialog';
 import { api } from '@/services/api';
+import { navigationRef } from '@/navigation/navigationRef';
 
 export default function SettingsScreen({ navigation }: any) {
   const { tokens, scheme, toggleTheme } = useTokens();
@@ -105,28 +106,24 @@ export default function SettingsScreen({ navigation }: any) {
   const handleSignOut = async () => {
     setLoading(true);
     // Fire and forget logout API call so user isn't blocked by slow network
-    api.post('/v1/mobile/auth/logout').catch(err => {
+    api.post('/v1/mobile/auth/logout').catch((err) => {
       console.warn('Logout endpoint mismatch or already unauthenticated:', err);
     });
 
     try {
-      // Clear token and memory storage
-      store.set({
-        token: null,
-        user: null,
-        teams: [],
-        numbers: [],
-        activeTeamId: null,
-      });
-      // Force remove from AsyncStorage immediately to prevent race conditions with Onboarding/Login screens auto-logging in
-      const AsyncStorage = require('@react-native-async-storage/async-storage').default;
-      await AsyncStorage.removeItem('@watxio_session');
-      
+      await store.clearSession();
       setLoading(false);
-      nav.getParent()?.reset({
-        index: 0,
-        routes: [{ name: 'Onboarding' }],
-      });
+      if (navigationRef.isReady()) {
+        navigationRef.reset({
+          index: 0,
+          routes: [{ name: 'Onboarding' }],
+        });
+      } else {
+        nav.getParent()?.reset({
+          index: 0,
+          routes: [{ name: 'Onboarding' }],
+        });
+      }
     } catch (err) {
       console.error('Failed to clear local storage during sign out:', err);
       setLoading(false);

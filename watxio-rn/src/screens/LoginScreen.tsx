@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { View, Text, TextInput, Pressable, ScrollView, Modal, ActivityIndicator, Image } from 'react-native';
+import { View, Text, TextInput, Pressable, ScrollView, Modal, ActivityIndicator, Image, Linking } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { ChevronDown, QrCode, Mail, Lock, Server } from 'lucide-react-native';
 import Svg, { Path } from 'react-native-svg';
@@ -214,9 +214,38 @@ export default function LoginScreen({ navigation }: any) {
 
         <View className="flex-1" />
 
-        <Text className="text-[11.5px] text-muted dark:text-d-muted text-center leading-[18px] px-2 pt-6">
-          By continuing you agree to our Terms and Privacy policy. We never read your customer conversations.
-        </Text>
+        <View className="items-center px-2 pt-6">
+          <Text className="text-[11.5px] text-muted dark:text-d-muted text-center leading-[18px]">
+            By continuing you agree to our{' '}
+            <Text
+              onPress={() => {
+                Linking.openURL('https://watxio.com/terms').catch((err) => {
+                  console.warn('Failed to open Terms URL:', err);
+                  showDialog('Terms', 'Could not open https://watxio.com/terms.');
+                });
+              }}
+              className="underline font-medium text-ink dark:text-d-ink"
+            >
+              Terms
+            </Text>{' '}
+            and{' '}
+            <Text
+              onPress={() => {
+                Linking.openURL('https://watxio.com/privacy').catch((err) => {
+                  console.warn('Failed to open privacy URL:', err);
+                  showDialog('Privacy Policy', 'Could not open https://watxio.com/privacy.');
+                });
+              }}
+              className="underline font-medium text-accent dark:text-d-accent"
+            >
+              Privacy Policy
+            </Text>
+            .
+          </Text>
+          <Text className="text-[11.5px] text-muted dark:text-d-muted text-center leading-[18px] mt-0.5">
+            We never read your customer conversations.
+          </Text>
+        </View>
       </ScrollView>
 
       {/* Loading Modal Overlay */}

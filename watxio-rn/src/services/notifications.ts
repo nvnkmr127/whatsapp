@@ -16,6 +16,7 @@ import { Platform } from 'react-native';
 import * as Notifications from 'expo-notifications';
 import * as Device from 'expo-device';
 import { api } from '@/services/api';
+import { securityService } from '@/services/security';
 
 // ── Foreground display behaviour ─────────────────────────────────────────────
 // Show banner + sound even when the app is open (like WhatsApp).
@@ -241,8 +242,22 @@ export function useNotificationNavigation(navRef: any) {
 }
 
 // ── Navigate based on notification type ─────────────────────────────────────
-function handleNotificationTap(data: NotificationPayload, navRef: any) {
+async function handleNotificationTap(data: NotificationPayload, navRef: any) {
   if (!data || !navRef?.isReady?.()) return;
+
+  // Do not navigate to protected screens if developer mode is blocking execution
+  const isBlocked = await securityService.shouldBlockExecution();
+  if (isBlocked) {
+    console.log('[FCM] Developer mode active — skipping notification navigation.');
+    return;
+  }
+
+  // Do not navigate to protected screens if the user is not authenticated
+  const authToken = api.getToken();
+  if (!authToken) {
+    console.log('[FCM] Skipping notification navigation — user is not authenticated.');
+    return;
+  }
 
   switch (data.type) {
     case 'new_message':
@@ -272,7 +287,9 @@ function handleNotificationTap(data: NotificationPayload, navRef: any) {
       break;
 
     default:
-      navRef.navigate('Main');
+      if (data.type) {
+        navRef.navigate('Main');
+      }
       break;
   }
 }

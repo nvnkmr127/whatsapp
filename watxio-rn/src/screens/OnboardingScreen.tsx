@@ -12,6 +12,7 @@ import {
   Modal,
   ScrollView,
   Image,
+  Linking,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import {
@@ -31,6 +32,7 @@ import { useTokens } from '@/theme';
 import { store, useGlobalState } from '@/store';
 import { CustomDialog } from '@/components/Dialog';
 import { api } from '@/services/api';
+import { securityService } from '@/services/security';
 
 export default function OnboardingScreen({ navigation }: any) {
   const { tokens } = useTokens();
@@ -70,11 +72,28 @@ export default function OnboardingScreen({ navigation }: any) {
   useEffect(() => {
     const checkSession = async () => {
       try {
+        const isBlocked = await securityService.shouldBlockExecution();
+        if (isBlocked) {
+          console.log('[Auth] Developer mode is active — halting session auto-navigation');
+          setCheckingSession(false);
+          return;
+        }
+
         const hasSession = await store.loadSession();
         if (hasSession && store.get().token) {
           // Validate token with backend server on app launch
           try {
             const meResponse = await api.get('/v1/mobile/auth/me');
+            if (!meResponse || !meResponse.user) {
+              throw new Error('Invalid user payload');
+            }
+
+            const blockedNow = await securityService.shouldBlockExecution();
+            if (blockedNow) {
+              setCheckingSession(false);
+              return;
+            }
+
             const userTeams = meResponse.teams || [];
             const activeTeam = userTeams[0] || null;
             const teamNumbers = meResponse.numbers || [];
@@ -406,14 +425,6 @@ export default function OnboardingScreen({ navigation }: any) {
     }
   };
 
-  if (checkingSession) {
-    return (
-      <View style={{ flex: 1, backgroundColor: '#0F1515', alignItems: 'center', justifyContent: 'center' }}>
-        <ActivityIndicator size="large" color="#5bb393" />
-      </View>
-    );
-  }
-
   return (
     <KeyboardAvoidingView
       behavior={Platform.OS === 'ios' ? 'padding' : undefined}
@@ -593,11 +604,35 @@ export default function OnboardingScreen({ navigation }: any) {
 
           {/* Footer Text */}
           <View className="flex-1 justify-end items-center pb-2 pt-10">
-            <Text className="text-[10.5px] text-gray-500 text-center leading-relaxed max-w-[280px]">
+            <Text className="text-[10.5px] text-gray-500 text-center leading-relaxed">
               By continuing you agree to our{' '}
-              <Text className="underline text-gray-400 font-medium">Terms</Text> and{' '}
-              <Text className="underline text-gray-400 font-medium">Privacy policy</Text>. We never read your customer
-              conversations.
+              <Text
+                onPress={() => {
+                  Linking.openURL('https://watxio.com/terms').catch((err) => {
+                    console.warn('Failed to open Terms URL:', err);
+                    showDialog('Terms', 'Could not open https://watxio.com/terms.');
+                  });
+                }}
+                className="underline text-gray-400 font-medium"
+              >
+                Terms
+              </Text>{' '}
+              and{' '}
+              <Text
+                onPress={() => {
+                  Linking.openURL('https://watxio.com/privacy').catch((err) => {
+                    console.warn('Failed to open privacy URL:', err);
+                    showDialog('Privacy Policy', 'Could not open https://watxio.com/privacy.');
+                  });
+                }}
+                className="underline text-[#5bb393] font-medium"
+              >
+                Privacy Policy
+              </Text>
+              .
+            </Text>
+            <Text className="text-[10.5px] text-gray-500 text-center leading-relaxed mt-0.5">
+              We never read your customer conversations.
             </Text>
           </View>
         </ScrollView>
