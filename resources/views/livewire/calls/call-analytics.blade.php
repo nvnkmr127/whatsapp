@@ -194,10 +194,9 @@
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     @script
     <script>
-        {
-            const costCtx = document.getElementById('costVelocityChart').getContext('2d');
-            const outcomeCtx = document.getElementById('outcomeIndexChart').getContext('2d');
-            let costChart, outcomeChart;
+        const costCtx = document.getElementById('costVelocityChart').getContext('2d');
+        const outcomeCtx = document.getElementById('outcomeIndexChart').getContext('2d');
+        let costChart, outcomeChart;
 
             const currencySymbol = "{{ get_setting('currency_symbol', '$') }}";
             const qualityCtx = document.getElementById('qualityTrendsChart').getContext('2d');
@@ -357,9 +356,8 @@
                 });
             }
 
-            initCharts();
-            $wire.on('refreshCharts', () => initCharts());
-        }
+        initCharts();
+        $wire.on('refreshCharts', () => initCharts());
     </script>
     @endscript
 </div>

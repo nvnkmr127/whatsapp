@@ -53,62 +53,60 @@
 
     @script
     <script>
-        {
-            let sdkInitialized = false;
-            const appId = '{{ config("services.facebook.client_id") }}';
+        let sdkInitialized = false;
+        const appId = '{{ config("services.facebook.client_id") }}';
 
-            // HTTPS Check
-            if (window.location.protocol !== 'https:' && window.location.hostname !== 'localhost') {
-                document.getElementById('meta-login-btn').classList.add('opacity-50', 'cursor-not-allowed');
-                document.getElementById('meta-login-btn').disabled = true;
-                document.getElementById('https-warning-meta').classList.remove('hidden');
-            }
-
-            // Initialize FB SDK if not already done
-            if (typeof FB === 'undefined') {
-                window.fbAsyncInit = function() {
-                    FB.init({
-                        appId: appId,
-                        cookie: true,
-                        xfbml: true,
-                        version: 'v21.0'
-                    });
-                    sdkInitialized = true;
-                };
-
-                (function(d, s, id){
-                    var js, fjs = d.getElementsByTagName(s)[0];
-                    if (d.getElementById(id)) {return;}
-                    js = d.createElement(s); js.id = id;
-                    js.src = "https://connect.facebook.net/en_US/sdk.js";
-                    fjs.parentNode.insertBefore(js, fjs);
-                }(document, 'script', 'facebook-jssdk'));
-            } else {
-                sdkInitialized = true;
-            }
-
-            window.launchMetaSignup = function() {
-                if (typeof FB === 'undefined') {
-                    alert('Facebook SDK is loading...');
-                    return;
-                }
-
-                FB.login(function(response) {
-                    if (response.authResponse) {
-                        // User authorized the app
-                        const accessToken = response.authResponse.accessToken;
-                        const userID = response.authResponse.userID;
-                        
-                        @this.handleAuthResponse(accessToken, userID);
-                    } else {
-                        console.log('User cancelled login or did not fully authorize.');
-                    }
-                }, {
-                    scope: 'email, public_profile, ads_management, ads_read, read_insights, business_management, whatsapp_business_management, whatsapp_business_messaging',
-                    return_scopes: true
-                });
-            };
+        // HTTPS Check
+        if (window.location.protocol !== 'https:' && window.location.hostname !== 'localhost') {
+            document.getElementById('meta-login-btn').classList.add('opacity-50', 'cursor-not-allowed');
+            document.getElementById('meta-login-btn').disabled = true;
+            document.getElementById('https-warning-meta').classList.remove('hidden');
         }
+
+        // Initialize FB SDK if not already done
+        if (typeof FB === 'undefined') {
+            window.fbAsyncInit = function() {
+                FB.init({
+                    appId: appId,
+                    cookie: true,
+                    xfbml: true,
+                    version: 'v21.0'
+                });
+                sdkInitialized = true;
+            };
+
+            (function(d, s, id){
+                var js, fjs = d.getElementsByTagName(s)[0];
+                if (d.getElementById(id)) {return;}
+                js = d.createElement(s); js.id = id;
+                js.src = "https://connect.facebook.net/en_US/sdk.js";
+                fjs.parentNode.insertBefore(js, fjs);
+            }(document, 'script', 'facebook-jssdk'));
+        } else {
+            sdkInitialized = true;
+        }
+
+        window.launchMetaSignup = function() {
+            if (typeof FB === 'undefined') {
+                alert('Facebook SDK is loading...');
+                return;
+            }
+
+            FB.login(function(response) {
+                if (response.authResponse) {
+                    // User authorized the app
+                    const accessToken = response.authResponse.accessToken;
+                    const userID = response.authResponse.userID;
+                    
+                    $wire.handleAuthResponse(accessToken, userID);
+                } else {
+                    console.log('User cancelled login or did not fully authorize.');
+                }
+            }, {
+                scope: 'email, public_profile, ads_management, ads_read, read_insights, business_management, whatsapp_business_management, whatsapp_business_messaging',
+                return_scopes: true
+            });
+        };
     </script>
     @endscript
 </div>

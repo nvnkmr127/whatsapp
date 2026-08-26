@@ -279,132 +279,130 @@
 
 @script
 <script>
-    {
-        let chart = null;
+    let chart = null;
 
-        const normalizeChartData = (data) => {
-            data = (data && typeof data === 'object') ? data : {};
-            const labels = Array.isArray(data.labels) ? data.labels : [];
+    const normalizeChartData = (data) => {
+        data = (data && typeof data === 'object') ? data : {};
+        const labels = Array.isArray(data.labels) ? data.labels : [];
 
-            let series = Array.isArray(data.series) ? data.series : [];
-            series = series
-                .filter(s => s && typeof s === 'object')
-                .map(s => ({
-                    name: typeof s.name === 'string' ? s.name : 'Messages',
-                    data: Array.isArray(s.data) ? s.data : [],
-                }));
+        let series = Array.isArray(data.series) ? data.series : [];
+        series = series
+            .filter(s => s && typeof s === 'object')
+            .map(s => ({
+                name: typeof s.name === 'string' ? s.name : 'Messages',
+                data: Array.isArray(s.data) ? s.data : [],
+            }));
 
-            if (series.length === 0) {
-                series = [{ name: 'Messages', data: [] }];
-            }
-
-            return { labels, series };
-        };
-
-        const initChart = (data) => {
-            const normalized = normalizeChartData(data);
-            const isDark = document.documentElement.classList.contains('dark');
-            const axisLabelColor = isDark ? '#71717a' : '#94a3b8';
-            const gridColor = isDark ? 'rgba(63,63,70,0.6)' : 'rgba(0,0,0,0.07)';
-            const tooltipBg = isDark ? '#18181b' : '#ffffff';
-            const tooltipBorder = isDark ? '#3f3f46' : '#e2e8f0';
-            const tooltipLabel = isDark ? '#71717a' : '#94a3b8';
-            const tooltipValue = isDark ? '#ffffff' : '#0f172a';
-            const options = {
-                series: normalized.series,
-                chart: {
-                    type: 'area',
-                    height: 400,
-                    fontFamily: 'Inter, sans-serif',
-                    toolbar: { show: false },
-                    background: 'transparent',
-                    animations: {
-                        enabled: true,
-                        easing: 'easeinout',
-                        speed: 800,
-                        animateGradually: { enabled: true, delay: 150 }
-                    },
-                    sparkline: { enabled: false }
-                },
-                colors: ['#f97316', '#fbbf24'],
-                fill: {
-                    type: 'gradient',
-                    gradient: {
-                        shadeIntensity: 1,
-                        opacityFrom: 0.3,
-                        opacityTo: 0.05,
-                        stops: [0, 90, 100]
-                    }
-                },
-                markers: {
-                    size: 0,
-                    colors: ['#fff'],
-                    strokeColors: ['#f97316', '#fbbf24'],
-                    strokeWidth: 3,
-                    hover: { size: 6 }
-                },
-                dataLabels: { enabled: false },
-                stroke: {
-                    curve: 'smooth',
-                    width: 4,
-                    lineCap: 'round'
-                },
-                xaxis: {
-                    categories: normalized.labels,
-                    axisBorder: { show: false },
-                    axisTicks: { show: false },
-                    labels: {
-                        style: { colors: axisLabelColor, fontSize: '11px', fontWeight: 600 }
-                    }
-                },
-                yaxis: {
-                    labels: {
-                        style: { colors: axisLabelColor, fontSize: '11px', fontWeight: 600 },
-                        formatter: (value) => Math.floor(value)
-                    }
-                },
-                grid: {
-                    borderColor: gridColor,
-                    strokeDashArray: 8,
-                    padding: { left: 0, right: 0 }
-                },
-                tooltip: {
-                    theme: isDark ? 'dark' : 'light',
-                    custom: function ({ series, seriesIndex, dataPointIndex, w }) {
-                        return '<div style="padding:12px 16px;background:' + tooltipBg + ';border:1px solid ' + tooltipBorder + ';border-radius:12px;box-shadow:0 10px 40px rgba(0,0,0,0.15)">' +
-                            '<div style="font-size:10px;text-transform:uppercase;font-weight:900;color:' + tooltipLabel + ';margin-bottom:4px;letter-spacing:0.1em">' + w.globals.categoryLabels[dataPointIndex] + '</div>' +
-                            '<div style="display:flex;align-items:center;gap:8px">' +
-                            '<span style="width:8px;height:8px;border-radius:50%;background:' + w.globals.colors[seriesIndex] + ';display:inline-block"></span>' +
-                            '<span style="font-size:14px;font-weight:900;color:' + tooltipValue + '">' + series[seriesIndex][dataPointIndex] + ' Messages</span>' +
-                            '</div>' +
-                            '</div>';
-                    }
-                }
-            };
-
-            const chartEl = document.querySelector("#chart");
-            if (chartEl) {
-                if (chart) {
-                    chart.destroy();
-                }
-                chart = new ApexCharts(chartEl, options);
-                chart.render();
-            }
-        };
-
-        const initialChartEl = document.querySelector("#chart");
-        let initialChartData = {};
-        try {
-            initialChartData = initialChartEl?.dataset?.chart ? JSON.parse(initialChartEl.dataset.chart) : {};
-        } catch (e) {
-            initialChartData = {};
+        if (series.length === 0) {
+            series = [{ name: 'Messages', data: [] }];
         }
-        initChart(initialChartData);
 
-        $wire.on('chartDataUpdated', (data) => {
-            if (Array.isArray(data)) data = data[0];
-            initChart(data);
-        });
+        return { labels, series };
+    };
+
+    const initChart = (data) => {
+        const normalized = normalizeChartData(data);
+        const isDark = document.documentElement.classList.contains('dark');
+        const axisLabelColor = isDark ? '#71717a' : '#94a3b8';
+        const gridColor = isDark ? 'rgba(63,63,70,0.6)' : 'rgba(0,0,0,0.07)';
+        const tooltipBg = isDark ? '#18181b' : '#ffffff';
+        const tooltipBorder = isDark ? '#3f3f46' : '#e2e8f0';
+        const tooltipLabel = isDark ? '#71717a' : '#94a3b8';
+        const tooltipValue = isDark ? '#ffffff' : '#0f172a';
+        const options = {
+            series: normalized.series,
+            chart: {
+                type: 'area',
+                height: 400,
+                fontFamily: 'Inter, sans-serif',
+                toolbar: { show: false },
+                background: 'transparent',
+                animations: {
+                    enabled: true,
+                    easing: 'easeinout',
+                    speed: 800,
+                    animateGradually: { enabled: true, delay: 150 }
+                },
+                sparkline: { enabled: false }
+            },
+            colors: ['#f97316', '#fbbf24'],
+            fill: {
+                type: 'gradient',
+                gradient: {
+                    shadeIntensity: 1,
+                    opacityFrom: 0.3,
+                    opacityTo: 0.05,
+                    stops: [0, 90, 100]
+                }
+            },
+            markers: {
+                size: 0,
+                colors: ['#fff'],
+                strokeColors: ['#f97316', '#fbbf24'],
+                strokeWidth: 3,
+                hover: { size: 6 }
+            },
+            dataLabels: { enabled: false },
+            stroke: {
+                curve: 'smooth',
+                width: 4,
+                lineCap: 'round'
+            },
+            xaxis: {
+                categories: normalized.labels,
+                axisBorder: { show: false },
+                axisTicks: { show: false },
+                labels: {
+                    style: { colors: axisLabelColor, fontSize: '11px', fontWeight: 600 }
+                }
+            },
+            yaxis: {
+                labels: {
+                    style: { colors: axisLabelColor, fontSize: '11px', fontWeight: 600 },
+                    formatter: (value) => Math.floor(value)
+                }
+            },
+            grid: {
+                borderColor: gridColor,
+                strokeDashArray: 8,
+                padding: { left: 0, right: 0 }
+            },
+            tooltip: {
+                theme: isDark ? 'dark' : 'light',
+                custom: function ({ series, seriesIndex, dataPointIndex, w }) {
+                    return '<div style="padding:12px 16px;background:' + tooltipBg + ';border:1px solid ' + tooltipBorder + ';border-radius:12px;box-shadow:0 10px 40px rgba(0,0,0,0.15)">' +
+                        '<div style="font-size:10px;text-transform:uppercase;font-weight:900;color:' + tooltipLabel + ';margin-bottom:4px;letter-spacing:0.1em">' + w.globals.categoryLabels[dataPointIndex] + '</div>' +
+                        '<div style="display:flex;align-items:center;gap:8px">' +
+                        '<span style="width:8px;height:8px;border-radius:50%;background:' + w.globals.colors[seriesIndex] + ';display:inline-block"></span>' +
+                        '<span style="font-size:14px;font-weight:900;color:' + tooltipValue + '">' + series[seriesIndex][dataPointIndex] + ' Messages</span>' +
+                        '</div>' +
+                        '</div>';
+                }
+            }
+        };
+
+        const chartEl = document.querySelector("#chart");
+        if (chartEl) {
+            if (chart) {
+                chart.destroy();
+            }
+            chart = new ApexCharts(chartEl, options);
+            chart.render();
+        }
+    };
+
+    const initialChartEl = document.querySelector("#chart");
+    let initialChartData = {};
+    try {
+        initialChartData = initialChartEl?.dataset?.chart ? JSON.parse(initialChartEl.dataset.chart) : {};
+    } catch (e) {
+        initialChartData = {};
     }
+    initChart(initialChartData);
+
+    $wire.on('chartDataUpdated', (data) => {
+        if (Array.isArray(data)) data = data[0];
+        initChart(data);
+    });
 </script>
 @endscript

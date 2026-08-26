@@ -271,6 +271,7 @@
         .dark .custom-scrollbar::-webkit-scrollbar-thumb {
             background: #1e293b;
         }
+    </style>
     <script>
         function copyToClipboard(elementId, button) {
             const text = document.getElementById(elementId).innerText;

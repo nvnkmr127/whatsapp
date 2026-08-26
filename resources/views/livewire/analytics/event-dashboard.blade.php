@@ -430,10 +430,9 @@
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     @script
     <script>
-        {
-            const trendCtx = document.getElementById('eventTrendChart').getContext('2d');
-            const distCtx = document.getElementById('eventDistributionChart').getContext('2d');
-            let trendChart, distChart;
+        const trendCtx = document.getElementById('eventTrendChart').getContext('2d');
+        const distCtx = document.getElementById('eventDistributionChart').getContext('2d');
+        let trendChart, distChart;
 
             function initCharts(chartData = null, distData = null) {
                 const isDark = document.documentElement.classList.contains('dark');
@@ -561,7 +560,6 @@
                 const data = Array.isArray(event) ? event[0] : event;
                 initCharts(data.chartData, data.distData);
             });
-        }
     </script>
     @endscript
 </div>

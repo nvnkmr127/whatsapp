@@ -1536,119 +1536,116 @@
             </div>
         </div>
     @endif
-</div><!-- End Main Card -->
 @endif
 
 @script
 <script>
-    {
-        let sdkInitialized = false;
+    let sdkInitialized = false;
 
-        const checkHttps = () => {
-            if (window.location.protocol !== 'https:' && window.location.hostname !== 'localhost') {
-                const fbBtn = document.getElementById('fb-login-btn');
-                if (fbBtn) {
-                    fbBtn.classList.add('opacity-50', 'cursor-not-allowed');
-                    fbBtn.disabled = true;
-                    fbBtn.innerHTML = 'HTTPS REQUIRED';
-                }
-                const warning = document.getElementById('https-warning');
-                if (warning) {
-                    warning.classList.remove('hidden');
-                }
-                return false;
+    const checkHttps = () => {
+        if (window.location.protocol !== 'https:' && window.location.hostname !== 'localhost') {
+            const fbBtn = document.getElementById('fb-login-btn');
+            if (fbBtn) {
+                fbBtn.classList.add('opacity-50', 'cursor-not-allowed');
+                fbBtn.disabled = true;
+                fbBtn.innerHTML = 'HTTPS REQUIRED';
             }
-            return true;
+            const warning = document.getElementById('https-warning');
+            if (warning) {
+                warning.classList.remove('hidden');
+            }
+            return false;
+        }
+        return true;
+    };
+
+    if (typeof launchWhatsAppSignup !== 'function') {
+        window.fbAsyncInit = function () {
+            FB.init({
+                appId: '{{ config("services.facebook.client_id") }}',
+                autoLogAppEvents: true,
+                xfbml: true,
+                version: 'v21.0'
+            });
+            sdkInitialized = true;
+            console.log('FB SDK Initialized');
         };
 
-        if (typeof launchWhatsAppSignup !== 'function') {
-            window.fbAsyncInit = function () {
-                FB.init({
-                    appId: '{{ config("services.facebook.client_id") }}',
-                    autoLogAppEvents: true,
-                    xfbml: true,
-                    version: 'v21.0'
-                });
-                sdkInitialized = true;
-                console.log('FB SDK Initialized');
-            };
+        (function (d, s, id) {
+            var js, fjs = d.getElementsByTagName(s)[0];
+            if (d.getElementById(id)) { return; }
+            js = d.createElement(s); js.id = id;
+            js.src = "https://connect.facebook.net/en_US/sdk.js";
+            fjs.parentNode.insertBefore(js, fjs);
+        }(document, 'script', 'facebook-jssdk'));
 
-            (function (d, s, id) {
-                var js, fjs = d.getElementsByTagName(s)[0];
-                if (d.getElementById(id)) { return; }
-                js = d.createElement(s); js.id = id;
-                js.src = "https://connect.facebook.net/en_US/sdk.js";
-                fjs.parentNode.insertBefore(js, fjs);
-            }(document, 'script', 'facebook-jssdk'));
+        window.launchWhatsAppSignup = function (btnElement) {
+            if (!checkHttps()) return;
 
-            window.launchWhatsAppSignup = function (btnElement) {
-                if (!checkHttps()) return;
+            const fbBtn = btnElement || document.getElementById('fb-login-btn');
+            const originalHtml = fbBtn ? fbBtn.innerHTML : '';
 
-                const fbBtn = btnElement || document.getElementById('fb-login-btn');
-                const originalHtml = fbBtn ? fbBtn.innerHTML : '';
+            if (!sdkInitialized || typeof FB === 'undefined') {
+                $wire.dispatch('notify', { title: 'SDK Loading', message: 'Facebook SDK is still loading. Please wait a moment.', type: 'info' });
+                return;
+            }
 
-                if (!sdkInitialized || typeof FB === 'undefined') {
-                    @this.dispatch('notify', { title: 'SDK Loading', message: 'Facebook SDK is still loading. Please wait a moment.', type: 'info' });
-                    return;
-                }
+            if (fbBtn) {
+                fbBtn.disabled = true;
+                fbBtn.innerHTML = 'WORKING...';
+            }
 
-                if (fbBtn) {
-                    fbBtn.disabled = true;
-                    fbBtn.innerHTML = 'WORKING...';
-                }
+            FB.login(function (response) {
+                if (response.authResponse) {
+                    const code = response.authResponse.accessToken;
+                    // Use window.axios to be safe
+                    (window.axios || axios).post('{{ route("whatsapp.onboard.exchange") }}', {
+                        access_token: code,
+                        waba_id: null // Let backend discover WABA ID from token scopes/account
+                    })
+                        .then(function (res) {
+                            if (res.data.status) {
+                                // Handle cases where multiple WABAs are found and user needs to pick
+                                const wabaId = res.data.waba_id;
+                                const options = res.data.waba_options || [];
 
-                FB.login(function (response) {
-                    if (response.authResponse) {
-                        const code = response.authResponse.accessToken;
-                        // Use window.axios to be safe
-                        (window.axios || axios).post('{{ route("whatsapp.onboard.exchange") }}', {
-                            access_token: code,
-                            waba_id: null // Let backend discover WABA ID from token scopes/account
-                        })
-                            .then(function (res) {
-                                if (res.data.status) {
-                                    // Handle cases where multiple WABAs are found and user needs to pick
-                                    const wabaId = res.data.waba_id;
-                                    const options = res.data.waba_options || [];
+                                console.log('WhatsApp Onboarding: Exchange success', { wabaId, optionsCount: options.length });
 
-                                    console.log('WhatsApp Onboarding: Exchange success', { wabaId, optionsCount: options.length });
-
-                                    @this.dispatch('notify', { title: 'Success', message: 'Onboarding exchange successful', type: 'success' });
-                                    @this.handleEmbeddedSuccess(res.data.access_token, wabaId, options);
-                                } else {
-                                    @this.dispatch('notify', { title: 'Onboarding Error', message: res.data.message, type: 'error' });
-                                    if (fbBtn) {
-                                        fbBtn.disabled = false;
-                                        fbBtn.innerHTML = originalHtml;
-                                    }
+                                $wire.dispatch('notify', { title: 'Success', message: 'Onboarding exchange successful', type: 'success' });
+                                $wire.handleEmbeddedSuccess(res.data.access_token, wabaId, options);
+                            } else {
+                                $wire.dispatch('notify', { title: 'Onboarding Error', message: res.data.message, type: 'error' });
+                                if (fbBtn) {
+                                    fbBtn.disabled = false;
+                                    fbBtn.innerHTML = originalHtml;
                                 }
-                            })
-                            .catch(function (error) {
-                                console.error('WhatsApp Onboarding External Error:', error);
-                                const errorMsg = error.response?.data?.message || error.message || 'Unknown network error';
-                                @this.dispatch('notify', { title: 'Linkage Failed', message: errorMsg, type: 'error' });
-                                fbBtn.disabled = false;
-                                fbBtn.innerHTML = originalHtml;
-                            });
-                    } else {
-                        // [NEW] Handle Cancellation
-                        console.log('WhatsApp Onboarding: User cancelled or did not fully authorize.');
-                        @this.dispatch('notify', { title: 'Onboarding Cancelled', message: 'You closed the Facebook login window before completing the setup.', type: 'info' });
-                        fbBtn.disabled = false;
-                        fbBtn.innerHTML = originalHtml;
-                    }
-                }, {
-                    scope: 'whatsapp_business_management, whatsapp_business_messaging, business_management',
-                    extras: {
-                        feature: 'whatsapp_embedded_signup',
-                        sessionInfoVersion: '2'
-                    }
-                });
-            };
-        }
-
-        checkHttps();
+                            }
+                        })
+                        .catch(function (error) {
+                            console.error('WhatsApp Onboarding External Error:', error);
+                            const errorMsg = error.response?.data?.message || error.message || 'Unknown network error';
+                            $wire.dispatch('notify', { title: 'Linkage Failed', message: errorMsg, type: 'error' });
+                            fbBtn.disabled = false;
+                            fbBtn.innerHTML = originalHtml;
+                        });
+                } else {
+                    // [NEW] Handle Cancellation
+                    console.log('WhatsApp Onboarding: User cancelled or did not fully authorize.');
+                    $wire.dispatch('notify', { title: 'Onboarding Cancelled', message: 'You closed the Facebook login window before completing the setup.', type: 'info' });
+                    fbBtn.disabled = false;
+                    fbBtn.innerHTML = originalHtml;
+                }
+            }, {
+                scope: 'whatsapp_business_management, whatsapp_business_messaging, business_management',
+                extras: {
+                    feature: 'whatsapp_embedded_signup',
+                    sessionInfoVersion: '2'
+                }
+            });
+        };
     }
+
+    checkHttps();
 </script>
 @endscript
 </div>
