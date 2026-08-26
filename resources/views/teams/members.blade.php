@@ -84,7 +84,7 @@
                             </td>
                             <td class="px-8 py-6">
                                 @php
-                                    $role = Laravel\Jetstream\Jetstream::findRole($user->membership->role);
+                                    $role = $user->teamRole($team);
                                 @endphp
                                 <span class="px-3 py-1.5 bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 text-xs font-black uppercase tracking-wider rounded-lg border border-slate-200/50 dark:border-slate-700/50">
                                     {{ $role ? $role->name : 'Unknown' }}
@@ -92,13 +92,19 @@
                             </td>
                             <td class="px-8 py-6">
                                 <span class="text-xs font-bold text-slate-500">
-                                    {{ $user->membership->created_at ? $user->membership->created_at->diffForHumans() : '-' }}
+                                    @if($user->membership && $user->membership->created_at)
+                                        {{ $user->membership->created_at->diffForHumans() }}
+                                    @elseif($user->id === $team->owner->id)
+                                        Owner
+                                    @else
+                                        -
+                                    @endif
                                 </span>
                             </td>
                             <td class="px-8 py-6 text-right">
                                 <div class="flex items-center justify-end gap-2">
                                     <!-- Manage Role -->
-                                    @if (Gate::check('updateTeamMember', $team) && Laravel\Jetstream\Jetstream::hasRoles())
+                                    @if (Gate::check('updateTeamMember', $team) && Laravel\Jetstream\Jetstream::hasRoles() && $user->id !== $team->owner->id)
                                         <button wire:click="manageRole('{{ $user->id }}')" 
                                             class="flex items-center gap-1.5 px-3 py-1.5 text-[10px] font-black uppercase tracking-wider text-slate-600 dark:text-slate-400 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700/80 rounded-lg border border-slate-200/50 dark:border-slate-700/50 transition-all hover:scale-[1.02] active:scale-95" title="Edit Role">
                                             <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -109,7 +115,7 @@
                                     @endif
 
                                     <!-- Leave / Remove -->
-                                    @if ($this->user->id === $user->id)
+                                    @if ($this->user->id === $user->id && $user->id !== $team->owner->id)
                                         <button wire:click="confirmLeaving"
                                             class="flex items-center gap-1.5 px-3 py-1.5 text-[10px] font-black uppercase tracking-wider text-slate-600 dark:text-slate-400 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700/80 rounded-lg border border-slate-200/50 dark:border-slate-700/50 transition-all hover:scale-[1.02] active:scale-95" title="Leave Team">
                                             <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -117,7 +123,7 @@
                                             </svg>
                                             Leave
                                         </button>
-                                    @elseif (Gate::check('removeTeamMember', $team))
+                                    @elseif (Gate::check('removeTeamMember', $team) && $user->id !== $team->owner->id)
                                         <button wire:click="confirmTeamMemberRemoval('{{ $user->id }}')" 
                                             class="flex items-center gap-1.5 px-3 py-1.5 text-[10px] font-black uppercase tracking-wider text-rose-600 dark:text-rose-400 bg-rose-50 hover:bg-rose-100 dark:bg-rose-950/20 dark:hover:bg-rose-950/40 rounded-lg border border-rose-200/50 dark:border-rose-900/30 transition-all hover:scale-[1.02] active:scale-95" title="Remove Member">
                                             <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">

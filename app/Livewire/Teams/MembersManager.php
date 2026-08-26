@@ -6,10 +6,12 @@ use App\Actions\Custom\CreateUserAndAddToTeam;
 use App\Models\Contact;
 use Laravel\Jetstream\Http\Livewire\TeamMemberManager;
 use Livewire\Attributes\Layout;
+use Livewire\WithPagination;
 
 #[Layout('layouts.app')]
 class MembersManager extends TeamMemberManager
 {
+    use WithPagination;
     /**
      * The "create user" form state.
      *
@@ -90,6 +92,11 @@ class MembersManager extends TeamMemberManager
      * @var string
      */
     public $search = '';
+
+    public function updatedSearch()
+    {
+        $this->resetPage();
+    }
 
     /**
      * Mount the component.
@@ -173,16 +180,32 @@ class MembersManager extends TeamMemberManager
      */
     public function render()
     {
-        $users = $this->team->users()
-            ->when($this->search, function ($query) {
-                $query->where('name', 'like', '%'.$this->search.'%')
-                    ->orWhere('email', 'like', '%'.$this->search.'%');
-            })
-            ->orderBy('name')
-            ->paginate(10);
+        // Use allUsers() to include the owner in the list
+        $query = $this->team->allUsers();
+        
+        // We can't use Eloquent query builder directly on the collection returned by allUsers()
+        // wait, allUsers() returns a Collection in Jetstream. So we must filter it.
+        $users = $query->when($this->search, function ($collection) {
+            return $collection->filter(function ($user) {
+                return stripos($user->name, $this->search) !== false || 
+                       stripos($user->email, $this->search) !== false;
+            });
+        })->sortBy('name');
+
+        // To use Livewire pagination on a collection, we can use the LengthAwarePaginator
+        $page = $this->getPage();
+        $perPage = 10;
+        
+        $paginatedUsers = new \Illuminate\Pagination\LengthAwarePaginator(
+            $users->forPage($page, $perPage),
+            $users->count(),
+            $perPage,
+            $page,
+            ['path' => \Illuminate\Pagination\Paginator::resolveCurrentPath(), 'pageName' => $this->pageName()]
+        );
 
         return view('teams.members', [
-            'users' => $users,
+            'users' => $paginatedUsers,
         ]);
     }
 }

@@ -67,7 +67,7 @@
             </a>
 
             @if(!Auth::user()->identities()->where('provider', 'phone_otp')->exists())
-                <button onclick="window.location.href='/login?method=phone'"
+                <button wire:click="$set('confirmingLinkPhone', true)"
                     class="flex items-center gap-2 px-4 py-2 bg-emerald-500 text-white rounded-xl text-xs font-black uppercase tracking-widest hover:bg-emerald-600 transition-all shadow-lg shadow-emerald-500/20">
                     <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
@@ -98,5 +98,145 @@
                 </x-danger-button>
             </x-slot>
         </x-confirmation-modal>
+
+        <!-- Link Phone Modal -->
+        <x-dialog-modal wire:model.live="confirmingLinkPhone">
+            <x-slot name="title">
+                {{ __('Link Phone Number') }}
+            </x-slot>
+
+            <x-slot name="content">
+                @if ($linkPhoneStep === 'request')
+                    <!-- Request OTP Step -->
+                    <form wire:submit.prevent="requestLinkPhoneOtp" x-data="{ timer: 0 }">
+                        <div class="mb-6">
+                            <label for="linkPhoneIdentifier" class="text-xs font-black uppercase tracking-widest text-slate-400 block mb-2 transition-colors">
+                                Phone Number
+                            </label>
+                            <input id="linkPhoneIdentifier" type="tel" wire:model="linkPhoneIdentifier" placeholder="+1 (555) 000-0000" required autofocus
+                                class="w-full px-5 py-3 bg-slate-50 dark:bg-slate-800/50 border-2 border-transparent rounded-2xl text-slate-900 dark:text-white font-bold placeholder:text-slate-400 focus:ring-4 focus:ring-emerald-500/10 focus:border-emerald-500 focus:bg-white dark:focus:bg-slate-900 transition-all duration-300" />
+                            @error('linkPhoneIdentifier')
+                                <span class="text-xs font-bold text-rose-500 uppercase mt-2 block">{{ $message }}</span>
+                            @enderror
+                            @if ($linkPhoneError)
+                                <span class="text-xs font-bold text-rose-500 uppercase mt-2 block">{{ $linkPhoneError }}</span>
+                            @endif
+                        </div>
+
+                        <button wire:loading.attr="disabled" type="submit"
+                            class="w-full py-3 bg-emerald-500 text-white font-black uppercase tracking-widest text-xs rounded-2xl shadow-xl shadow-emerald-500/30 hover:bg-emerald-600 transition-all disabled:opacity-50 disabled:cursor-not-allowed">
+                            <span wire:loading.remove>Send Verification Code</span>
+                            <span wire:loading>Sending...</span>
+                        </button>
+                    </form>
+                @else
+                    <!-- Verify OTP Step -->
+                    <div x-data="{ 
+                            length: 6,
+                            otp: Array(6).fill(''),
+                            verifying: false,
+                            code: $wire.entangle('linkPhoneCode'),
+                            init() {
+                                this.$watch('otp', value => {
+                                    this.code = value.join('');
+                                    if (value.every(v => v !== '') && value.join('').length === this.length && !this.verifying) {
+                                        this.verifying = true;
+                                        this.$nextTick(() => $wire.verifyLinkPhoneOtp());
+                                    }
+                                    if (value.some(v => v === '')) {
+                                        this.verifying = false;
+                                    }
+                                });
+                            },
+                            handleInput(e, index) {
+                                const input = e.target;
+                                const val = input.value.replace(/[^0-9]/g, '');
+                                this.otp[index] = val;
+                                input.value = val;
+                                if (val && index < this.length - 1) {
+                                    this.$nextTick(() => {
+                                        const next = document.getElementById('link-otp-' + (index + 1));
+                                        if (next) { next.focus(); next.select(); }
+                                    });
+                                }
+                            },
+                            handleKeydown(e, index) {
+                                if (e.key === 'Backspace') {
+                                    if (!this.otp[index] && index > 0) {
+                                        const prev = document.getElementById('link-otp-' + (index - 1));
+                                        if (prev) { prev.focus(); prev.select(); }
+                                    }
+                                    if (this.otp[index]) this.otp[index] = '';
+                                }
+                            },
+                            handlePaste(e) {
+                                e.preventDefault();
+                                const paste = (e.clipboardData || window.clipboardData).getData('text');
+                                const cleanPaste = paste.replace(/[^0-9]/g, '').slice(0, this.length);
+                                if (cleanPaste) {
+                                    cleanPaste.split('').forEach((char, i) => {
+                                        if (i < this.length) this.otp[i] = char;
+                                    });
+                                    this.$nextTick(() => {
+                                        const destIndex = Math.min(cleanPaste.length - 1, this.length - 1);
+                                        const dest = document.getElementById('link-otp-' + destIndex);
+                                        if (dest) dest.focus();
+                                    });
+                                }
+                            }
+                        }" x-init="init()">
+                        
+                        @if($linkPhoneMessage)
+                            <div class="mb-4 text-sm font-bold text-emerald-500">{{ $linkPhoneMessage }}</div>
+                        @endif
+
+                        <div class="mb-6">
+                            <label class="text-xs font-black uppercase tracking-widest text-slate-400 block text-center mb-4">
+                                Enter 6-Digit Verification Code
+                            </label>
+
+                            <div class="flex justify-center gap-2 mb-4">
+                                <template x-for="(i, index) in length" :key="index">
+                                    <input type="text" maxlength="1" inputmode="numeric" :id="'link-otp-' + index" x-model="otp[index]"
+                                        :disabled="verifying"
+                                        class="w-10 h-14 bg-slate-50 dark:bg-slate-800/50 border-2 rounded-2xl text-slate-900 dark:text-white font-black text-xl text-center focus:ring-4 focus:ring-emerald-500/10 focus:border-emerald-500 transition-all outline-none"
+                                        @input="handleInput($event, index)" @keydown="handleKeydown($event, index)"
+                                        @paste="handlePaste($event)">
+                                </template>
+                            </div>
+
+                            @error('linkPhoneCode')
+                                <span class="text-xs font-bold text-rose-500 uppercase mt-2 block text-center">{{ $message }}</span>
+                            @enderror
+                            @if ($linkPhoneError)
+                                <span class="text-xs font-bold text-rose-500 uppercase mt-2 block text-center">{{ $linkPhoneError }}</span>
+                            @endif
+                        </div>
+
+                        <div class="text-center mt-4" x-data="{ timer: {{ $resendCountdown }} }"
+                            @start-timer.window="timer = $event.detail.duration"
+                            x-init="setInterval(() => { if(timer > 0) timer-- }, 1000)">
+                            
+                            <p class="text-sm font-bold text-slate-400" x-show="timer > 0">
+                                Resend in <span x-text="timer"></span>s
+                            </p>
+
+                            <div x-show="timer <= 0" style="display: none;">
+                                <button type="button" wire:click="requestLinkPhoneOtp"
+                                    class="text-sm font-bold text-emerald-500 hover:text-emerald-600 transition-colors">
+                                    Didn't receive a code? Resend
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                @endif
+            </x-slot>
+
+            <x-slot name="footer">
+                <x-secondary-button wire:click="$toggle('confirmingLinkPhone')" wire:loading.attr="disabled">
+                    {{ __('Cancel') }}
+                </x-secondary-button>
+            </x-slot>
+        </x-dialog-modal>
     </x-slot>
 </x-action-section>
