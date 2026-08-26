@@ -57,7 +57,7 @@
             <table class="w-full text-left">
                 <thead>
                     <tr class="border-b border-slate-50 dark:border-slate-800/50">
-                        <th class="px-8 py-6 text-[10px] font-black uppercase tracking-widest text-slate-400">User Identity</th>
+                        <th class="px-8 py-6 text-[10px] font-black uppercase tracking-widest text-slate-400">Member</th>
                         <th class="px-8 py-6 text-[10px] font-black uppercase tracking-widest text-slate-400">Role</th>
                         <th class="px-8 py-6 text-[10px] font-black uppercase tracking-widest text-slate-400">Joined</th>
                         <th class="px-8 py-6 text-[10px] font-black uppercase tracking-widest text-slate-400 text-right">Actions</th>
@@ -78,7 +78,7 @@
                                                 <span class="ml-2 px-2 py-0.5 bg-indigo-100 dark:bg-indigo-900/50 text-wa-teal dark:text-indigo-400 text-[10px] rounded-full uppercase tracking-wider">You</span>
                                             @endif
                                         </div>
-                                        <div class="text-xs text-slate-500 font-medium">{{ $user->email }}</div>
+                                        <div class="text-xs text-slate-500 font-medium">{{ $user->phone ?: $user->email ?: '—' }}</div>
                                     </div>
                                 </div>
                             </td>
@@ -129,7 +129,7 @@
                                             <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
                                             </svg>
-                                            Delete
+                                            Remove
                                         </button>
                                     @endif
                                 </div>
@@ -146,203 +146,81 @@
 
 
 
-    <!-- Pending Invitations -->
-    @if ($team->teamInvitations->isNotEmpty() && Gate::check('addTeamMember', $team))
-        <div class="bg-white dark:bg-slate-900 rounded-[2.5rem] shadow-xl border border-slate-50 dark:border-slate-800 overflow-hidden mt-8">
-            <div class="p-8 border-b border-slate-50 dark:border-slate-800/50">
-                <h3 class="text-xs font-black uppercase tracking-widest text-slate-400">Pending Invitations</h3>
-            </div>
-            <div class="overflow-x-auto">
-                <table class="w-full text-left">
-                     <thead>
-                        <tr class="border-b border-slate-50 dark:border-slate-800/50">
-                            <th class="px-8 py-6 text-[10px] font-black uppercase tracking-widest text-slate-400">Email</th>
-                            <th class="px-8 py-6 text-[10px] font-black uppercase tracking-widest text-slate-400">Role</th>
-                            <th class="px-8 py-6 text-[10px] font-black uppercase tracking-widest text-slate-400">Status</th>
-                            <th class="px-8 py-6 text-[10px] font-black uppercase tracking-widest text-slate-400 text-right">Actions</th>
-                        </tr>
-                    </thead>
-                    <tbody class="divide-y divide-slate-50 dark:divide-slate-800/30">
-                        @foreach ($team->teamInvitations as $invitation)
-                            <tr class="group hover:bg-slate-50/50 dark:hover:bg-slate-800/20 transition-colors">
-                                <td class="px-8 py-6">
-                                    <div class="text-sm font-bold text-slate-700 dark:text-slate-300">{{ $invitation->email }}</div>
-                                </td>
-                                <td class="px-8 py-6">
-                                    @php $invRole = $invitation->role ? Laravel\Jetstream\Jetstream::findRole($invitation->role) : null; @endphp
-                                    <span class="px-3 py-1.5 bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 text-xs font-black uppercase tracking-wider rounded-lg border border-slate-200/50 dark:border-slate-700/50">
-                                        {{ $invRole ? $invRole->name : '—' }}
-                                    </span>
-                                </td>
-                                <td class="px-8 py-6">
-                                    <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-black uppercase tracking-wider bg-amber-50 text-amber-600 dark:bg-amber-900/20 dark:text-amber-400">
-                                        <span class="w-1.5 h-1.5 rounded-full bg-amber-500 animate-pulse"></span>
-                                        Pending
-                                    </span>
-                                </td>
-                                <td class="px-8 py-6 text-right">
-                                    @if (Gate::check('addTeamMember', $team))
-                                        <button wire:click="resendTeamInvitation({{ $invitation->id }})"
-                                            class="text-xs font-bold text-wa-teal hover:opacity-80 uppercase tracking-wider mr-4">
-                                            Resend
-                                        </button>
-                                    @endif
-                                    @if (Gate::check('removeTeamMember', $team))
-                                        <button wire:click="cancelTeamInvitation({{ $invitation->id }})"
-                                            class="text-xs font-bold text-rose-500 hover:text-rose-600 uppercase tracking-wider">
-                                            Cancel
-                                        </button>
-                                    @endif
-                                </td>
-                            </tr>
-                        @endforeach
-                    </tbody>
-                </table>
-            </div>
-        </div>
-    @endif
-
     <!-- Add Member Modal -->
     @if($isAddMemberModalOpen)
         <div class="fixed inset-0 z-50 flex items-center justify-center p-4">
             <div class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm" wire:click="closeAddMemberModal"></div>
             <div class="relative w-full max-w-xl bg-white dark:bg-slate-900 rounded-[2.5rem] shadow-2xl border border-slate-100 dark:border-slate-800 overflow-hidden animate-in fade-in zoom-in-95 duration-200 flex flex-col max-h-[90vh]">
-                <div class="p-8 pb-0 shrink-0">
-                     <h2 class="text-2xl font-black text-slate-900 dark:text-white uppercase tracking-tight">
-                        Add Team <span class="text-wa-teal">Member</span>
-                    </h2>
+                <div class="flex items-start justify-between p-8 pb-0 shrink-0">
+                    <div>
+                        <h2 class="text-2xl font-black text-slate-900 dark:text-white uppercase tracking-tight">
+                            Add Team <span class="text-wa-teal">Member</span>
+                        </h2>
+                        <p class="text-sm text-slate-500 font-medium mt-1">They'll sign in with this number using a one-time code — no password needed.</p>
+                    </div>
+                    <button type="button" wire:click="closeAddMemberModal" aria-label="Close"
+                        class="p-2 -mr-2 -mt-2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 transition-colors">
+                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+                    </button>
                 </div>
 
-                <div x-data="{ mode: 'invite' }" class="p-8 overflow-y-auto">
-                    <!-- Tabs -->
-                    <div class="flex p-1 space-x-1 bg-slate-100 dark:bg-slate-800 rounded-xl mb-6">
-                        <button @click="mode = 'invite'" 
-                            :class="mode === 'invite' ? 'bg-white dark:bg-slate-700 text-slate-900 dark:text-white shadow-sm' : 'text-slate-500 hover:text-slate-700 dark:hover:text-slate-300'"
-                            class="w-full py-2.5 text-xs font-black uppercase tracking-wider rounded-lg transition-all">
-                            Invite via Email
-                        </button>
-                        <button @click="mode = 'create'" 
-                            :class="mode === 'create' ? 'bg-white dark:bg-slate-700 text-slate-900 dark:text-white shadow-sm' : 'text-slate-500 hover:text-slate-700 dark:hover:text-slate-300'"
-                            class="w-full py-2.5 text-xs font-black uppercase tracking-wider rounded-lg transition-all">
-                            Create New User
-                        </button>
-                    </div>
+                <div class="p-8 overflow-y-auto">
+                    <form wire:submit="createUser">
+                        <div class="space-y-4">
+                            <div class="space-y-2">
+                                <label class="text-xs font-black uppercase tracking-widest text-slate-400">Full Name</label>
+                                <input type="text" wire:model="createUserForm.name"
+                                    class="w-full px-5 py-3 bg-slate-50 dark:bg-slate-800 border-none rounded-xl text-slate-900 dark:text-white font-bold focus:ring-2 focus:ring-wa-teal/20"
+                                    placeholder="e.g. Priya Sharma">
+                                <x-input-error for="name" class="mt-1" />
+                            </div>
 
-                    <!-- INVITE FORM -->
-                    <div x-show="mode === 'invite'">
-                        <form wire:submit="addTeamMember">
-                            <div class="space-y-4">
-                                <div class="space-y-2">
-                                    <label class="text-xs font-black uppercase tracking-widest text-slate-400">Email Address</label>
-                                    <input type="email" wire:model="addTeamMemberForm.email" 
-                                        class="w-full px-5 py-3 bg-slate-50 dark:bg-slate-800 border-none rounded-xl text-slate-900 dark:text-white font-bold focus:ring-2 focus:ring-wa-teal/20"
-                                        placeholder="colleague@example.com">
-                                    <x-input-error for="email" class="mt-1" />
-                                </div>
+                            <div class="space-y-2">
+                                <label class="text-xs font-black uppercase tracking-widest text-slate-400">Phone Number</label>
+                                <input type="tel" wire:model="createUserForm.phone"
+                                    class="w-full px-5 py-3 bg-slate-50 dark:bg-slate-800 border-none rounded-xl text-slate-900 dark:text-white font-bold focus:ring-2 focus:ring-wa-teal/20"
+                                    placeholder="+91 98765 43210">
+                                <p class="text-xs text-slate-400 font-medium">Include the country code. This is the number they log in with.</p>
+                                <x-input-error for="phone" class="mt-1" />
+                            </div>
 
-                                <div class="space-y-2">
-                                    <label class="text-xs font-black uppercase tracking-widest text-slate-400">Role</label>
-                                    <div class="grid grid-cols-1 gap-3">
-                                        @foreach ($this->roles as $index => $role)
-                                            <button type="button" 
-                                                wire:click="$set('addTeamMemberForm.role', '{{ $role->key }}')"
-                                                class="relative flex items-center justify-between px-4 py-3 border-2 rounded-xl transition-all {{ isset($addTeamMemberForm['role']) && $addTeamMemberForm['role'] == $role->key ? 'border-wa-teal bg-indigo-50 dark:bg-indigo-900/20' : 'border-slate-100 dark:border-slate-700 hover:border-slate-200 dark:hover:border-slate-600' }}">
-                                                <div class="text-left">
-                                                    <div class="text-sm font-bold {{ isset($addTeamMemberForm['role']) && $addTeamMemberForm['role'] == $role->key ? 'text-wa-teal dark:text-indigo-400' : 'text-slate-700 dark:text-slate-300' }}">
-                                                        {{ $role->name }}
-                                                    </div>
-                                                    <div class="text-xs text-slate-500 font-medium mt-0.5">{{ $role->description }}</div>
+                            <div class="space-y-2">
+                                <label class="text-xs font-black uppercase tracking-widest text-slate-400">Role</label>
+                                <div class="grid grid-cols-1 gap-3">
+                                    @foreach ($this->roles as $index => $role)
+                                        <button type="button"
+                                            wire:click="$set('createUserForm.role', '{{ $role->key }}')"
+                                            class="relative flex items-center justify-between px-4 py-3 border-2 rounded-xl transition-all {{ isset($createUserForm['role']) && $createUserForm['role'] == $role->key ? 'border-wa-teal bg-indigo-50 dark:bg-indigo-900/20' : 'border-slate-100 dark:border-slate-700 hover:border-slate-200 dark:hover:border-slate-600' }}">
+                                            <div class="text-left">
+                                                <div class="text-sm font-bold {{ isset($createUserForm['role']) && $createUserForm['role'] == $role->key ? 'text-wa-teal dark:text-indigo-400' : 'text-slate-700 dark:text-slate-300' }}">
+                                                    {{ $role->name }}
                                                 </div>
-                                                @if (isset($addTeamMemberForm['role']) && $addTeamMemberForm['role'] == $role->key)
-                                                    <div class="text-wa-teal">
-                                                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>
-                                                    </div>
-                                                @endif
-                                            </button>
-                                        @endforeach
-                                    </div>
-                                    <x-input-error for="role" class="mt-1" />
-                                </div>
-                            </div>
-
-                            <div class="mt-8 flex gap-3">
-                                <button type="button" wire:click="closeAddMemberModal"
-                                    class="flex-1 py-3 bg-slate-100 dark:bg-slate-800 text-slate-500 font-black uppercase tracking-widest text-xs rounded-xl hover:bg-slate-200 transition-all">
-                                    Cancel
-                                </button>
-                                <button type="submit"
-                                    class="flex-[2] py-4 bg-wa-teal text-white font-black uppercase tracking-widest text-xs rounded-2xl shadow-xl shadow-wa-teal/20 hover:scale-[1.02] active:scale-95 transition-all">
-                                    Send Invitation
-                                </button>
-                            </div>
-                        </form>
-                    </div>
-
-                    <!-- CREATE FORM -->
-                    <div x-show="mode === 'create'" style="display: none;">
-                        <form wire:submit="createUser">
-                             <div class="space-y-4">
-                                <div class="space-y-2">
-                                    <label class="text-xs font-black uppercase tracking-widest text-slate-400">Full Name</label>
-                                    <input type="text" wire:model="createUserForm.name" 
-                                        class="w-full px-5 py-3 bg-slate-50 dark:bg-slate-800 border-none rounded-xl text-slate-900 dark:text-white font-bold focus:ring-2 focus:ring-wa-teal/20"
-                                        placeholder="John Doe">
-                                    <x-input-error for="createUserForm.name" class="mt-1" />
-                                </div>
-
-                                <div class="space-y-2">
-                                    <label class="text-xs font-black uppercase tracking-widest text-slate-400">Email Address</label>
-                                    <input type="email" wire:model="createUserForm.email" 
-                                        class="w-full px-5 py-3 bg-slate-50 dark:bg-slate-800 border-none rounded-xl text-slate-900 dark:text-white font-bold focus:ring-2 focus:ring-wa-teal/20"
-                                        placeholder="john@example.com">
-                                    <x-input-error for="createUserForm.email" class="mt-1" />
-                                </div>
-
-                                <div class="space-y-2">
-                                    <label class="text-xs font-black uppercase tracking-widest text-slate-400">Password</label>
-                                    <input type="password" wire:model="createUserForm.password" 
-                                        class="w-full px-5 py-3 bg-slate-50 dark:bg-slate-800 border-none rounded-xl text-slate-900 dark:text-white font-bold focus:ring-2 focus:ring-wa-teal/20"
-                                        placeholder="••••••••">
-                                    <x-input-error for="createUserForm.password" class="mt-1" />
-                                </div>
-
-                                <div class="space-y-2">
-                                    <label class="text-xs font-black uppercase tracking-widest text-slate-400">Role</label>
-                                   <div class="grid grid-cols-1 gap-3">
-                                        @foreach ($this->roles as $index => $role)
-                                            <button type="button" 
-                                                wire:click="$set('createUserForm.role', '{{ $role->key }}')"
-                                                class="relative flex items-center justify-between px-4 py-3 border-2 rounded-xl transition-all {{ isset($createUserForm['role']) && $createUserForm['role'] == $role->key ? 'border-wa-teal bg-indigo-50 dark:bg-indigo-900/20' : 'border-slate-100 dark:border-slate-700 hover:border-slate-200 dark:hover:border-slate-600' }}">
-                                                <div class="text-left">
-                                                    <div class="text-sm font-bold {{ isset($createUserForm['role']) && $createUserForm['role'] == $role->key ? 'text-wa-teal dark:text-indigo-400' : 'text-slate-700 dark:text-slate-300' }}">
-                                                        {{ $role->name }}
-                                                    </div>
-                                                    <div class="text-xs text-slate-500 font-medium mt-0.5">{{ $role->description }}</div>
+                                                <div class="text-xs text-slate-500 font-medium mt-0.5">{{ $role->description }}</div>
+                                            </div>
+                                            @if (isset($createUserForm['role']) && $createUserForm['role'] == $role->key)
+                                                <div class="text-wa-teal">
+                                                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>
                                                 </div>
-                                                @if (isset($createUserForm['role']) && $createUserForm['role'] == $role->key)
-                                                    <div class="text-wa-teal">
-                                                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>
-                                                    </div>
-                                                @endif
-                                            </button>
-                                        @endforeach
-                                    </div>
-                                    <x-input-error for="createUserForm.role" class="mt-1" />
+                                            @endif
+                                        </button>
+                                    @endforeach
                                 </div>
+                                <x-input-error for="role" class="mt-1" />
                             </div>
+                        </div>
 
-                            <div class="mt-8 flex gap-3">
-                                 <button type="button" wire:click="closeAddMemberModal"
-                                    class="flex-1 py-3 bg-slate-100 dark:bg-slate-800 text-slate-500 font-black uppercase tracking-widest text-xs rounded-xl hover:bg-slate-200 transition-all">
-                                    Cancel
-                                </button>
-                                <button type="submit"
-                                    class="flex-[2] py-4 bg-wa-teal text-white font-black uppercase tracking-widest text-xs rounded-2xl shadow-xl shadow-wa-teal/20 hover:scale-[1.02] active:scale-95 transition-all">
-                                    Create User
-                                </button>
-                            </div>
-                        </form>
-                    </div>
+                        <div class="mt-8 flex gap-3">
+                            <button type="button" wire:click="closeAddMemberModal"
+                                class="flex-1 py-3 bg-slate-100 dark:bg-slate-800 text-slate-500 font-black uppercase tracking-widest text-xs rounded-xl hover:bg-slate-200 transition-all">
+                                Cancel
+                            </button>
+                            <button type="submit" wire:loading.attr="disabled" wire:target="createUser"
+                                class="flex-[2] py-4 bg-wa-teal text-white font-black uppercase tracking-widest text-xs rounded-2xl shadow-xl shadow-wa-teal/20 hover:scale-[1.02] active:scale-95 transition-all disabled:opacity-60">
+                                <span wire:loading.remove wire:target="createUser">Add Member</span>
+                                <span wire:loading wire:target="createUser">Adding…</span>
+                            </button>
+                        </div>
+                    </form>
                 </div>
             </div>
         </div>

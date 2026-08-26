@@ -27,8 +27,7 @@ class MembersManager extends TeamMemberManager
      */
     public $createUserForm = [
         'name' => '',
-        'email' => '',
-        'password' => '',
+        'phone' => '',
         'role' => null,
     ];
 
@@ -160,8 +159,7 @@ class MembersManager extends TeamMemberManager
 
         $this->createUserForm = [
             'name' => '',
-            'email' => '',
-            'password' => '',
+            'phone' => '',
             'role' => null,
         ];
 
@@ -195,8 +193,9 @@ class MembersManager extends TeamMemberManager
         // wait, allUsers() returns a Collection in Jetstream. So we must filter it.
         $users = $query->when($this->search, function ($collection) {
             return $collection->filter(function ($user) {
-                return stripos($user->name, $this->search) !== false ||
-                       stripos($user->email, $this->search) !== false;
+                return stripos($user->name ?? '', $this->search) !== false ||
+                       stripos($user->email ?? '', $this->search) !== false ||
+                       stripos($user->phone ?? '', $this->search) !== false;
             });
         })->sortBy('name');
 
