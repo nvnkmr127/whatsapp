@@ -201,7 +201,7 @@ class MembersManager extends TeamMemberManager
             $users->count(),
             $perPage,
             $page,
-            ['path' => \Illuminate\Pagination\Paginator::resolveCurrentPath(), 'pageName' => $this->pageName()]
+            ['path' => \Illuminate\Pagination\Paginator::resolveCurrentPath(), 'pageName' => 'page']
         );
 
         return view('teams.members', [
