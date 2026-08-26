@@ -189,7 +189,7 @@ Route::group(['middleware' => ['auth:sanctum', 'tenant', 'throttle:api', \App\Ht
             return response()->json($request->user()->currentTeam->allUsers()->map(fn($u) => [
                 'id' => $u->id,
                 'name' => $u->name,
-                'initials' => strtoupper(substr($u->name, 0, 2)),
+                'initials' => mb_strtoupper(mb_substr($u->name, 0, 2)),
             ]));
         });
     });

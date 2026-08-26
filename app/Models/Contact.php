@@ -146,7 +146,7 @@ class Contact extends Model
     {
         return $this->hasOne(Conversation::class)
             ->whereIn('status', ['new', 'open', 'waiting_reply'])
-            ->latest();
+            ->latestOfMany();
     }
 
     public function category()
