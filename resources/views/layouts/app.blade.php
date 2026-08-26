@@ -38,9 +38,9 @@
     <!-- Fonts -->
     <link rel="preload" href="/fonts/inter.woff2" as="font" type="font/woff2" crossorigin>
 
-    <!-- External Scripts -->
-    <script src="https://cdn.jsdelivr.net/npm/apexcharts"></script>
-    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.js"></script>
+    <!-- External Scripts (deferred so they don't block first paint; chart init runs after DOM) -->
+    <script defer src="https://cdn.jsdelivr.net/npm/apexcharts@3.49.1/dist/apexcharts.min.js"></script>
+    <script defer src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.js"></script>
 
     <!-- Scripts -->
     @vite(['resources/css/app.css', 'resources/js/app.js'])
@@ -118,7 +118,7 @@
                 <!-- Subscription Banner -->
                 @include('components.subscription-banner')
 
-                <div class="px-8 py-8">
+                <div class="px-4 sm:px-6 lg:px-8 py-6 lg:py-8">
                     <x-billing-alerts />
                     {{ $slot }}
                 </div>
@@ -132,7 +132,7 @@
     <script src="https://cdn.jsdelivr.net/npm/tom-select@2.2.2/dist/js/tom-select.complete.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/tributejs@5.1.3/dist/tribute.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
-    <script src="https://cdn.jsdelivr.net/gh/mcstudios/glightbox/dist/js/glightbox.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/glightbox@3.3.0/dist/js/glightbox.min.js"></script>
 
     <script>
         // Global Error Handler for remote debugging

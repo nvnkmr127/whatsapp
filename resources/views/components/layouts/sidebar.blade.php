@@ -170,7 +170,7 @@
     <!-- Profile Pane (Fixed Bottom) -->
     <div class="flex-shrink-0 p-4 bg-zinc-950 border-t border-zinc-800 border-zinc-800/80 shadow-[0_-10px_30px_-5px_rgba(0,0,0,0.5)]">
         <div x-data="{ open: false }" class="relative">
-            <button @click="open = !open" 
+            <button @click="open = !open" aria-label="{{ __('Open account menu') }}"
                 class="w-full flex items-center gap-4 p-3 bg-zinc-900/50 backdrop-blur-md border border-zinc-800/80 rounded-[2rem] shadow-xl hover:bg-zinc-800/80 hover:border-white/10 transition-all group">
                 
                 <div class="relative flex-shrink-0">
@@ -234,7 +234,7 @@
                         @csrf
                         <button type="submit" class="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-xs font-bold text-rose-500 hover:bg-rose-500/10 transition-colors text-left">
                             <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" /></svg>
-                            Terminate Session
+                            Log Out
                         </button>
                     </form>
                 </div>

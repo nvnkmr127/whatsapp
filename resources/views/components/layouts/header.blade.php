@@ -21,7 +21,7 @@
     <div class="absolute bottom-0 left-0 right-0 h-px bg-zinc-800/40"></div>
 
     <div class="flex items-center gap-6 flex-1">
-        <button @click="sidebarOpen = true"
+        <button @click="sidebarOpen = true" aria-label="{{ __('Open navigation menu') }}"
             class="p-2 -ml-2 text-zinc-500 hover:text-orange-500 focus:outline-none lg:hidden transition-all duration-300 hover:scale-110 active:scale-90">
             <svg class="w-8 h-8" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h7" />
@@ -54,7 +54,7 @@
             <livewire:components.header-stats />
 
             <!-- Theme Toggle -->
-            <button @click="toggleTheme()"
+            <button @click="toggleTheme()" aria-label="{{ __('Toggle light and dark theme') }}"
                 class="p-2.5 rounded-2xl text-slate-400 dark:text-zinc-400 hover:text-orange-500 hover:bg-black/5 dark:hover:bg-zinc-900 shadow-none hover:shadow-lg transition-all duration-300 focus:outline-none group">
                 <svg class="w-5 h-5 hidden dark:block group-hover:rotate-45 transition-transform duration-500"
                     fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -76,10 +76,10 @@
         @if (Laravel\Jetstream\Jetstream::hasTeamFeatures())
             <div class="relative">
                 <x-dropdown align="right" width="60"
-                    dropdownClasses="rounded-2xl shadow-2xl overflow-hidden border border-zinc-800">
+                    dropdownClasses="rounded-2xl shadow-2xl overflow-hidden border border-gray-200 dark:border-zinc-800">
                     <x-slot name="trigger">
                         <button type="button"
-                            class="group inline-flex items-center gap-2.5 px-4 py-2 border-none text-[11px] font-black uppercase tracking-widest text-zinc-400 hover:text-white bg-zinc-800/60 hover:bg-zinc-800 rounded-[1rem] transition-all duration-300 shadow-sm border border-zinc-700/50">
+                            class="group inline-flex items-center gap-2.5 px-4 py-2 text-[11px] font-black uppercase tracking-widest text-gray-500 hover:text-gray-900 bg-black/[0.04] hover:bg-black/[0.08] dark:text-zinc-400 dark:hover:text-white dark:bg-zinc-800/60 dark:hover:bg-zinc-800 rounded-[1rem] transition-all duration-300 shadow-sm border border-black/[0.06] dark:border-zinc-700/50">
                             {{ Auth::user()->currentTeam->name ?? __('No Team') }}
                             <svg class="h-3.5 w-3.5 text-zinc-400 group-hover:text-orange-500 transition-all duration-300 group-hover:rotate-180"
                                 xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="3"
@@ -92,7 +92,7 @@
                     <x-slot name="content">
                         <div class="w-60">
                             <div
-                                class="block px-5 py-3 text-[9px] font-black text-zinc-400 uppercase tracking-widest border-b border-zinc-800">
+                                class="block px-5 py-3 text-[9px] font-black text-gray-500 dark:text-zinc-400 uppercase tracking-widest border-b border-gray-200 dark:border-zinc-800">
                                 {{ __('Workspace Context') }}
                             </div>
 
@@ -132,8 +132,8 @@
                             </div>
 
                             @if (Auth::user()->allTeams()->count() > 1)
-                                <div class="border-t border-zinc-800 my-1"></div>
-                                <div class="block px-5 py-2 text-[9px] font-black text-zinc-400 uppercase tracking-widest">
+                                <div class="border-t border-gray-200 dark:border-zinc-800 my-1"></div>
+                                <div class="block px-5 py-2 text-[9px] font-black text-gray-500 dark:text-zinc-400 uppercase tracking-widest">
                                     {{ __('Switch Workspace') }}
                                 </div>
                                 <div class="p-1">
@@ -151,17 +151,17 @@
         <!-- User Profile Dropdown -->
         <div class="relative">
             <x-dropdown align="right" width="48"
-                dropdownClasses="rounded-2xl shadow-2xl overflow-hidden border border-zinc-800">
+                dropdownClasses="rounded-2xl shadow-2xl overflow-hidden border border-gray-200 dark:border-zinc-800">
                 <x-slot name="trigger">
                     @if (Laravel\Jetstream\Jetstream::managesProfilePhotos())
-                        <button
+                        <button aria-label="{{ __('Open account menu') }}"
                             class="flex text-sm border-2 border-transparent rounded-full focus:outline-none focus:border-orange-500/40 transition-all duration-300 shadow-lg shadow-black/10 hover:scale-110 active:scale-95">
                             <img class="h-10 w-10 rounded-full object-cover ring-2 ring-white/10 dark:ring-zinc-800/50"
                                 src="{{ Auth::user()->profile_photo_url }}" alt="{{ Auth::user()->name }}" />
                         </button>
                     @else
                         <button type="button"
-                            class="inline-flex items-center px-4 py-2 border border-transparent text-sm leading-4 font-medium rounded-2xl text-zinc-400 bg-zinc-900/50 hover:text-white transition-all duration-300">
+                            class="inline-flex items-center px-4 py-2 border border-transparent text-sm leading-4 font-medium rounded-2xl text-gray-600 bg-black/[0.04] hover:text-gray-900 dark:text-zinc-400 dark:bg-zinc-900/50 dark:hover:text-white transition-all duration-300">
                             {{ Auth::user()->name }}
                             <svg class="ml-2 -mr-0.5 h-4 w-4" xmlns="http://www.w3.org/2000/svg" fill="none"
                                 viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
@@ -173,7 +173,7 @@
 
                 <x-slot name="content">
                     <div
-                        class="block px-5 py-3 text-[9px] font-black text-zinc-400 uppercase tracking-widest border-b border-zinc-800">
+                        class="block px-5 py-3 text-[9px] font-black text-gray-500 dark:text-zinc-400 uppercase tracking-widest border-b border-gray-200 dark:border-zinc-800">
                         {{ __('Account Control') }}
                     </div>
 
@@ -197,7 +197,7 @@
                             </x-dropdown-link>
                         @endif
 
-                        <div class="border-t border-zinc-800 my-1"></div>
+                        <div class="border-t border-gray-200 dark:border-zinc-800 my-1"></div>
 
                         <form method="POST" action="{{ route('logout') }}" x-data>
                             @csrf
