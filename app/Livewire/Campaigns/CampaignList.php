@@ -94,7 +94,7 @@ class CampaignList extends Component
     public function pause($id)
     {
         $campaign = Campaign::where('team_id', auth()->user()->current_team_id)->findOrFail($id);
-        if (in_array($campaign->status, ['processing', 'sending', 'queued'])) {
+        if (in_array($campaign->status, ['processing', 'sending', 'queued', 'running', 'scheduled'])) {
             $campaign->update(['status' => 'paused']);
             $this->dispatch('notify', [
                 'type' => 'success',

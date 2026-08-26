@@ -158,7 +158,10 @@ class TemplateList extends Component
 
     public function updatedName($value)
     {
-        $this->name = str_replace(' ', '_', strtolower($value));
+        // Meta template names allow only [a-z0-9_]. Collapse spaces/dashes/other
+        // characters to underscores as the user types so it can't fail validation
+        // later on a stray character.
+        $this->name = preg_replace('/[^a-z0-9_]+/', '_', strtolower($value));
     }
 
     // Reset pagination when searching or filtering
@@ -590,8 +593,10 @@ class TemplateList extends Component
             if ($response['success']) {
                 $this->showCreateModal = false;
 
-                // 1. Sync to get the new structure
-                $this->syncTemplates($whatsapp);
+                // 1. Sync to get the new structure. syncTemplates() needs a
+                // TemplateService — passing the WhatsAppService here threw an
+                // uncaught TypeError (not an Exception), 500-ing the success path.
+                $this->syncTemplates(app(\App\Services\TemplateService::class));
 
                 // 2. Save variable_config
                 $tpl = WhatsappTemplate::where('team_id', auth()->user()->currentTeam->id)
@@ -631,17 +636,21 @@ class TemplateList extends Component
             $whatsapp->setTeam(auth()->user()->currentTeam);
             $response = $whatsapp->deleteTemplate($template->name);
 
-            if ($response['success']) {
+            $errorMsg = $response['error']['message'] ?? json_encode($response['error'] ?? '');
+
+            // If Meta reports the template doesn't exist there, the local row is an
+            // orphan — remove it too so it isn't stuck forever undeletable.
+            $goneOnMeta = ! ($response['success'] ?? false)
+                && preg_match('/not found|does not exist|no template|#100/i', (string) $errorMsg);
+
+            if (($response['success'] ?? false) || $goneOnMeta) {
                 $template->delete();
                 $this->dispatch('notify', message: 'Template deleted successfully.', type: 'success');
             } else {
-                // If template not found on Meta, maybe just delete local?
-                // For now, respect error.
-                $errorMsg = $response['error']['message'] ?? json_encode($response['error']);
                 $this->dispatch('notify', message: 'Meta Error: '.$errorMsg, type: 'error');
             }
         } catch (\Exception $e) {
-            $this->dispatch('notify', 'Error: '.$e->getMessage());
+            $this->dispatch('notify', message: 'Error: '.$e->getMessage(), type: 'error');
         }
     }
 
@@ -709,13 +718,19 @@ class TemplateList extends Component
 
         $templates = $query->latest()->paginate(10);
 
-        // Module-Level Core Metrics
-        $teamId = auth()->user()->current_team_id;
+        // Module-Level Core Metrics — one aggregation instead of four COUNTs.
+        $agg = WhatsappTemplate::where('team_id', $teamId)
+            ->selectRaw("COUNT(*) AS total,
+                SUM(status = 'APPROVED') AS approved,
+                SUM(status = 'REJECTED') AS rejected,
+                SUM(components LIKE '%IMAGE%' OR components LIKE '%VIDEO%') AS media_count")
+            ->first();
+
         $stats = [
-            'approved' => WhatsappTemplate::where('team_id', $teamId)->where('status', 'APPROVED')->count(),
-            'rejected' => WhatsappTemplate::where('team_id', $teamId)->where('status', 'REJECTED')->count(),
-            'total' => WhatsappTemplate::where('team_id', $teamId)->count(),
-            'media_ratio' => WhatsappTemplate::where('team_id', $teamId)->where('components', 'like', '%IMAGE%')->orWhere('components', 'like', '%VIDEO%')->count(),
+            'approved' => (int) ($agg->approved ?? 0),
+            'rejected' => (int) ($agg->rejected ?? 0),
+            'total' => (int) ($agg->total ?? 0),
+            'media_ratio' => (int) ($agg->media_count ?? 0),
         ];
 
         return view('livewire.templates.template-list', [

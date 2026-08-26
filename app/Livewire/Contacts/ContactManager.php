@@ -123,7 +123,7 @@ class ContactManager extends Component
 
     protected $rules = [
         'name' => 'required|string|max:255',
-        'countryCode' => 'required|string',
+        'countryCode' => 'nullable|string',
         'phoneNumberWithoutCode' => 'required|string|max:20',
         'email' => 'nullable|email|max:255',
         'language' => 'required|string|max:10',
@@ -254,9 +254,12 @@ class ContactManager extends Component
         if ($foundCode) {
             $this->countryCode = $foundCode;
         } else {
-            // Fallback to default country code
-            $this->countryCode = get_setting('default_country_code', '+91');
-            $this->phoneNumberWithoutCode = $phone;
+            // Unknown/unsupported country code. Do NOT force the default code onto
+            // an already-complete international number — that prepended e.g. +91 to
+            // a +49 number and corrupted it on save. Keep the full number intact and
+            // leave the code unselected; store() sends it through as-is.
+            $this->countryCode = '';
+            $this->phoneNumberWithoutCode = '+'.$phone;
         }
 
         $this->email = $contact->email;
@@ -274,8 +277,13 @@ class ContactManager extends Component
         $this->validate();
 
         try {
-            // Combine country code + phone number
-            $fullPhoneNumber = $this->countryCode.ltrim($this->phoneNumberWithoutCode, '0');
+            // Combine country code + local number. When no code is selected the
+            // field already holds a complete international number (edit fallback for
+            // unsupported countries), so pass it straight through. ContactService
+            // normalizes to E.164 in both cases.
+            $fullPhoneNumber = $this->countryCode
+                ? $this->countryCode.ltrim($this->phoneNumberWithoutCode, '0')
+                : $this->phoneNumberWithoutCode;
 
             $data = [
                 'team_id' => Auth::user()->currentTeam->id,
@@ -397,6 +405,8 @@ class ContactManager extends Component
             ]
         );
 
+        \Illuminate\Support\Facades\Cache::forget('team_'.Auth::user()->currentTeam->id.'_fields');
+
         $this->isFieldModalOpen = false;
         $this->resetFieldInput();
         session()->flash('field_message', 'Custom Field saved successfully.');
@@ -405,6 +415,7 @@ class ContactManager extends Component
     public function deleteField($id)
     {
         \App\Models\ContactField::where('team_id', Auth::user()->currentTeam->id)->where('id', $id)->delete();
+        \Illuminate\Support\Facades\Cache::forget('team_'.Auth::user()->currentTeam->id.'_fields');
         session()->flash('field_message', 'Custom Field deleted.');
     }
 
@@ -619,10 +630,9 @@ class ContactManager extends Component
             $query->where('opt_in_status', $this->filterStatus);
         }
 
-        $contacts = $query->with(['tags', 'category'])->get();
         $customFields = \App\Models\ContactField::where('team_id', Auth::user()->currentTeam->id)->get();
 
-        $callback = function () use ($contacts, $customFields) {
+        $callback = function () use ($query, $customFields) {
             $file = fopen('php://output', 'w');
 
             // Headers
@@ -632,8 +642,9 @@ class ContactManager extends Component
             }
             fputcsv($file, $headers);
 
-            // Data
-            foreach ($contacts as $contact) {
+            // Stream rows with a lazy cursor so a large team's export doesn't load
+            // every contact into memory at once.
+            foreach ($query->with(['tags', 'category'])->lazy(500) as $contact) {
                 $row = [
                     $contact->name,
                     $contact->phone_number,
@@ -654,7 +665,7 @@ class ContactManager extends Component
             fclose($file);
         };
 
-        audit('contact.exported', 'Exported '.$contacts->count().' contacts to CSV.');
+        audit('contact.exported', 'Exported '.$query->count().' contacts to CSV.');
 
         return response()->streamDownload($callback, 'contacts_export_'.now()->format('Y-m-d_H-i').'.csv');
     }

@@ -95,15 +95,22 @@ class Show extends Component
         $campaign = $this->campaign;
 
         // Source of truth for delivery metrics is Message status lifecycle.
-        $messageQuery = Message::query()
+        // Single aggregation instead of five separate COUNTs on the messages table.
+        $agg = Message::query()
             ->where('campaign_id', $campaign->id)
-            ->where('direction', 'outbound');
+            ->where('direction', 'outbound')
+            ->selectRaw("COUNT(*) AS total,
+                SUM(status IN ('sent','delivered','read')) AS sent,
+                SUM(status IN ('delivered','read')) AS delivered,
+                SUM(status = 'read') AS `read`,
+                SUM(status = 'failed') AS failed")
+            ->first();
 
-        $messageCount = (clone $messageQuery)->count();
-        $sent = (clone $messageQuery)->whereIn('status', ['sent', 'delivered', 'read'])->count();
-        $delivered = (clone $messageQuery)->whereIn('status', ['delivered', 'read'])->count();
-        $read = (clone $messageQuery)->where('status', 'read')->count();
-        $failed = (clone $messageQuery)->where('status', 'failed')->count();
+        $messageCount = (int) ($agg->total ?? 0);
+        $sent = (int) ($agg->sent ?? 0);
+        $delivered = (int) ($agg->delivered ?? 0);
+        $read = (int) ($agg->read ?? 0);
+        $failed = (int) ($agg->failed ?? 0);
 
         // Keep target size from campaign_details when available; fall back safely.
         $targeted = CampaignDetail::where('campaign_id', $campaign->id)->count();

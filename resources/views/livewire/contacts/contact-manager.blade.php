@@ -465,6 +465,7 @@
                         <div class="w-24 shrink-0">
                             <select wire:model="countryCode" 
                                 class="w-full px-3 py-3.5 bg-slate-50 dark:bg-slate-800 border-none rounded-2xl text-slate-900 dark:text-white font-bold focus:ring-2 focus:ring-wa-teal/20 cursor-pointer text-sm">
+                                <option value="">—</option>
                                 @foreach($availableCountryCodes as $code => $label)
                                     <option value="{{ $code }}">{{ $code }}</option>
                                 @endforeach

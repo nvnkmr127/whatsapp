@@ -32,14 +32,18 @@ class Dashboard extends Component
     public function metrics()
     {
         $campaign = $this->campaign;
-        $sentCount = $campaign->messages()->whereIn('status', ['sent', 'delivered', 'read'])->count();
-        $failedCount = $campaign->messages()->where('status', 'failed')->count();
+
+        // One aggregation instead of two COUNTs (this reruns on every poll tick).
+        $agg = $campaign->messages()
+            ->selectRaw("SUM(status IN ('sent','delivered','read')) AS sent,
+                SUM(status = 'failed') AS failed")
+            ->first();
 
         return [
-            'sent' => max($campaign->sent_count, $sentCount),
+            'sent' => max($campaign->sent_count, (int) ($agg->sent ?? 0)),
             'delivered' => $campaign->del_count,
             'read' => $campaign->read_count,
-            'failed' => $failedCount,
+            'failed' => (int) ($agg->failed ?? 0),
             'total' => $campaign->total_contacts,
         ];
     }

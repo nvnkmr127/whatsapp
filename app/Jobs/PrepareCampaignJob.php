@@ -53,7 +53,11 @@ class PrepareCampaignJob implements ShouldQueue
         $campaign->update(['status' => 'preparing']);
 
         try {
-            $query = Contact::where('team_id', $campaign->team_id);
+            // Only ever build recipients from contacts who have consented. The
+            // wizard's audience count already filters on this, and sending to
+            // opted-out contacts is a WhatsApp policy violation.
+            $query = Contact::where('team_id', $campaign->team_id)
+                ->where('opt_in_status', 'opted_in');
 
             // Filter logic
             if ($this->criteria['selection_type'] === 'tags' && ! empty($this->criteria['tags'])) {

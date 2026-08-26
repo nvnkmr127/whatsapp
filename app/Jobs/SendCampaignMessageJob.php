@@ -76,6 +76,15 @@ class SendCampaignMessageJob implements ShouldQueue
             return;
         }
 
+        // --- CONSENT CHECK ---
+        // A contact can opt out (reply STOP) between preparation and send, so
+        // re-verify consent here, not just when building the recipient list.
+        if (! $contact->hasValidConsent()) {
+            Log::info("Skipping Campaign {$this->campaignId} to Contact {$this->contactId}: no valid consent.");
+
+            return;
+        }
+
         // --- PAUSE CHECK ---
         if ($campaign->status === 'paused') {
             $this->release(60); // Check again in 60 seconds
@@ -116,17 +125,24 @@ class SendCampaignMessageJob implements ShouldQueue
 
         // Simple personalization
         $bodyVars = array_map(function ($v) use ($contact) {
-            return str_replace('{{name}}', $contact->name, $v);
+            return str_replace('{{name}}', $contact->name ?? '', $v);
         }, $bodyVars);
 
         try {
             // --- MID-QUEUE PREFLIGHT GUARANTEE (RE-CHECK LIMITS BEFORE DISPATCHING TO API) ---
             // Recalculates exact constraints mid-flight to stop an "enqueue, then drain" infinite queue exploit.
-            $messagesUsed = Message::where('team_id', $campaign->team_id)
-                ->where('direction', 'outbound')
-                ->whereMonth('created_at', now()->month)
-                ->whereYear('created_at', now()->year)
-                ->count();
+            // Cache the monthly usage briefly: without this, a large campaign
+            // fires one full COUNT per recipient. Shares BroadcastService's cache
+            // key so both the pre-queue and mid-queue checks read one value.
+            $messagesUsed = Cache::remember(
+                "team_msg_count_month:{$campaign->team_id}:".now()->format('Y-m'),
+                30,
+                fn () => Message::where('team_id', $campaign->team_id)
+                    ->where('direction', 'outbound')
+                    ->whereMonth('created_at', now()->month)
+                    ->whereYear('created_at', now()->year)
+                    ->count()
+            );
 
             // Re-auth using the current snapshot against wallet and limits
             $preflight = app(\App\Services\OutboundPreflightService::class)->authorize(
@@ -180,8 +196,6 @@ class SendCampaignMessageJob implements ShouldQueue
             if (! empty($response['success']) && $response['success']) {
                 $campaign->increment('sent_count');
 
-                // --- STORE ATTRIBUTION POINTER ---
-                // Store for 48 hours to track temporal replies
                 // --- STORE ATTRIBUTION POINTER ---
                 // Store for 48 hours to track temporal replies
                 Cache::put("last_campaign:contact:{$contact->phone_number}", $this->campaignId, 172800);

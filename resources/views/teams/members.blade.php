@@ -92,10 +92,10 @@
                             </td>
                             <td class="px-8 py-6">
                                 <span class="text-xs font-bold text-slate-500">
-                                    @if($user->membership && $user->membership->created_at)
-                                        {{ $user->membership->created_at->diffForHumans() }}
-                                    @elseif($user->id === $team->owner->id)
+                                    @if($user->id === $team->owner->id)
                                         Owner
+                                    @elseif($user->relationLoaded('membership') && $user->membership->created_at)
+                                        {{ $user->membership->created_at->diffForHumans() }}
                                     @else
                                         -
                                     @endif

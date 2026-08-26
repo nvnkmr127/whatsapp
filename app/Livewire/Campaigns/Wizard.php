@@ -229,14 +229,12 @@ class Wizard extends Component
         } elseif ($this->audienceType === 'contacts' && ! empty($this->selectedContacts)) {
             $query->whereIn('id', $this->selectedContacts);
         } elseif ($this->audienceType === 'all') {
-            // Keep all
+            // Keep all opted-in contacts (base query already filters opt-in).
         } else {
-            // No selection
-            if ($this->audienceType !== 'all') {
-                $this->audienceCount = 0;
+            // 'tags'/'contacts' with an empty selection → no recipients.
+            $this->audienceCount = 0;
 
-                return;
-            }
+            return;
         }
 
         $this->audienceCount = $query->count();
@@ -315,8 +313,12 @@ class Wizard extends Component
                     $this->templateVars[$i - 1] = '';
                 }
 
-                if ($this->campaignType === 'drip' && isset($this->dripSteps[$this->currentDripStep])) {
-                    $this->dripSteps[$this->currentDripStep]['variables'] = $this->templateVars;
+                // Write the freshly-initialized variables to the SAME follow-up
+                // step whose template we just set above ([currentDripStep - 1]),
+                // not [currentDripStep] — that off-by-one seeded them onto the
+                // wrong step.
+                if ($this->campaignType === 'drip' && $this->currentDripStep > 0 && isset($this->dripSteps[$this->currentDripStep - 1])) {
+                    $this->dripSteps[$this->currentDripStep - 1]['variables'] = $this->templateVars;
                 }
             }
         }
@@ -406,8 +408,15 @@ class Wizard extends Component
         // Handle Media Header
         $finalHeaderMedia = null;
         if ($this->headerMediaFile) {
-            $finalHeaderMedia = $this->headerMediaFile->store('campaigns/headers', 'public');
-            $finalHeaderMedia = asset('storage/'.$finalHeaderMedia);
+            // Store on the app's configured disk (R2/S3 in production) and let it
+            // build the public URL, so Meta can fetch the header media. Hardcoding
+            // the 'public' disk broke this on cloud-storage deployments.
+            $disk = config('filesystems.default', 'public');
+            if ($disk === 'local') {
+                $disk = 'public';
+            }
+            $path = $this->headerMediaFile->store('campaigns/headers', $disk);
+            $finalHeaderMedia = \Illuminate\Support\Facades\Storage::disk($disk)->url($path);
         } elseif ($this->headerMediaUrl) {
             $finalHeaderMedia = $this->headerMediaUrl;
         }

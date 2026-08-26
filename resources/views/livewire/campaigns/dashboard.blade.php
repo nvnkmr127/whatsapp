@@ -14,7 +14,7 @@
     $status = $statusConfig[$campaign->status] ?? ['color' => 'slate-400', 'label' => $campaign->status];
 @endphp
 
-<div class="space-y-8 pb-20" wire:poll.5s>
+<div class="space-y-8 pb-20" wire:poll.10s>
     <!-- Page Header -->
     <div class="flex flex-col md:flex-row md:items-end justify-between gap-6">
         <div>

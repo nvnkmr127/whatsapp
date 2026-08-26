@@ -198,8 +198,12 @@ class MonitorWhatsAppPhoneStatus extends Command
                 'data' => $data,
             ]);
 
-            // Pause running campaigns
-            $pausedCount = $team->campaigns()->where('status', 'running')->update(['status' => 'paused']);
+            // Pause in-flight and pending campaigns. Live campaigns are 'processing'
+            // (never 'running' — that's a workflow-log status), so matching on
+            // 'running' here silently paused nothing while a RED number kept sending.
+            $pausedCount = $team->campaigns()
+                ->whereIn('status', ['processing', 'scheduled', 'active'])
+                ->update(['status' => 'paused']);
 
             if ($pausedCount > 0) {
                 $this->warn("Paused {$pausedCount} campaigns for team {$team->id}");
