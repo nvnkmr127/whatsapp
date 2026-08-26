@@ -2,13 +2,34 @@
 
 namespace App\Livewire\Chat;
 
-use App\Models\Conversation;
+use App\Events\ConversationAssigned;
 // use App\Services\WhatsAppService;
+use App\Events\MessageReceived;
+use App\Events\MessageStatusUpdated;
+use App\Jobs\DownloadMediaJob;
+use App\Jobs\MarkAsReadJob;
+use App\Jobs\SendMessageJob;
+use App\Models\CannedMessage;
+use App\Models\Category;
+use App\Models\Conversation;
+use App\Models\Message;
+use App\Models\WhatsappTemplate;
+use App\Notifications\ConversationAssignedNotification;
+use App\Services\BotHandoffService;
+use App\Services\CsatService;
+use App\Services\WhatsAppService;
+use Illuminate\Http\File;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Str;
+use Livewire\Attributes\Renderless;
 use Livewire\Component;
+use Livewire\Features\SupportFileUploads\TemporaryUploadedFile;
 use Livewire\WithFileUploads;
+use Symfony\Component\Process\ExecutableFinder;
+use Symfony\Component\Process\Process;
 
 class MessageWindow extends Component
 {
@@ -63,14 +84,17 @@ class MessageWindow extends Component
     public $lightboxOpen = false;
 
     public $lightboxImage = '';
-    
+
     // Reply State
     public $replyToMessageId = null;
 
     // Forward State
     public $showForwardModal = false;
+
     public $forwardingMessageId = null;
+
     public $forwardSelectedConversations = [];
+
     public $forwardRecentConversations = [];
 
     public $lastMessageId = null;
@@ -88,7 +112,7 @@ class MessageWindow extends Component
         $this->loadConversation();
         $this->initialMessages = $this->loadMessagesJson(0, 50);
 
-        $this->availableCategories = \App\Models\Category::where('team_id', Auth::user()->currentTeam->id)
+        $this->availableCategories = Category::where('team_id', Auth::user()->currentTeam->id)
             ->whereIn('target_module', ['chat', 'all'])
             ->where('is_active', true)
             ->get();
@@ -135,7 +159,7 @@ class MessageWindow extends Component
         }
 
         if (! empty($waIds)) {
-            \App\Jobs\MarkAsReadJob::dispatch(Auth::user()->currentTeam->id, $waIds);
+            MarkAsReadJob::dispatch(Auth::user()->currentTeam->id, $waIds);
         }
 
         $this->dispatch('chat-messages-read');
@@ -147,7 +171,7 @@ class MessageWindow extends Component
             return;
         }
 
-        $wa = new \App\Services\WhatsAppService(Auth::user()->currentTeam);
+        $wa = new WhatsAppService(Auth::user()->currentTeam);
 
         // Extract variables (header + body)
         $variables = $payload['variables'];
@@ -227,7 +251,7 @@ class MessageWindow extends Component
         $type = $this->getMediaType($mime);
         $caption = $this->msgBody ?: null;
 
-        $message = \App\Models\Message::create([
+        $message = Message::create([
             'team_id' => Auth::user()->currentTeam->id,
             'contact_id' => $this->conversation->contact_id,
             'conversation_id' => $this->conversation->id,
@@ -243,10 +267,10 @@ class MessageWindow extends Component
         ]);
 
         // Message-based dispatch resolves the public URL via $message->full_media_url.
-        \App\Jobs\SendMessageJob::dispatch($message);
+        SendMessageJob::dispatch($message);
 
         if ($this->conversation?->contact) {
-            app(\App\Services\BotHandoffService::class)->handleAgentActivity($this->conversation->contact);
+            app(BotHandoffService::class)->handleAgentActivity($this->conversation->contact);
         }
 
         $this->msgBody = '';
@@ -283,7 +307,7 @@ class MessageWindow extends Component
 
     public function selectTemplate($templateId)
     {
-        $template = \App\Models\WhatsappTemplate::where('team_id', Auth::user()->currentTeam->id)
+        $template = WhatsappTemplate::where('team_id', Auth::user()->currentTeam->id)
             ->find($templateId);
 
         if (! $template) {
@@ -351,7 +375,7 @@ class MessageWindow extends Component
     {
         $template = $this->selectedTemplate;
         if (! $template && $this->selectedTemplateId) {
-            $template = \App\Models\WhatsappTemplate::where('team_id', Auth::user()->currentTeam->id)
+            $template = WhatsappTemplate::where('team_id', Auth::user()->currentTeam->id)
                 ->find($this->selectedTemplateId);
         }
 
@@ -405,9 +429,9 @@ class MessageWindow extends Component
     /**
      * Create an internal_note message on the current conversation.
      */
-    private function logInternalNote(string $content, array $meta = []): \App\Models\Message
+    private function logInternalNote(string $content, array $meta = []): Message
     {
-        return \App\Models\Message::create([
+        return Message::create([
             'team_id' => Auth::user()->currentTeam->id,
             'contact_id' => $this->conversation->contact_id,
             'conversation_id' => $this->conversation->id,
@@ -454,8 +478,8 @@ class MessageWindow extends Component
         // Log transfer as internal note
         $this->logInternalNote("Conversation transferred to {$agent->name}.", ['type' => 'transfer', 'transferred_by' => Auth::user()->name]);
 
-        $agent->notify(new \App\Notifications\ConversationAssignedNotification($this->conversation, Auth::user()));
-        \App\Events\ConversationAssigned::dispatch($this->conversation, $agent, Auth::user());
+        $agent->notify(new ConversationAssignedNotification($this->conversation, Auth::user()));
+        ConversationAssigned::dispatch($this->conversation, $agent, Auth::user());
 
         $this->loadConversation();
         $this->dispatch('notify', [
@@ -469,60 +493,62 @@ class MessageWindow extends Component
         Log::info('[VN:B1] sendVoiceNote() called', [
             'audioFile_raw' => $audioFile,
             'audioFile_type' => gettype($audioFile),
-            'voiceNote_property_set' => !is_null($this->voiceNote),
+            'voiceNote_property_set' => ! is_null($this->voiceNote),
             'conversationId' => $this->conversationId,
         ]);
 
         // Support array wrap in case Livewire passes it as an array
         if (is_array($audioFile)) {
             $audioFile = head($audioFile);
-            Log::info('[VN:B1] audioFile was array, unwrapped to: ' . $audioFile);
+            Log::info('[VN:B1] audioFile was array, unwrapped to: '.$audioFile);
         }
 
         // Try resolving from local property first, fallback to manual creation from temporary file path
         $file = $this->voiceNote;
         Log::info('[VN:B2] $this->voiceNote resolved', [
             'is_null' => is_null($file),
-            'class'   => $file ? get_class($file) : 'null',
+            'class' => $file ? get_class($file) : 'null',
         ]);
 
-        if (!$file && $audioFile) {
-            Log::info('[VN:B3] voiceNote property null, trying createFromLivewire fallback with: ' . $audioFile);
+        if (! $file && $audioFile) {
+            Log::info('[VN:B3] voiceNote property null, trying createFromLivewire fallback with: '.$audioFile);
             try {
-                $file = \Livewire\Features\SupportFileUploads\TemporaryUploadedFile::createFromLivewire($audioFile);
+                $file = TemporaryUploadedFile::createFromLivewire($audioFile);
                 Log::info('[VN:B3] createFromLivewire success', [
-                    'class'            => get_class($file),
-                    'originalName'     => $file->getClientOriginalName(),
-                    'size'             => $file->getSize(),
-                    'mimeType'         => $file->getMimeType(),
-                    'clientMimeType'   => $file->getClientMimeType(),
-                    'realPath'         => $file->getRealPath(),
-                    'tmpPath'          => $file->getPathname(),
+                    'class' => get_class($file),
+                    'originalName' => $file->getClientOriginalName(),
+                    'size' => $file->getSize(),
+                    'mimeType' => $file->getMimeType(),
+                    'clientMimeType' => $file->getClientMimeType(),
+                    'realPath' => $file->getRealPath(),
+                    'tmpPath' => $file->getPathname(),
                 ]);
             } catch (\Exception $e) {
-                Log::error('[VN:B3] FAIL — createFromLivewire threw exception: ' . $e->getMessage(), [
+                Log::error('[VN:B3] FAIL — createFromLivewire threw exception: '.$e->getMessage(), [
                     'audioFile' => $audioFile,
                     'conversationId' => $this->conversationId,
                 ]);
             }
         }
 
-        if (!$file) {
+        if (! $file) {
             Log::error('[VN:B4] CRITICAL — no file resolved at all! Both voiceNote property and fallback failed.', [
                 'conversationId' => $this->conversationId,
                 'audioFile' => $audioFile,
             ]);
+
             return;
         }
 
         if (! $this->conversation) {
             Log::error('[VN:B4] CRITICAL — no conversation loaded', ['conversationId' => $this->conversationId]);
+
             return;
         }
 
         Log::info('[VN:B4] File and conversation OK', [
             'conversationId' => $this->conversation->id,
-            'contact_id'     => $this->conversation->contact_id,
+            'contact_id' => $this->conversation->contact_id,
         ]);
 
         // Resolve target disk
@@ -531,21 +557,21 @@ class MessageWindow extends Component
 
         // Resolve actual uploaded extension
         $uploadedExt = strtolower(pathinfo($file->getClientOriginalName(), PATHINFO_EXTENSION));
-        $srcExt      = in_array($uploadedExt, ['ogg', 'webm', 'mp3', 'mp4', 'm4a', 'opus']) ? $uploadedExt : 'ogg';
+        $srcExt = in_array($uploadedExt, ['ogg', 'webm', 'mp3', 'mp4', 'm4a', 'opus']) ? $uploadedExt : 'ogg';
 
         Log::info('[VN:B5] Extension resolved', [
             'uploadedExt' => $uploadedExt,
-            'srcExt'      => $srcExt,
-            'file_size'   => $file->getSize(),
-            'realPath'    => $file->getRealPath(),
+            'srcExt' => $srcExt,
+            'file_size' => $file->getSize(),
+            'realPath' => $file->getRealPath(),
         ]);
 
         // ── FFmpeg transcoding ───────────────────────────────────────────────
         // Chrome records audio/webm. WhatsApp only accepts audio/ogg (opus),
         // audio/mp4, audio/aac, audio/mpeg, or audio/amr for audio messages.
         // We must convert webm → ogg before uploading to avoid silent failures.
-        $srcPath  = $file->getRealPath();
-        $ext      = $srcExt;
+        $srcPath = $file->getRealPath();
+        $ext = $srcExt;
         $mimeType = 'audio/ogg; codecs=opus';
         $convertedTmp = null;
 
@@ -554,34 +580,35 @@ class MessageWindow extends Component
             // If ffmpeg is missing or the convert fails we must NOT ship the raw
             // webm bytes under a .ogg name: WhatsApp silently drops that. Bail
             // loudly instead so the user knows to retry / install ffmpeg.
-            $ffmpegBin = env('FFMPEG_PATH')
-                ?: (new \Symfony\Component\Process\ExecutableFinder)
+            $ffmpegBin = config('whatsapp.ffmpeg_path')
+                ?: (new ExecutableFinder)
                     ->find('ffmpeg', null, ['/opt/homebrew/bin', '/usr/local/bin', '/usr/bin', '/bin']);
 
             if (! $ffmpegBin) {
                 Log::error('[VN:B5a] ffmpeg not found — cannot convert webm voice note. Install ffmpeg or set FFMPEG_PATH.');
                 $this->dispatch('notify', ['type' => 'error', 'message' => 'Voice notes need audio conversion support on the server (ffmpeg). Please contact support.']);
                 $this->reset('voiceNote');
+
                 return;
             }
 
-            $tmpOgg = sys_get_temp_dir() . '/' . \Illuminate\Support\Str::random(20) . '.ogg';
+            $tmpOgg = sys_get_temp_dir().'/'.Str::random(20).'.ogg';
 
             // Livewire's temp upload has no absolute path ffmpeg can open —
             // getRealPath() is relative to the upload disk (e.g. "livewire-tmp/..").
             // Copy the bytes to a real local file first; $file->get() reads from
             // whatever disk the temp file lives on (local or cloud).
-            $srcTmp = sys_get_temp_dir() . '/' . \Illuminate\Support\Str::random(20) . '.webm';
+            $srcTmp = sys_get_temp_dir().'/'.Str::random(20).'.webm';
             file_put_contents($srcTmp, $file->get());
 
             Log::info('[VN:B5a] webm detected — attempting FFmpeg transcoding via Process', [
                 'ffmpeg' => $ffmpegBin,
-                'src'    => $srcTmp,
+                'src' => $srcTmp,
                 'target' => $tmpOgg,
             ]);
 
             try {
-                $process = new \Symfony\Component\Process\Process([
+                $process = new Process([
                     $ffmpegBin,
                     '-y',
                     '-i', $srcTmp,
@@ -593,7 +620,7 @@ class MessageWindow extends Component
                     '-application', 'voip',
                     '-map_metadata', '-1',
                     '-f', 'ogg',
-                    $tmpOgg
+                    $tmpOgg,
                 ]);
                 $process->setTimeout(30);
                 $process->run();
@@ -603,9 +630,9 @@ class MessageWindow extends Component
                     Log::info('[VN:B5a] FFmpeg transcoding SUCCESS', [
                         'ogg_size' => filesize($tmpOgg),
                     ]);
-                    $srcPath      = $tmpOgg;
-                    $ext          = 'ogg';
-                    $mimeType     = 'audio/ogg; codecs=opus';
+                    $srcPath = $tmpOgg;
+                    $ext = 'ogg';
+                    $mimeType = 'audio/ogg; codecs=opus';
                     $convertedTmp = $tmpOgg;
                 } else {
                     Log::error('[VN:B5a] FFmpeg process failed', [
@@ -616,70 +643,71 @@ class MessageWindow extends Component
                     @unlink($tmpOgg);
                     $this->dispatch('notify', ['type' => 'error', 'message' => 'Could not process the voice note. Please try again.']);
                     $this->reset('voiceNote');
+
                     return;
                 }
             } catch (\Throwable $fe) {
-                Log::error('[VN:B5a] FFmpeg execution exception: ' . $fe->getMessage());
+                Log::error('[VN:B5a] FFmpeg execution exception: '.$fe->getMessage());
                 @unlink($srcTmp);
                 @unlink($tmpOgg);
                 $this->dispatch('notify', ['type' => 'error', 'message' => 'Could not process the voice note. Please try again.']);
                 $this->reset('voiceNote');
+
                 return;
             }
         } else {
-            $mimeType = match($ext) {
-                'ogg'  => 'audio/ogg; codecs=opus',
-                'mp3'  => 'audio/mpeg',
-                'm4a'  => 'audio/mp4',
+            $mimeType = match ($ext) {
+                'ogg' => 'audio/ogg; codecs=opus',
+                'mp3' => 'audio/mpeg',
+                'm4a' => 'audio/mp4',
                 default => 'audio/ogg; codecs=opus',
             };
         }
 
-
-        $fileName = \Illuminate\Support\Str::random(40) . '.' . $ext;
+        $fileName = Str::random(40).'.'.$ext;
         Log::info('[VN:B6] Calling storeAs()', [
             'directory' => 'voice-notes',
-            'fileName'  => $fileName,
-            'disk'      => $disk,
-            'mimeType'  => $mimeType,
+            'fileName' => $fileName,
+            'disk' => $disk,
+            'mimeType' => $mimeType,
         ]);
 
         if ($convertedTmp) {
             // Store from the converted temp file using Laravel's File wrapper
-            $path = \Illuminate\Support\Facades\Storage::disk($disk)
-                ->putFileAs('voice-notes', new \Illuminate\Http\File($convertedTmp), $fileName);
+            $path = Storage::disk($disk)
+                ->putFileAs('voice-notes', new File($convertedTmp), $fileName);
             @unlink($convertedTmp);
         } else {
             $path = $file->storeAs('voice-notes', $fileName, $disk);
         }
 
-
-        if (!$path) {
+        if (! $path) {
             Log::error('[VN:B6] FAIL — storeAs() returned false (disk write failed)', [
-                'disk'     => $disk,
+                'disk' => $disk,
                 'fileName' => $fileName,
             ]);
+
             return;
         }
 
         Log::info('[VN:B7] File stored on disk', [
-            'path'     => $path,
-            'ext'      => $ext,
+            'path' => $path,
+            'ext' => $ext,
             'mimeType' => $mimeType,
-            'disk'     => $disk,
+            'disk' => $disk,
         ]);
 
-        $message = \App\Models\Message::create([
-            'team_id'         => Auth::user()->currentTeam->id,
-            'contact_id'      => $this->conversation->contact_id,
+        $message = Message::create([
+            'team_id' => Auth::user()->currentTeam->id,
+            'contact_id' => $this->conversation->contact_id,
             'conversation_id' => $this->conversation->id,
-            'direction'       => 'outbound',
-            'status'          => 'queued',
-            'type'            => 'audio',
-            'media_url'       => $path,
-            'media_type'      => $mimeType,
-            'metadata'        => [
-                'agent_id'   => Auth::id(),
+            'direction' => 'outbound',
+            'status' => 'queued',
+            'type' => 'audio',
+            'media_url' => $path,
+            'media_type' => $mimeType,
+            'metadata' => [
+                'agent_id' => Auth::id(),
                 'agent_name' => Auth::user()->name,
                 'voice_note' => true,
             ],
@@ -689,13 +717,12 @@ class MessageWindow extends Component
         // via $message->full_media_url — which SIGNS S3/R2 URLs. A raw Storage::url()
         // is unsigned and 403s on a private bucket, so WhatsApp can't fetch the audio.
         // This mirrors the attachment sender (sendMessage) and works on any disk.
-        \App\Jobs\SendMessageJob::dispatch($message);
+        SendMessageJob::dispatch($message);
 
         $this->reset('voiceNote');
         $this->loadConversation();
         $this->dispatch('messageSent');
     }
-
 
     public function closeConversation($reason = 'resolved')
     {
@@ -708,9 +735,9 @@ class MessageWindow extends Component
 
             // Trigger CSAT Survey
             try {
-                app(\App\Services\CsatService::class)->sendSurvey($this->conversation);
+                app(CsatService::class)->sendSurvey($this->conversation);
             } catch (\Exception $e) {
-                Log::warning("Failed to send CSAT survey for Conversation #{$this->conversation->id}: " . $e->getMessage());
+                Log::warning("Failed to send CSAT survey for Conversation #{$this->conversation->id}: ".$e->getMessage());
             }
 
             // Dispatch event for UI updates if needed
@@ -833,7 +860,7 @@ class MessageWindow extends Component
     {
         $this->forwardingMessageId = $messageId;
         $this->forwardSelectedConversations = [];
-        $this->forwardRecentConversations = \App\Models\Conversation::with('contact')
+        $this->forwardRecentConversations = Conversation::with('contact')
             ->where('team_id', Auth::user()->currentTeam->id)
             ->orderBy('updated_at', 'desc')
             ->limit(20)
@@ -843,18 +870,22 @@ class MessageWindow extends Component
 
     public function forwardMessage()
     {
-        if (!$this->forwardingMessageId || empty($this->forwardSelectedConversations)) {
+        if (! $this->forwardingMessageId || empty($this->forwardSelectedConversations)) {
             return;
         }
 
-        $sourceMessage = \App\Models\Message::find($this->forwardingMessageId);
-        if (!$sourceMessage) return;
+        $sourceMessage = Message::find($this->forwardingMessageId);
+        if (! $sourceMessage) {
+            return;
+        }
 
         foreach ($this->forwardSelectedConversations as $convId) {
-            $conv = \App\Models\Conversation::find($convId);
-            if (!$conv) continue;
+            $conv = Conversation::find($convId);
+            if (! $conv) {
+                continue;
+            }
 
-            $message = \App\Models\Message::create([
+            $message = Message::create([
                 'team_id' => Auth::user()->currentTeam->id,
                 'contact_id' => $conv->contact_id,
                 'conversation_id' => $conv->id,
@@ -868,7 +899,7 @@ class MessageWindow extends Component
                 'metadata' => ['agent_id' => Auth::id(), 'agent_name' => Auth::user()->name, 'is_forwarded' => true],
             ]);
 
-            \App\Jobs\SendMessageJob::dispatch($message);
+            SendMessageJob::dispatch($message);
         }
 
         $this->showForwardModal = false;
@@ -879,7 +910,7 @@ class MessageWindow extends Component
 
     public function saveCallNote($messageId, $note)
     {
-        $message = \App\Models\Message::where('team_id', Auth::user()->currentTeam->id)
+        $message = Message::where('team_id', Auth::user()->currentTeam->id)
             ->where('id', $messageId)
             ->first();
 
@@ -906,7 +937,7 @@ class MessageWindow extends Component
         }
 
         $contact = $this->conversation->contact;
-        $handoff = new \App\Services\BotHandoffService;
+        $handoff = new BotHandoffService;
 
         if ($contact->is_bot_paused) {
             $handoff->resume($contact);
@@ -959,7 +990,7 @@ class MessageWindow extends Component
             return;
         }
 
-        $message = \App\Models\Message::where('team_id', Auth::user()->currentTeam->id)
+        $message = Message::where('team_id', Auth::user()->currentTeam->id)
             ->find($messageId);
 
         if (! $message || $message->conversation_id !== $this->conversationId) {
@@ -992,20 +1023,20 @@ class MessageWindow extends Component
 
         if ($message->whatsapp_message_id) {
             try {
-                $whatsapp = new \App\Services\WhatsAppService(\Illuminate\Support\Facades\Auth::user()->currentTeam);
+                $whatsapp = new WhatsAppService(Auth::user()->currentTeam);
                 $response = $whatsapp->sendReaction($this->conversation->contact->phone_number, $message->whatsapp_message_id, $emojiToSend);
-                \Illuminate\Support\Facades\Log::info('Reaction API Response: ' . json_encode($response));
-                
+                Log::info('Reaction API Response: '.json_encode($response));
+
                 if (isset($response['error'])) {
-                    \Illuminate\Support\Facades\Log::error('WhatsApp API Reaction Error: ' . json_encode($response['error']));
+                    Log::error('WhatsApp API Reaction Error: '.json_encode($response['error']));
                 }
             } catch (\Exception $e) {
-                \Illuminate\Support\Facades\Log::error('Failed to send reaction to WhatsApp: ' . $e->getMessage());
+                Log::error('Failed to send reaction to WhatsApp: '.$e->getMessage());
             }
         }
 
         // Broadcast update
-        \App\Events\MessageStatusUpdated::dispatch($message);
+        MessageStatusUpdated::dispatch($message);
         $this->dispatch('message-reacted');
     }
 
@@ -1015,7 +1046,7 @@ class MessageWindow extends Component
     {
         $teamId = Auth::user()->currentTeam->id;
 
-        return cache()->remember("chat_quick_replies_{$teamId}", 60, fn () => \App\Models\CannedMessage::where('team_id', $teamId)
+        return cache()->remember("chat_quick_replies_{$teamId}", 60, fn () => CannedMessage::where('team_id', $teamId)
             ->latest()
             ->get(['shortcut', 'content'])
             ->map(fn ($msg) => ['code' => $msg->shortcut, 'text' => $msg->content])
@@ -1064,9 +1095,9 @@ class MessageWindow extends Component
             ->get();
 
         $lines = [];
-        $lines[] = "=== CHAT TRANSCRIPT ===";
+        $lines[] = '=== CHAT TRANSCRIPT ===';
         $lines[] = "Contact: {$contactName} ({$contactPhone})";
-        $lines[] = "Exported: ".now()->format('Y-m-d H:i:s');
+        $lines[] = 'Exported: '.now()->format('Y-m-d H:i:s');
         $lines[] = "----------------------------------------\n";
 
         foreach ($messages as $msg) {
@@ -1079,7 +1110,7 @@ class MessageWindow extends Component
         $transcript = implode("\n", $lines);
         $filename = "transcript_conv_{$this->conversationId}.txt";
 
-        return response()->streamDownload(fn () => print($transcript), $filename, [
+        return response()->streamDownload(fn () => print ($transcript), $filename, [
             'Content-Type' => 'text/plain',
         ]);
     }
@@ -1090,7 +1121,7 @@ class MessageWindow extends Component
             return;
         }
 
-        $message = \App\Models\Message::where('team_id', Auth::user()->currentTeam->id)
+        $message = Message::where('team_id', Auth::user()->currentTeam->id)
             ->where('conversation_id', $this->conversationId)
             ->find($messageId);
 
@@ -1160,12 +1191,12 @@ class MessageWindow extends Component
             // Prepare buttons
             $buttons = [];
             foreach ($this->interactiveButtons as $title) {
-                $id = 'btn_'.\Illuminate\Support\Str::slug($title);
+                $id = 'btn_'.Str::slug($title);
                 $buttons[$id] = $title;
             }
 
             // 1. Pre-persist
-            $message = \App\Models\Message::create([
+            $message = Message::create([
                 'team_id' => Auth::user()->currentTeam->id,
                 'contact_id' => $this->conversation->contact_id,
                 'conversation_id' => $this->conversation->id,
@@ -1178,7 +1209,7 @@ class MessageWindow extends Component
 
             // 2. Dispatch
 
-            \App\Jobs\SendMessageJob::dispatch(
+            SendMessageJob::dispatch(
                 Auth::user()->currentTeam->id,
                 $this->conversation->contact->phone_number,
                 'interactive',
@@ -1202,7 +1233,7 @@ class MessageWindow extends Component
     /**
      * API for Alpine Store to fetch messages as JSON
      */
-    #[\Livewire\Attributes\Renderless]
+    #[Renderless]
     public function loadMessagesJson($offset = 0, $limit = 50)
     {
         if (! $this->conversation) {
@@ -1227,7 +1258,7 @@ class MessageWindow extends Component
 
         return $messages
             ->map(function ($msg) {
-                $team = $msg->relationLoaded('team') ? $msg->team : ($this->conversation?->team ?? \Illuminate\Support\Facades\Auth::user()?->currentTeam);
+                $team = $msg->relationLoaded('team') ? $msg->team : ($this->conversation?->team ?? Auth::user()?->currentTeam);
                 // Media is fetched by the queued DownloadMediaJob on receipt. If it's
                 // still missing here, re-queue it — but never download inline: this runs
                 // inside the chat-render request and a Meta call (up to 60s each) would
@@ -1235,7 +1266,7 @@ class MessageWindow extends Component
                 // doesn't re-queue them forever; the realtime event updates the bubble.
                 if (empty($msg->media_url) && ! empty($msg->media_id) && $team
                     && ! ($msg->metadata['media_failed'] ?? false)) {
-                    \App\Jobs\DownloadMediaJob::dispatch($msg->id, $msg->media_id, $team->id);
+                    DownloadMediaJob::dispatch($msg->id, $msg->media_id, $team->id);
                 }
 
                 return [
@@ -1268,7 +1299,7 @@ class MessageWindow extends Component
     /**
      * API for Alpine Store to send text messages and get ID
      */
-    #[\Livewire\Attributes\Renderless]
+    #[Renderless]
     public function sendMessageJson($body, $tempId)
     {
         if (empty($body)) {
@@ -1290,7 +1321,7 @@ class MessageWindow extends Component
         // 2. Check Lock Ownership (Optional strictness)
         $lockKey = "conversation_lock:{$this->conversation->id}";
         // Replace Redis with Cache for shared hosting compatibility
-        $lockOwner = \Illuminate\Support\Facades\Cache::get($lockKey);
+        $lockOwner = Cache::get($lockKey);
         if ($lockOwner && (int) $lockOwner !== Auth::id()) {
             // We allow replying if lock is expired (empty) but if someone else holds it, we reject.
             // However, UI handles input fix usually. This is a safety check.
@@ -1306,13 +1337,13 @@ class MessageWindow extends Component
             'type' => 'text',
             'content' => $body,
             'metadata' => [
-                'agent_id' => Auth::id(), 
+                'agent_id' => Auth::id(),
                 'agent_name' => Auth::user()->name,
                 'reply_to_message_id' => $this->replyToMessageId,
             ],
         ];
 
-        $message = \App\Models\Message::create($msgData);
+        $message = Message::create($msgData);
         $this->replyToMessageId = null;
 
         // Update conversation last_message_at immediately for the guard to work for others
@@ -1321,7 +1352,7 @@ class MessageWindow extends Component
         // Release lock immediately after sending (optional, or let blur handle it)
         // \App\Services\ConversationService::releaseLock($this->conversation->id, Auth::id());
 
-        \App\Jobs\SendMessageJob::dispatch(
+        SendMessageJob::dispatch(
             Auth::user()->currentTeam->id,
             $this->conversation->contact->phone_number,
             'text',
@@ -1340,7 +1371,7 @@ class MessageWindow extends Component
         ];
     }
 
-    #[\Livewire\Attributes\Renderless]
+    #[Renderless]
     public function retryMessage($messageId)
     {
         if (! $this->conversation && $this->conversationId) {
@@ -1351,7 +1382,7 @@ class MessageWindow extends Component
             return ['status' => 'error', 'message' => 'Conversation not found. Please refresh the page.'];
         }
 
-        $message = \App\Models\Message::where('id', $messageId)
+        $message = Message::where('id', $messageId)
             ->where('conversation_id', $this->conversation->id)
             ->first();
 
@@ -1364,7 +1395,7 @@ class MessageWindow extends Component
             'error_message' => null,
         ]);
 
-        \App\Jobs\SendMessageJob::dispatch($message);
+        SendMessageJob::dispatch($message);
 
         $message->refresh();
 
@@ -1375,14 +1406,15 @@ class MessageWindow extends Component
         ];
     }
 
-    #[\Livewire\Attributes\Renderless]
+    #[Renderless]
     public function retryMediaDownload($messageId)
     {
-        \Illuminate\Support\Facades\Log::info("[LIVEWIRE_RETRY_MEDIA] Retry requested for Message #{$messageId}");
+        Log::info("[LIVEWIRE_RETRY_MEDIA] Retry requested for Message #{$messageId}");
 
-        $message = \App\Models\Message::find($messageId);
+        $message = Message::find($messageId);
         if (! $message || ! $message->media_id) {
-            \Illuminate\Support\Facades\Log::warning("[LIVEWIRE_RETRY_MEDIA] Message or media ID missing for Message #{$messageId}");
+            Log::warning("[LIVEWIRE_RETRY_MEDIA] Message or media ID missing for Message #{$messageId}");
+
             return ['status' => 'error', 'message' => 'Message or media ID not found'];
         }
 
@@ -1391,13 +1423,13 @@ class MessageWindow extends Component
         $message->update(['metadata' => $meta]);
 
         try {
-            \App\Jobs\DownloadMediaJob::dispatchSync($message->id, $message->media_id, $message->team_id);
+            DownloadMediaJob::dispatchSync($message->id, $message->media_id, $message->team_id);
             $message->refresh();
-            \Illuminate\Support\Facades\Log::info("[LIVEWIRE_RETRY_MEDIA] Successfully downloaded media for Message #{$messageId}", [
+            Log::info("[LIVEWIRE_RETRY_MEDIA] Successfully downloaded media for Message #{$messageId}", [
                 'media_url' => $message->full_media_url,
             ]);
         } catch (\Throwable $e) {
-            \Illuminate\Support\Facades\Log::error("[LIVEWIRE_RETRY_MEDIA] Media download failed for Message #{$messageId}", [
+            Log::error("[LIVEWIRE_RETRY_MEDIA] Media download failed for Message #{$messageId}", [
                 'error' => $e->getMessage(),
                 'media_id' => $message->media_id,
                 'team_id' => $message->team_id,
@@ -1412,13 +1444,13 @@ class MessageWindow extends Component
             return [
                 'status' => 'error',
                 'error' => $e->getMessage(),
-                'message' => 'Media download failed: ' . $e->getMessage(),
+                'message' => 'Media download failed: '.$e->getMessage(),
                 'media_url' => null,
                 'metadata' => $message->fresh()->metadata,
             ];
         }
 
-        \App\Events\MessageReceived::dispatch($message);
+        MessageReceived::dispatch($message);
 
         return [
             'status' => 'success',

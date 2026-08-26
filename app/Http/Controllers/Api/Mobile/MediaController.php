@@ -3,9 +3,12 @@
 namespace App\Http\Controllers\Api\Mobile;
 
 use App\Http\Controllers\Controller;
+use Illuminate\Http\File;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
+use Symfony\Component\Process\ExecutableFinder;
+use Symfony\Component\Process\Process;
 
 class MediaController extends Controller
 {
@@ -22,29 +25,29 @@ class MediaController extends Controller
         ]);
 
         $file = $request->file('file');
-        
+
         \Log::info('[MOBILE_MEDIA_UPLOAD] Upload request received', [
             'original_name' => $file->getClientOriginalName(),
             'mime_type' => $file->getClientMimeType(),
             'size' => $file->getSize(),
             'is_voice_note_input' => $request->input('is_voice_note'),
         ]);
-        
+
         // Derive extension from MIME type or original filename
         $clientExt = strtolower($file->getClientOriginalExtension());
-        $allowedExtensions = ['jpg','jpeg','png','gif','webp','heic','heif','mp4','mov','avi','mkv','webm','3gp','mp3','ogg','wav','m4a','aac','opus','pdf','doc','docx','xls','xlsx','csv','txt'];
-        
+        $allowedExtensions = ['jpg', 'jpeg', 'png', 'gif', 'webp', 'heic', 'heif', 'mp4', 'mov', 'avi', 'mkv', 'webm', '3gp', 'mp3', 'ogg', 'wav', 'm4a', 'aac', 'opus', 'pdf', 'doc', 'docx', 'xls', 'xlsx', 'csv', 'txt'];
+
         $extension = $file->extension() ?: $clientExt;
-        if (!in_array($extension, $allowedExtensions)) {
+        if (! in_array($extension, $allowedExtensions)) {
             if (in_array($clientExt, $allowedExtensions)) {
                 $extension = $clientExt;
             } else {
                 return response()->json(['error' => "Invalid file type (.$extension)"], 422);
             }
         }
-        
-        $fileName = Str::uuid() . '.' . $extension;
-        
+
+        $fileName = Str::uuid().'.'.$extension;
+
         $isVoiceNote = filter_var($request->input('is_voice_note'), FILTER_VALIDATE_BOOLEAN);
         \Log::info('[MOBILE_MEDIA_UPLOAD] Voice note flag resolved', [
             'is_voice_note_bool' => $isVoiceNote,
@@ -55,37 +58,37 @@ class MediaController extends Controller
             // A recorded .ogg can be Vorbis or an off-spec Opus sample rate — both are accepted
             // by Meta's /media upload but rejected on delivery with 131053 "Media upload error".
             try {
-                $ffmpegBin = env('FFMPEG_PATH');
+                $ffmpegBin = config('whatsapp.ffmpeg_path');
 
-                if (!$ffmpegBin) {
+                if (! $ffmpegBin) {
                     $extraDirs = [
                         '/opt/homebrew/bin', '/usr/local/bin', '/usr/bin', '/bin',
                         'C:/ffmpeg/bin', 'C:/ProgramData/chocolatey/bin',
                         'C:/Program Files/ffmpeg/bin', 'C:/tools/ffmpeg/bin',
                     ];
                     $userProfile = getenv('USERPROFILE') ?: getenv('HOME');
-                    if ($userProfile && is_dir($userProfile . '/AppData/Local/Microsoft/WinGet/Packages')) {
-                        $winGetPkgs = glob($userProfile . '/AppData/Local/Microsoft/WinGet/Packages/Gyan.FFmpeg*');
+                    if ($userProfile && is_dir($userProfile.'/AppData/Local/Microsoft/WinGet/Packages')) {
+                        $winGetPkgs = glob($userProfile.'/AppData/Local/Microsoft/WinGet/Packages/Gyan.FFmpeg*');
                         foreach ($winGetPkgs as $pkg) {
-                            $subDirs = glob($pkg . '/ffmpeg-*');
+                            $subDirs = glob($pkg.'/ffmpeg-*');
                             foreach ($subDirs as $sd) {
-                                if (is_dir($sd . '/bin')) {
-                                    $extraDirs[] = $sd . '/bin';
+                                if (is_dir($sd.'/bin')) {
+                                    $extraDirs[] = $sd.'/bin';
                                 }
                             }
                         }
                     }
 
-                    $ffmpegBin = (new \Symfony\Component\Process\ExecutableFinder)
+                    $ffmpegBin = (new ExecutableFinder)
                         ->find('ffmpeg', null, array_values(array_unique($extraDirs)));
                 }
 
                 if ($ffmpegBin) {
-                    $tmpOgg = sys_get_temp_dir() . '/' . \Illuminate\Support\Str::random(20) . '.ogg';
-                    $srcTmp = sys_get_temp_dir() . '/' . \Illuminate\Support\Str::random(20) . '.' . $extension;
+                    $tmpOgg = sys_get_temp_dir().'/'.Str::random(20).'.ogg';
+                    $srcTmp = sys_get_temp_dir().'/'.Str::random(20).'.'.$extension;
                     copy($file->getRealPath(), $srcTmp);
 
-                    $process = new \Symfony\Component\Process\Process([
+                    $process = new Process([
                         $ffmpegBin,
                         '-y',
                         '-i', $srcTmp,
@@ -97,26 +100,26 @@ class MediaController extends Controller
                         '-application', 'voip',
                         '-map_metadata', '-1',
                         '-f', 'ogg',
-                        $tmpOgg
+                        $tmpOgg,
                     ]);
                     $process->setTimeout(30);
-                    
+
                     \Log::info('[MOBILE_MEDIA_UPLOAD] Running FFmpeg transcoding', [
                         'ffmpeg_path' => $ffmpegBin,
                         'src_temp' => $srcTmp,
                         'dst_temp' => $tmpOgg,
                     ]);
-                    
+
                     $process->run();
                     @unlink($srcTmp);
 
                     if ($process->isSuccessful() && file_exists($tmpOgg) && filesize($tmpOgg) > 100) {
                         \Log::info('[MOBILE_MEDIA_UPLOAD] FFmpeg transcoding succeeded', [
-                            'size_bytes' => filesize($tmpOgg)
+                            'size_bytes' => filesize($tmpOgg),
                         ]);
-                        $file = new \Illuminate\Http\File($tmpOgg);
+                        $file = new File($tmpOgg);
                         $extension = 'ogg';
-                        $fileName = Str::uuid() . '.' . $extension;
+                        $fileName = Str::uuid().'.'.$extension;
                         $tmpOggFileToUnlink = $tmpOgg;
                     } else {
                         \Log::error('[MOBILE_MEDIA_UPLOAD] FFmpeg transcoding failed', [
@@ -124,10 +127,12 @@ class MediaController extends Controller
                             'error' => $process->getErrorOutput(),
                             'output' => $process->getOutput(),
                         ]);
+
                         return response()->json(['error' => 'Could not convert voice note audio format. Please try again.'], 422);
                     }
                 } else {
                     \Log::error('[MOBILE_MEDIA_UPLOAD] ffmpeg not found — cannot convert voice note.');
+
                     return response()->json(['error' => 'Voice notes require server audio conversion support (FFmpeg). Please contact support.'], 422);
                 }
             } catch (\Throwable $e) {
@@ -135,24 +140,25 @@ class MediaController extends Controller
                     'error' => $e->getMessage(),
                     'trace' => $e->getTraceAsString(),
                 ]);
-                return response()->json(['error' => 'Failed to process voice note: ' . $e->getMessage()], 422);
+
+                return response()->json(['error' => 'Failed to process voice note: '.$e->getMessage()], 422);
             }
         }
-        
+
         // Determine type based on mime or extension
         $mime = strtolower((string) $file->getMimeType());
         if ($extension === 'ogg' || str_contains($mime, 'ogg')) {
             $mime = 'audio/ogg; codecs=opus';
         }
         $type = 'document';
-        if (str_contains($mime, 'audio') || in_array($extension, ['mp3','ogg','wav','m4a','aac','opus','3gp'])) {
+        if (str_contains($mime, 'audio') || in_array($extension, ['mp3', 'ogg', 'wav', 'm4a', 'aac', 'opus', '3gp'])) {
             $type = 'audio';
             if ($extension === 'ogg' || $extension === 'opus') {
                 $mime = 'audio/ogg; codecs=opus';
             }
-        } elseif (str_contains($mime, 'image') || in_array($extension, ['jpg','jpeg','png','gif','webp','heic','heif'])) {
+        } elseif (str_contains($mime, 'image') || in_array($extension, ['jpg', 'jpeg', 'png', 'gif', 'webp', 'heic', 'heif'])) {
             $type = 'image';
-        } elseif (str_contains($mime, 'video') || in_array($extension, ['mp4','mov','avi','mkv','webm'])) {
+        } elseif (str_contains($mime, 'video') || in_array($extension, ['mp4', 'mov', 'avi', 'mkv', 'webm'])) {
             $type = 'video';
         }
 
@@ -161,7 +167,7 @@ class MediaController extends Controller
         $disk = ($configuredDisk === 'local') ? 'public' : $configuredDisk;
 
         // Store in resolved disk ('voice-notes' directory for voice notes to match web, otherwise standard uploads path)
-        $dir = $isVoiceNote ? 'voice-notes' : 'mobile/uploads/' . $type;
+        $dir = $isVoiceNote ? 'voice-notes' : 'mobile/uploads/'.$type;
         $path = Storage::disk($disk)->putFileAs($dir, $file, $fileName);
 
         // Capture size before deleting the temp file — $file points at the transcoded
@@ -176,7 +182,7 @@ class MediaController extends Controller
             $fullUrl = Storage::disk($disk)->url($path);
         } catch (\Throwable $e) {
             $origin = request()->getSchemeAndHttpHost();
-            $fullUrl = rtrim($origin, '/') . '/storage/' . ltrim($path, '/');
+            $fullUrl = rtrim($origin, '/').'/storage/'.ltrim($path, '/');
         }
 
         $originalName = method_exists($file, 'getClientOriginalName') ? $file->getClientOriginalName() : 'voice.ogg';
@@ -199,7 +205,7 @@ class MediaController extends Controller
             'fileName' => $originalName,
             'mime' => $mime,
             'size' => $sizeBytes,
-            'type' => $type
+            'type' => $type,
         ]);
     }
 }

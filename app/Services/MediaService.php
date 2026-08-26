@@ -3,6 +3,7 @@
 namespace App\Services;
 
 use App\Models\Team;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
@@ -34,7 +35,7 @@ class MediaService
         // Only this team's token, or a single system token. Never another team's —
         // a different WABA's token 500s on download and crosses tenant boundaries.
         $accessToken = $team->whatsapp_access_token
-            ?: (config('whatsapp.system_access_token') ?: env('WHATSAPP_ACCESS_TOKEN'));
+            ?: (config('whatsapp.system_access_token') ?: config('whatsapp.access_token'));
 
         if (! $accessToken) {
             Log::error('Media download failed', $log + ['step' => 'no_access_token', 'reason' => 'No Meta access token on team or system config']);
@@ -72,7 +73,7 @@ class MediaService
             // cooldown so DownloadMediaJob backs every download off instead of each
             // retry making another call and keeping the limit pinned (a feedback loop).
             if ($isRateLimit) {
-                \Illuminate\Support\Facades\Cache::put('meta_media_cooldown_until', now()->addMinutes(10)->getTimestamp(), now()->addMinutes(11));
+                Cache::put('meta_media_cooldown_until', now()->addMinutes(10)->getTimestamp(), now()->addMinutes(11));
             }
 
             return null;

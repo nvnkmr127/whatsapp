@@ -4,7 +4,14 @@ namespace App\Livewire\Teams;
 
 use App\Actions\Custom\CreateUserAndAddToTeam;
 use App\Models\Contact;
+use Illuminate\Pagination\LengthAwarePaginator;
+use Illuminate\Pagination\Paginator;
+use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Gate;
+use Illuminate\Support\Facades\Mail;
+use Illuminate\View\View;
 use Laravel\Jetstream\Http\Livewire\TeamMemberManager;
+use Laravel\Jetstream\Mail\TeamInvitation;
 use Livewire\Attributes\Layout;
 use Livewire\WithPagination;
 
@@ -12,6 +19,7 @@ use Livewire\WithPagination;
 class MembersManager extends TeamMemberManager
 {
     use WithPagination;
+
     /**
      * The "create user" form state.
      *
@@ -57,14 +65,14 @@ class MembersManager extends TeamMemberManager
      */
     public function resendTeamInvitation($invitationId)
     {
-        if (! \Illuminate\Support\Facades\Gate::check('addTeamMember', $this->team)) {
+        if (! Gate::check('addTeamMember', $this->team)) {
             abort(403);
         }
 
         $invitation = $this->team->teamInvitations()->findOrFail($invitationId);
 
-        \Illuminate\Support\Facades\Mail::to($invitation->email)
-            ->queue(new \Laravel\Jetstream\Mail\TeamInvitation($invitation));
+        Mail::to($invitation->email)
+            ->queue(new TeamInvitation($invitation));
 
         session()->flash('message', __('Invitation resent to :email.', ['email' => $invitation->email]));
     }
@@ -106,9 +114,9 @@ class MembersManager extends TeamMemberManager
      */
     public function mount($team = null)
     {
-        $this->team = $team ?: \Illuminate\Support\Facades\Auth::user()->currentTeam;
+        $this->team = $team ?: Auth::user()->currentTeam;
 
-        if (! \Illuminate\Support\Facades\Gate::check('view', $this->team)) {
+        if (! Gate::check('view', $this->team)) {
             abort(403);
         }
 
@@ -117,7 +125,7 @@ class MembersManager extends TeamMemberManager
 
     public function openAddMemberModal()
     {
-        if (! \Illuminate\Support\Facades\Gate::check('addTeamMember', $this->team)) {
+        if (! Gate::check('addTeamMember', $this->team)) {
             abort(403);
         }
 
@@ -138,7 +146,7 @@ class MembersManager extends TeamMemberManager
      */
     public function createUser(CreateUserAndAddToTeam $creator)
     {
-        if (! \Illuminate\Support\Facades\Gate::check('addTeamMember', $this->team)) {
+        if (! Gate::check('addTeamMember', $this->team)) {
             abort(403);
         }
 
@@ -165,7 +173,7 @@ class MembersManager extends TeamMemberManager
 
     public function addTeamMember()
     {
-        if (! \Illuminate\Support\Facades\Gate::check('addTeamMember', $this->team)) {
+        if (! Gate::check('addTeamMember', $this->team)) {
             abort(403);
         }
 
@@ -176,18 +184,18 @@ class MembersManager extends TeamMemberManager
     /**
      * Render the component.
      *
-     * @return \Illuminate\View\View
+     * @return View
      */
     public function render()
     {
         // Use allUsers() to include the owner in the list
         $query = $this->team->allUsers();
-        
+
         // We can't use Eloquent query builder directly on the collection returned by allUsers()
         // wait, allUsers() returns a Collection in Jetstream. So we must filter it.
         $users = $query->when($this->search, function ($collection) {
             return $collection->filter(function ($user) {
-                return stripos($user->name, $this->search) !== false || 
+                return stripos($user->name, $this->search) !== false ||
                        stripos($user->email, $this->search) !== false;
             });
         })->sortBy('name');
@@ -195,13 +203,17 @@ class MembersManager extends TeamMemberManager
         // To use Livewire pagination on a collection, we can use the LengthAwarePaginator
         $page = $this->getPage();
         $perPage = 10;
-        
-        $paginatedUsers = new \Illuminate\Pagination\LengthAwarePaginator(
-            $users->forPage($page, $perPage),
+
+        // teamRole() -> belongsToTeam() reads $user->teams per row; eager-load it
+        // on the visible slice so the list doesn't fire one query per member.
+        $pageItems = $users->forPage($page, $perPage)->load('teams');
+
+        $paginatedUsers = new LengthAwarePaginator(
+            $pageItems,
             $users->count(),
             $perPage,
             $page,
-            ['path' => \Illuminate\Pagination\Paginator::resolveCurrentPath(), 'pageName' => 'page']
+            ['path' => Paginator::resolveCurrentPath(), 'pageName' => 'page']
         );
 
         return view('teams.members', [

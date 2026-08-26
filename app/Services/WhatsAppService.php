@@ -2,10 +2,34 @@
 
 namespace App\Services;
 
+use App\Core\WhatsApp\WhatsAppClient;
+use App\Enums\IntegrationState;
+use App\Events\CallAnswered;
+use App\Events\CallEnded;
+use App\Events\CallOffered;
+use App\Events\CallRejected;
+use App\Events\MessageSent;
+use App\Exceptions\Messaging\WhatsAppPolicyException;
+use App\Helpers\PhoneNumberHelper;
+use App\Models\CallPermission;
+use App\Models\CallSettings;
+use App\Models\Campaign;
+use App\Models\Contact;
+use App\Models\Message;
 use App\Models\Team;
+use App\Models\WhatsAppCall;
+use App\Models\WhatsAppFlow;
+use App\Models\WhatsappTemplate;
+use App\Services\WhatsApp\MessagingService;
+use App\Validators\FlowEntryPointValidator;
+use App\Validators\TemplateValidator;
 use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Str;
+use Symfony\Component\Process\ExecutableFinder;
 
 class WhatsAppService
 {
@@ -19,8 +43,8 @@ class WhatsAppService
 
     public function __construct(?Team $team = null)
     {
-        $this->client = app(\App\Core\WhatsApp\WhatsAppClient::class);
-        $this->messaging = new \App\Services\WhatsApp\MessagingService($this->client);
+        $this->client = app(WhatsAppClient::class);
+        $this->messaging = new MessagingService($this->client);
 
         if ($team) {
             $this->setTeam($team);
@@ -51,6 +75,7 @@ class WhatsAppService
     public function sendRaw(Team $team, array $payload, string $endpoint = 'messages')
     {
         $this->setTeam($team);
+
         return $this->client->sendRequest($endpoint, $payload, 'post');
     }
 
@@ -109,7 +134,7 @@ class WhatsAppService
     /**
      * Resolve the peer number (customer) for a call.
      */
-    protected function getCallPeerNumber(\App\Models\WhatsAppCall $call): ?string
+    protected function getCallPeerNumber(WhatsAppCall $call): ?string
     {
         if ($call->direction === 'inbound') {
             return $call->from_number ?: $call->to_number;
@@ -125,20 +150,20 @@ class WhatsAppService
      * Get or create contact with race condition protection.
      *
      * @param  string  $phone  Phone number in any format
-     * @return \App\Models\Contact
+     * @return Contact
      */
     protected function getOrCreateContact(string $phone)
     {
-        $phone = \App\Helpers\PhoneNumberHelper::normalize($phone);
+        $phone = PhoneNumberHelper::normalize($phone);
 
-        return \Illuminate\Support\Facades\DB::transaction(function () use ($phone) {
-            $contact = \App\Models\Contact::lockForUpdate()
+        return DB::transaction(function () use ($phone) {
+            $contact = Contact::lockForUpdate()
                 ->where('team_id', $this->team->id)
                 ->where('phone_number', $phone)
                 ->first();
 
             if (! $contact) {
-                $contact = \App\Models\Contact::create([
+                $contact = Contact::create([
                     'team_id' => $this->team->id,
                     'phone_number' => $phone,
                 ]);
@@ -159,18 +184,17 @@ class WhatsAppService
         $policy = app(PolicyService::class);
         if ($contact && ! $policy->canSendFreeMessage($contact)) {
             Log::warning("Blocked free message to {$to}. 24h Window Closed.");
-            throw new \App\Exceptions\Messaging\WhatsAppPolicyException('Message blocked by 24h policy. Use a Template.');
+            throw new WhatsAppPolicyException('Message blocked by 24h policy. Use a Template.');
         }
-
 
         if (! $this->team->canAccess('send_message')) {
-            throw new \App\Exceptions\Messaging\WhatsAppPolicyException('Plan limit reached.');
+            throw new WhatsAppPolicyException('Plan limit reached.');
         }
 
-        $conversationService = new \App\Services\ConversationService;
+        $conversationService = new ConversationService;
         $conversation = $conversationService->ensureActiveConversation($contact);
 
-        $msg = $existingMessage ?: \App\Models\Message::create([
+        $msg = $existingMessage ?: Message::create([
             'team_id' => $this->team->id,
             'contact_id' => $contact->id,
             'conversation_id' => $conversation->id,
@@ -184,12 +208,12 @@ class WhatsAppService
         try {
             $replyToWamId = null;
             $replyId = $msg->reply_to_message_id;
-            if (!empty($replyId)) {
-                $repliedMsg = \App\Models\Message::find($replyId);
-                if ($repliedMsg && !empty($repliedMsg->whatsapp_message_id)) {
+            if (! empty($replyId)) {
+                $repliedMsg = Message::find($replyId);
+                if ($repliedMsg && ! empty($repliedMsg->whatsapp_message_id)) {
                     $replyToWamId = $repliedMsg->whatsapp_message_id;
                 } else {
-                    Log::warning("Reply context dropped: quoted message #{$replyId} has no whatsapp_message_id (direction=" . ($repliedMsg->direction ?? 'missing') . "). Sending as plain text.");
+                    Log::warning("Reply context dropped: quoted message #{$replyId} has no whatsapp_message_id (direction=".($repliedMsg->direction ?? 'missing').'). Sending as plain text.');
                 }
             }
             $response = $this->messaging->sendText($to, $message, $replyToWamId); // Delegate to specialized service
@@ -197,9 +221,11 @@ class WhatsAppService
             if ($response['success'] ?? false) {
                 $wamId = $response['data']['messages'][0]['id'] ?? null;
                 $conversationService->handleOutboundMessage($conversation, $this->isBot);
-                if (! $this->isBot) { app(\App\Services\SlaService::class)->recordFirstResponse($conversation); }
+                if (! $this->isBot) {
+                    app(SlaService::class)->recordFirstResponse($conversation);
+                }
                 $msg->update(['status' => 'sent', 'whatsapp_message_id' => $wamId, 'sent_at' => now()]);
-                \App\Events\MessageSent::dispatch($msg);
+                MessageSent::dispatch($msg);
             } else {
                 $msg->update(['status' => 'failed', 'error_message' => json_encode($response['error'])]);
             }
@@ -210,15 +236,17 @@ class WhatsAppService
             throw $e;
         }
     }
+
     public function sendReaction($to, $messageId, $emoji)
     {
         $this->verifyReadyToSend();
 
         try {
             $response = $this->messaging->sendReaction($to, $messageId, $emoji);
+
             return $response;
         } catch (\Exception $e) {
-            Log::error('Failed to send WhatsApp reaction: ' . $e->getMessage());
+            Log::error('Failed to send WhatsApp reaction: '.$e->getMessage());
             throw $e;
         }
     }
@@ -260,27 +288,28 @@ class WhatsAppService
         }
 
         // 1. Resolve Conversation
-        $conversationService = new \App\Services\ConversationService;
+        $conversationService = new ConversationService;
         $conversation = $conversationService->ensureActiveConversation($contact);
 
         // Auto-fallback unsupported (.mov, .webm, etc.) or large (>16MB) videos to document type for delivery guarantee
         if ($type === 'video') {
             $extension = strtolower(pathinfo(parse_url($link, PHP_URL_PATH), PATHINFO_EXTENSION));
-            $isUnsupported = !in_array($extension, ['mp4', '3gp']);
-            
+            $isUnsupported = ! in_array($extension, ['mp4', '3gp']);
+
             $isTooLarge = false;
             if ($existingMessage) {
                 try {
                     $path = $existingMessage->media_url;
                     $disk = config('filesystems.default', 'public');
                     $remoteDisk = ($disk === 'local') ? 'public' : $disk;
-                    if (\Illuminate\Support\Facades\Storage::disk($remoteDisk)->exists($path)) {
-                        $size = \Illuminate\Support\Facades\Storage::disk($remoteDisk)->size($path);
+                    if (Storage::disk($remoteDisk)->exists($path)) {
+                        $size = Storage::disk($remoteDisk)->size($path);
                         if ($size > 16 * 1024 * 1024) { // 16MB
                             $isTooLarge = true;
                         }
                     }
-                } catch (\Throwable $e) { }
+                } catch (\Throwable $e) {
+                }
             }
 
             if ($isUnsupported || $isTooLarge) {
@@ -294,7 +323,7 @@ class WhatsAppService
         // 2. Pre-Persist or Use Existing
         $msg = $existingMessage;
         if (! $msg) {
-            $msg = \App\Models\Message::create([
+            $msg = Message::create([
                 'team_id' => $this->team->id,
                 'contact_id' => $contact->id,
                 'conversation_id' => $conversation->id,
@@ -319,7 +348,7 @@ class WhatsAppService
         // Meta accepts on upload but rejects on delivery (error 131053 "Media upload error").
         $isVoice = false;
         if ($type === 'audio') {
-            if ($existingMessage && (!empty($existingMessage->metadata['voice_note']) || !empty($existingMessage->metadata['is_voice_note']))) {
+            if ($existingMessage && (! empty($existingMessage->metadata['voice_note']) || ! empty($existingMessage->metadata['is_voice_note']))) {
                 $isVoice = true;
             } elseif (str_ends_with(strtolower(strtok((string) $link, '?')), '.ogg') || str_ends_with(strtolower(strtok((string) $link, '?')), '.opus')) {
                 $isVoice = true;
@@ -334,13 +363,13 @@ class WhatsAppService
         if ($existingMessage && $existingMessage->media_url) {
             $rawStored = $existingMessage->media_url;
             // It's already a clean relative path (e.g. "mobile/uploads/audio/uuid.ogg")
-            if (!str_starts_with($rawStored, 'http://') && !str_starts_with($rawStored, 'https://')) {
+            if (! str_starts_with($rawStored, 'http://') && ! str_starts_with($rawStored, 'https://')) {
                 $cleanPath = ltrim(preg_replace('#^/?(storage|public)/#i', '', $rawStored), '/');
             }
         }
 
         // If no clean path from the message, try to extract from the signed URL
-        if (!$cleanPath) {
+        if (! $cleanPath) {
             if (preg_match('#^https?://[^/]+/(storage|public)/(.*)$#i', $link, $m)) {
                 $cleanPath = strtok($m[2], '?');
             } elseif (preg_match('#^/?(storage|public)/(.*)$#i', $link, $m)) {
@@ -349,9 +378,9 @@ class WhatsAppService
         }
 
         // 1. Try local file path first (for local disk deployments)
-        $localPath = $cleanPath ? \Illuminate\Support\Facades\Storage::disk($disk)->path($cleanPath) : null;
+        $localPath = $cleanPath ? Storage::disk($disk)->path($cleanPath) : null;
         if ($localPath && file_exists($localPath)) {
-            $mimeType = match($type) {
+            $mimeType = match ($type) {
                 'audio' => 'audio/ogg; codecs=opus',
                 'image' => 'image/jpeg',
                 'video' => 'video/mp4',
@@ -381,39 +410,39 @@ class WhatsAppService
             if ($uploadPath !== $localPath) {
                 @unlink($uploadPath);
             }
-            if (!empty($uploadRes['success']) && !empty($uploadRes['id'])) {
+            if (! empty($uploadRes['success']) && ! empty($uploadRes['id'])) {
                 $mediaId = $uploadRes['id'];
                 Log::info("Direct Meta Media Upload successful! Media ID: {$mediaId}");
             } else {
-                Log::warning("Direct Meta Media Upload failed, falling back to remote disk method: " . json_encode($uploadRes['error'] ?? ''));
+                Log::warning('Direct Meta Media Upload failed, falling back to remote disk method: '.json_encode($uploadRes['error'] ?? ''));
             }
         }
 
         // 2. If no local file (remote disk: R2/S3), stream from disk to a temp file and upload directly.
         //    This avoids sending signed private bucket URLs to WhatsApp which results in 403.
-        if (!$mediaId && $cleanPath && config("filesystems.disks.{$disk}.driver") === 's3') {
+        if (! $mediaId && $cleanPath && config("filesystems.disks.{$disk}.driver") === 's3') {
             try {
-                if (\Illuminate\Support\Facades\Storage::disk($disk)->exists($cleanPath)) {
+                if (Storage::disk($disk)->exists($cleanPath)) {
                     $ext = strtolower(pathinfo($cleanPath, PATHINFO_EXTENSION));
-                    $mimeType = match($ext) {
+                    $mimeType = match ($ext) {
                         'ogg', 'opus' => 'audio/ogg; codecs=opus',
-                        'm4a'         => 'audio/mp4',
-                        'mp3'         => 'audio/mpeg',
-                        'aac'         => 'audio/aac',
-                        'mp4'         => 'video/mp4',
+                        'm4a' => 'audio/mp4',
+                        'mp3' => 'audio/mpeg',
+                        'aac' => 'audio/aac',
+                        'mp4' => 'video/mp4',
                         'jpg', 'jpeg' => 'image/jpeg',
-                        'png'         => 'image/png',
-                        'gif'         => 'image/gif',
-                        'webp'        => 'image/webp',
-                        'pdf'         => 'application/pdf',
-                        default       => 'application/octet-stream',
+                        'png' => 'image/png',
+                        'gif' => 'image/gif',
+                        'webp' => 'image/webp',
+                        'pdf' => 'application/pdf',
+                        default => 'application/octet-stream',
                     };
                     if ($type === 'audio') {
                         $mimeType = in_array($ext, ['ogg', 'opus']) ? 'audio/ogg; codecs=opus' : ($ext === 'm4a' ? 'audio/mp4' : ($ext === 'mp3' ? 'audio/mpeg' : 'audio/ogg; codecs=opus'));
                     }
 
-                    $tmpFile = sys_get_temp_dir() . '/' . \Illuminate\Support\Str::random(20) . '.' . $ext;
-                    $stream = \Illuminate\Support\Facades\Storage::disk($disk)->readStream($cleanPath);
+                    $tmpFile = sys_get_temp_dir().'/'.Str::random(20).'.'.$ext;
+                    $stream = Storage::disk($disk)->readStream($cleanPath);
                     if (is_resource($stream)) {
                         // Use stream_copy_to_stream for reliable binary write (file_put_contents
                         // may not correctly handle all remote PHP stream resource types)
@@ -425,7 +454,7 @@ class WhatsAppService
                         fclose($stream);
 
                         if (file_exists($tmpFile) && filesize($tmpFile) > 0) {
-                            Log::info("Attempting Direct Meta Media Upload for remote R2/S3 file: {$cleanPath} (mime: {$mimeType}, size: " . filesize($tmpFile) . "b, temp: {$tmpFile})");
+                            Log::info("Attempting Direct Meta Media Upload for remote R2/S3 file: {$cleanPath} (mime: {$mimeType}, size: ".filesize($tmpFile)."b, temp: {$tmpFile})");
                             $uploadPath = ($type === 'audio' && $isVoice) ? $this->ensureOpus($tmpFile) : $tmpFile;
                             if ($type === 'audio' && ($isVoice || str_ends_with(strtolower($uploadPath), '.ogg') || str_ends_with(strtolower($uploadPath), '.opus'))) {
                                 $mimeType = 'audio/ogg; codecs=opus';
@@ -436,11 +465,11 @@ class WhatsAppService
                             }
                             @unlink($tmpFile);
 
-                            if (!empty($uploadRes['success']) && !empty($uploadRes['id'])) {
+                            if (! empty($uploadRes['success']) && ! empty($uploadRes['id'])) {
                                 $mediaId = $uploadRes['id'];
                                 Log::info("Direct Meta Media Upload (from R2/S3) successful! Media ID: {$mediaId}");
                             } else {
-                                Log::warning("Direct Meta Media Upload (from R2/S3) failed: " . json_encode($uploadRes['error'] ?? ''));
+                                Log::warning('Direct Meta Media Upload (from R2/S3) failed: '.json_encode($uploadRes['error'] ?? ''));
                             }
                         } else {
                             Log::warning("R2/S3 stream wrote 0 bytes to temp file — skipping Meta upload for {$cleanPath}");
@@ -449,7 +478,7 @@ class WhatsAppService
                     }
                 }
             } catch (\Throwable $e) {
-                Log::warning("Failed to stream file from R2/S3 for direct Meta upload: " . $e->getMessage());
+                Log::warning('Failed to stream file from R2/S3 for direct Meta upload: '.$e->getMessage());
             }
         }
 
@@ -478,12 +507,12 @@ class WhatsAppService
         ];
 
         $replyId = $msg->reply_to_message_id;
-        if (!empty($replyId)) {
-            $repliedMsg = \App\Models\Message::find($replyId);
-            if ($repliedMsg && !empty($repliedMsg->whatsapp_message_id)) {
+        if (! empty($replyId)) {
+            $repliedMsg = Message::find($replyId);
+            if ($repliedMsg && ! empty($repliedMsg->whatsapp_message_id)) {
                 $payload['context'] = ['message_id' => $repliedMsg->whatsapp_message_id];
             } else {
-                Log::warning("Reply context dropped: quoted message #{$replyId} has no whatsapp_message_id (direction=" . ($repliedMsg->direction ?? 'missing') . "). Sending media as plain.");
+                Log::warning("Reply context dropped: quoted message #{$replyId} has no whatsapp_message_id (direction=".($repliedMsg->direction ?? 'missing').'). Sending media as plain.');
             }
         }
 
@@ -505,7 +534,9 @@ class WhatsAppService
             if ($response['success'] ?? false) {
                 $wamId = $response['data']['messages'][0]['id'] ?? null;
                 $conversationService->handleOutboundMessage($conversation, $this->isBot);
-                if (! $this->isBot) { app(\App\Services\SlaService::class)->recordFirstResponse($conversation); }
+                if (! $this->isBot) {
+                    app(SlaService::class)->recordFirstResponse($conversation);
+                }
 
                 $msg->update([
                     'status' => 'sent',
@@ -513,7 +544,7 @@ class WhatsAppService
                     'sent_at' => now(),
                 ]);
 
-                \App\Events\MessageSent::dispatch($msg);
+                MessageSent::dispatch($msg);
             } else {
                 $msg->update([
                     'status' => 'failed',
@@ -541,8 +572,8 @@ class WhatsAppService
     private function ensureOpus(string $path): string
     {
         try {
-            $ffmpegBin = env('FFMPEG_PATH');
-            $ffprobeBin = env('FFPROBE_PATH');
+            $ffmpegBin = config('whatsapp.ffmpeg_path');
+            $ffprobeBin = config('whatsapp.ffprobe_path');
 
             if (! $ffmpegBin || ! $ffprobeBin) {
                 $extraDirs = [
@@ -551,15 +582,15 @@ class WhatsAppService
                     'C:/Program Files/ffmpeg/bin', 'C:/tools/ffmpeg/bin',
                 ];
                 $userProfile = getenv('USERPROFILE') ?: getenv('HOME');
-                if ($userProfile && is_dir($userProfile . '/AppData/Local/Microsoft/WinGet/Packages')) {
-                    $winGetPkgs = glob($userProfile . '/AppData/Local/Microsoft/WinGet/Packages/Gyan.FFmpeg*');
+                if ($userProfile && is_dir($userProfile.'/AppData/Local/Microsoft/WinGet/Packages')) {
+                    $winGetPkgs = glob($userProfile.'/AppData/Local/Microsoft/WinGet/Packages/Gyan.FFmpeg*');
                     if ($winGetPkgs) {
                         foreach ($winGetPkgs as $pkg) {
-                            $subDirs = glob($pkg . '/ffmpeg-*');
+                            $subDirs = glob($pkg.'/ffmpeg-*');
                             if ($subDirs) {
                                 foreach ($subDirs as $sd) {
-                                    if (is_dir($sd . '/bin')) {
-                                        $extraDirs[] = $sd . '/bin';
+                                    if (is_dir($sd.'/bin')) {
+                                        $extraDirs[] = $sd.'/bin';
                                     }
                                 }
                             }
@@ -567,14 +598,14 @@ class WhatsAppService
                     }
                 }
 
-                $finder = new \Symfony\Component\Process\ExecutableFinder;
+                $finder = new ExecutableFinder;
                 $ffmpegBin = $ffmpegBin ?: ($finder->find('ffmpeg', 'ffmpeg', array_values(array_unique($extraDirs))) ?: 'ffmpeg');
                 $ffprobeBin = $ffprobeBin ?: ($finder->find('ffprobe', 'ffprobe', array_values(array_unique($extraDirs))) ?: 'ffprobe');
             }
 
             // WhatsApp voice notes strictly require 16kHz mono Opus; anything else delivers as 131053.
-            $probeCmd = escapeshellarg($ffprobeBin) . ' -v error -select_streams a:0 -show_entries stream=codec_name,sample_rate,channels -of csv=p=0 '
-                . escapeshellarg($path) . ' 2>/dev/null';
+            $probeCmd = escapeshellarg($ffprobeBin).' -v error -select_streams a:0 -show_entries stream=codec_name,sample_rate,channels -of csv=p=0 '
+                .escapeshellarg($path).' 2>/dev/null';
             $probe = trim((string) @shell_exec($probeCmd));
 
             if ($probe === '') {
@@ -586,9 +617,9 @@ class WhatsAppService
                 return $path; // already exactly the WhatsApp voice-note spec
             }
 
-            $out = sys_get_temp_dir() . '/' . \Illuminate\Support\Str::random(20) . '.ogg';
-            $ffmpegCmd = escapeshellarg($ffmpegBin) . ' -y -i ' . escapeshellarg($path)
-                . ' -vn -c:a libopus -b:a 16k -ar 16000 -ac 1 -application voip -map_metadata -1 -f ogg ' . escapeshellarg($out) . ' 2>/dev/null';
+            $out = sys_get_temp_dir().'/'.Str::random(20).'.ogg';
+            $ffmpegCmd = escapeshellarg($ffmpegBin).' -y -i '.escapeshellarg($path)
+                .' -vn -c:a libopus -b:a 16k -ar 16000 -ac 1 -application voip -map_metadata -1 -f ogg '.escapeshellarg($out).' 2>/dev/null';
             @shell_exec($ffmpegCmd);
 
             if (file_exists($out) && filesize($out) > 0) {
@@ -602,7 +633,7 @@ class WhatsAppService
 
             return $path;
         } catch (\Throwable $e) {
-            Log::warning('ensureOpus error: ' . $e->getMessage());
+            Log::warning('ensureOpus error: '.$e->getMessage());
 
             return $path;
         }
@@ -633,13 +664,13 @@ class WhatsAppService
         }
 
         // 1. Resolve Conversation
-        $conversationService = new \App\Services\ConversationService;
+        $conversationService = new ConversationService;
         $conversation = $conversationService->ensureActiveConversation($contact);
 
         // 2. Pre-Persist or Use Existing
         $msg = $existingMessage;
         if (! $msg) {
-            $msg = \App\Models\Message::create([
+            $msg = Message::create([
                 'team_id' => $this->team->id,
                 'contact_id' => $contact->id,
                 'conversation_id' => $conversation->id,
@@ -676,7 +707,9 @@ class WhatsAppService
             if ($response['success'] ?? false) {
                 $wamId = $response['data']['messages'][0]['id'] ?? null;
                 $conversationService->handleOutboundMessage($conversation, $this->isBot);
-                if (! $this->isBot) { app(\App\Services\SlaService::class)->recordFirstResponse($conversation); }
+                if (! $this->isBot) {
+                    app(SlaService::class)->recordFirstResponse($conversation);
+                }
 
                 $msg->update([
                     'status' => 'sent',
@@ -684,7 +717,7 @@ class WhatsAppService
                     'sent_at' => now(),
                 ]);
 
-                \App\Events\MessageSent::dispatch($msg);
+                MessageSent::dispatch($msg);
             } else {
                 $msg->update([
                     'status' => 'failed',
@@ -722,12 +755,12 @@ class WhatsAppService
             throw new \Exception($denial ?: 'Monthly message limit reached or subscription inactive.');
         }
 
-        $conversationService = new \App\Services\ConversationService;
+        $conversationService = new ConversationService;
         $conversation = $conversationService->ensureActiveConversation($contact);
 
         $msg = $existingMessage;
         if (! $msg) {
-            $msg = \App\Models\Message::create([
+            $msg = Message::create([
                 'team_id' => $this->team->id,
                 'contact_id' => $contact->id,
                 'conversation_id' => $conversation->id,
@@ -759,7 +792,9 @@ class WhatsAppService
             if ($response['success'] ?? false) {
                 $wamId = $response['data']['messages'][0]['id'] ?? null;
                 $conversationService->handleOutboundMessage($conversation, $this->isBot);
-                if (! $this->isBot) { app(\App\Services\SlaService::class)->recordFirstResponse($conversation); }
+                if (! $this->isBot) {
+                    app(SlaService::class)->recordFirstResponse($conversation);
+                }
 
                 $msg->update([
                     'status' => 'sent',
@@ -767,7 +802,7 @@ class WhatsAppService
                     'sent_at' => now(),
                 ]);
 
-                \App\Events\MessageSent::dispatch($msg);
+                MessageSent::dispatch($msg);
             } else {
                 $msg->update([
                     'status' => 'failed',
@@ -804,13 +839,13 @@ class WhatsAppService
 
         // ENTRY POINT ENFORCEMENT
         // Resolve Flow Model
-        $flow = \App\Models\WhatsAppFlow::where('team_id', $this->team->id)
+        $flow = WhatsAppFlow::where('team_id', $this->team->id)
             ->where(function ($q) use ($flowId) {
                 $q->where('flow_id', $flowId)->orWhere('id', $flowId);
             })->first();
 
         if ($flow) {
-            $epValidator = new \App\Validators\FlowEntryPointValidator;
+            $epValidator = new FlowEntryPointValidator;
             // Flows sent via API (interactive message) fall under 'interactive' entry point
             $epResult = $epValidator->validate($flow, 'interactive');
             if (! $epResult->isValid()) {
@@ -829,13 +864,13 @@ class WhatsAppService
         }
 
         // 1. Resolve Conversation
-        $conversationService = new \App\Services\ConversationService;
+        $conversationService = new ConversationService;
         $conversation = $conversationService->ensureActiveConversation($contact);
 
         // 2. Pre-Persist or Use Existing
         $msg = $existingMessage;
         if (! $msg) {
-            $msg = \App\Models\Message::create([
+            $msg = Message::create([
                 'team_id' => $this->team->id,
                 'contact_id' => $contact->id,
                 'conversation_id' => $conversation->id,
@@ -890,7 +925,9 @@ class WhatsAppService
             if ($response['success'] ?? false) {
                 $wamId = $response['data']['messages'][0]['id'] ?? null;
                 $conversationService->handleOutboundMessage($conversation, $this->isBot);
-                if (! $this->isBot) { app(\App\Services\SlaService::class)->recordFirstResponse($conversation); }
+                if (! $this->isBot) {
+                    app(SlaService::class)->recordFirstResponse($conversation);
+                }
 
                 $msg->update([
                     'status' => 'sent',
@@ -898,7 +935,7 @@ class WhatsAppService
                     'sent_at' => now(),
                 ]);
 
-                \App\Events\MessageSent::dispatch($msg);
+                MessageSent::dispatch($msg);
             } else {
                 $msg->update([
                     'status' => 'failed',
@@ -925,10 +962,10 @@ class WhatsAppService
 
         $contact = $this->getOrCreateContact($to);
 
-        $conversationService = new \App\Services\ConversationService;
+        $conversationService = new ConversationService;
         $conversation = $conversationService->ensureActiveConversation($contact);
 
-        $msg = $existingMessage ?: \App\Models\Message::create([
+        $msg = $existingMessage ?: Message::create([
             'team_id' => $this->team->id,
             'contact_id' => $contact->id,
             'conversation_id' => $conversation->id,
@@ -956,9 +993,11 @@ class WhatsAppService
             if ($response['success'] ?? false) {
                 $wamId = $response['data']['messages'][0]['id'] ?? null;
                 $conversationService->handleOutboundMessage($conversation, $this->isBot);
-                if (! $this->isBot) { app(\App\Services\SlaService::class)->recordFirstResponse($conversation); }
+                if (! $this->isBot) {
+                    app(SlaService::class)->recordFirstResponse($conversation);
+                }
                 $msg->update(['status' => 'sent', 'whatsapp_message_id' => $wamId, 'sent_at' => now()]);
-                \App\Events\MessageSent::dispatch($msg);
+                MessageSent::dispatch($msg);
             } else {
                 $msg->update(['status' => 'failed', 'error_message' => json_encode($response['error'])]);
             }
@@ -979,10 +1018,10 @@ class WhatsAppService
 
         $contact = $this->getOrCreateContact($to);
 
-        $conversationService = new \App\Services\ConversationService;
+        $conversationService = new ConversationService;
         $conversation = $conversationService->ensureActiveConversation($contact);
 
-        $msg = $existingMessage ?: \App\Models\Message::create([
+        $msg = $existingMessage ?: Message::create([
             'team_id' => $this->team->id,
             'contact_id' => $contact->id,
             'conversation_id' => $conversation->id,
@@ -1006,9 +1045,11 @@ class WhatsAppService
             if ($response['success'] ?? false) {
                 $wamId = $response['data']['messages'][0]['id'] ?? null;
                 $conversationService->handleOutboundMessage($conversation, $this->isBot);
-                if (! $this->isBot) { app(\App\Services\SlaService::class)->recordFirstResponse($conversation); }
+                if (! $this->isBot) {
+                    app(SlaService::class)->recordFirstResponse($conversation);
+                }
                 $msg->update(['status' => 'sent', 'whatsapp_message_id' => $wamId, 'sent_at' => now()]);
-                \App\Events\MessageSent::dispatch($msg);
+                MessageSent::dispatch($msg);
             } else {
                 $msg->update(['status' => 'failed', 'error_message' => json_encode($response['error'])]);
             }
@@ -1029,10 +1070,10 @@ class WhatsAppService
 
         $contact = $this->getOrCreateContact($to);
 
-        $conversationService = new \App\Services\ConversationService;
+        $conversationService = new ConversationService;
         $conversation = $conversationService->ensureActiveConversation($contact);
 
-        $msg = $existingMessage ?: \App\Models\Message::create([
+        $msg = $existingMessage ?: Message::create([
             'team_id' => $this->team->id,
             'contact_id' => $contact->id,
             'conversation_id' => $conversation->id,
@@ -1077,9 +1118,11 @@ class WhatsAppService
             if ($response['success'] ?? false) {
                 $wamId = $response['data']['messages'][0]['id'] ?? null;
                 $conversationService->handleOutboundMessage($conversation, $this->isBot);
-                if (! $this->isBot) { app(\App\Services\SlaService::class)->recordFirstResponse($conversation); }
+                if (! $this->isBot) {
+                    app(SlaService::class)->recordFirstResponse($conversation);
+                }
                 $msg->update(['status' => 'sent', 'whatsapp_message_id' => $wamId, 'sent_at' => now()]);
-                \App\Events\MessageSent::dispatch($msg);
+                MessageSent::dispatch($msg);
             } else {
                 $msg->update(['status' => 'failed', 'error_message' => json_encode($response['error'])]);
             }
@@ -1096,14 +1139,14 @@ class WhatsAppService
         $this->verifyReadyToSend();
 
         // Fetch Template first to understand structure
-        $tpl = \App\Models\WhatsappTemplate::where('team_id', $this->team->id)
+        $tpl = WhatsappTemplate::where('team_id', $this->team->id)
             ->where('name', $templateName)
             ->where('language', $language)
             ->first();
 
         // Language Fallback
         if (! $tpl) {
-            $fallback = \App\Models\WhatsappTemplate::where('team_id', $this->team->id)
+            $fallback = WhatsappTemplate::where('team_id', $this->team->id)
                 ->where('name', $templateName)
                 ->where('language', 'en_US')
                 ->first();
@@ -1115,7 +1158,7 @@ class WhatsAppService
 
         // ID Fallback: If name lookup failed but name is numeric, try searching by ID
         if (! $tpl && is_numeric($templateName)) {
-            $idFallback = \App\Models\WhatsappTemplate::where('team_id', $this->team->id)
+            $idFallback = WhatsappTemplate::where('team_id', $this->team->id)
                 ->where('id', $templateName)
                 ->first();
             if ($idFallback) {
@@ -1142,7 +1185,7 @@ class WhatsAppService
         }
 
         // Readiness Pre-flight check (Rules UC-04, UC-05)
-        $validator = new \App\Validators\TemplateValidator;
+        $validator = new TemplateValidator;
         $validator->validate($tpl, [
             'header_media_url' => $headerParams[0] ?? null,
             'body_variables' => $bodyParams,
@@ -1165,7 +1208,7 @@ class WhatsAppService
         // we check if the template has multiple components and distribute them sequentially.
         if (! empty($bodyParams) && empty($headerParams) && empty($footerParams)) {
             $distributed = $this->distributeParameters($tpl, $bodyParams);
-            
+
             $headerParams = $distributed['header'];
             $bodyParams = $distributed['body'];
             $footerParams = $distributed['footer'];
@@ -1302,7 +1345,7 @@ class WhatsAppService
             return ['success' => false, 'error' => $denial ?: 'Plan Limit Reached or Subscription Inactive'];
         }
 
-        $billing = app(\App\Services\BillingService::class);
+        $billing = app(BillingService::class);
         $allowed = $billing->recordConversationUsage($this->team, $contact->id, $category, null);
 
         if (! $allowed) {
@@ -1311,7 +1354,7 @@ class WhatsAppService
 
         // --- STATUS CHECK (Safety Gate) ---
         // Verify template is actually safe to send right now.
-        $templateModel = \App\Models\WhatsappTemplate::where('team_id', $this->team->id)
+        $templateModel = WhatsappTemplate::where('team_id', $this->team->id)
             ->where('name', $templateName)
             ->where('language', $language)
             ->first();
@@ -1320,7 +1363,7 @@ class WhatsAppService
             // ... (existing status checks) ...
 
             // --- COOLDOWN CHECK (Spam Prevention) ---
-            $healthService = new \App\Services\TemplateHealthService;
+            $healthService = new TemplateHealthService;
             if (! $healthService->checkCooldown($contact, $templateModel->category)) {
                 return ['success' => false, 'error' => "Message blocked by cooldown rules ({$templateModel->category})."];
             }
@@ -1328,21 +1371,21 @@ class WhatsAppService
 
         // --- DEEP-LINK ANALYTICS (Feature 4) ---
         // Track URLs in all dynamic parameters for attribution
-        $linkTracker = new \App\Services\LinkTrackerService;
-        $campaignModel = $campaignId ? \App\Models\Campaign::find($campaignId) : null;
+        $linkTracker = new LinkTrackerService;
+        $campaignModel = $campaignId ? Campaign::find($campaignId) : null;
 
         $bodyParams = collect($bodyParams)->map(fn ($p) => is_string($p) ? $linkTracker->trackUrls($p, $this->team, $contact, $campaignModel) : $p)->toArray();
         $headerParams = collect($headerParams)->map(fn ($p) => is_string($p) ? $linkTracker->trackUrls($p, $this->team, $contact, $campaignModel) : $p)->toArray();
         $footerParams = collect($footerParams)->map(fn ($p) => is_string($p) ? $linkTracker->trackUrls($p, $this->team, $contact, $campaignModel) : $p)->toArray();
 
         // --- SANITIZATION ---
-        $tplService = new \App\Services\TemplateService;
+        $tplService = new TemplateService;
         $bodyParams = $tplService->sanitizeVariables($bodyParams);
         $headerParams = $tplService->sanitizeVariables($headerParams);
         $footerParams = $tplService->sanitizeVariables($footerParams);
 
         // --- PRE-PERSISTENCE or USE EXISTING ---
-        $conversationService = new \App\Services\ConversationService;
+        $conversationService = new ConversationService;
         $conversation = $conversationService->ensureActiveConversation($contact);
 
         $msg = $existingMessage;
@@ -1371,7 +1414,7 @@ class WhatsAppService
                 }
             }
 
-            $msg = \App\Models\Message::create([
+            $msg = Message::create([
                 'team_id' => $this->team->id,
                 'contact_id' => $contact->id,
                 'conversation_id' => $conversation->id,
@@ -1397,7 +1440,9 @@ class WhatsAppService
             if ($response['success'] ?? false) {
                 $wamId = $response['data']['messages'][0]['id'] ?? null;
                 $conversationService->handleOutboundMessage($conversation, $this->isBot);
-                if (! $this->isBot) { app(\App\Services\SlaService::class)->recordFirstResponse($conversation); }
+                if (! $this->isBot) {
+                    app(SlaService::class)->recordFirstResponse($conversation);
+                }
 
                 $msg->update([
                     'status' => 'sent',
@@ -1407,10 +1452,10 @@ class WhatsAppService
 
                 // Record Usage for Cooldowns
                 if (isset($templateModel)) {
-                    (new \App\Services\TemplateHealthService)->recordUsage($contact, $templateModel->category);
+                    (new TemplateHealthService)->recordUsage($contact, $templateModel->category);
                 }
 
-                \App\Events\MessageSent::dispatch($msg);
+                MessageSent::dispatch($msg);
             } else {
                 $msg->update([
                     'status' => 'failed',
@@ -1813,8 +1858,8 @@ class WhatsAppService
      */
     public function requestCallPermission(int $contactId): array
     {
-        $contact = \App\Models\Contact::findOrFail($contactId);
-        $permissionService = new \App\Services\CallPermissionService;
+        $contact = Contact::findOrFail($contactId);
+        $permissionService = new CallPermissionService;
 
         // Validate permission request
         $validation = $permissionService->validatePermissionRequest($contact, $this->team);
@@ -1918,11 +1963,11 @@ class WhatsAppService
     public function initiateCallWithPermission(string $to, ?int $permissionId = null, array $options = []): array
     {
         $contact = $this->getOrCreateContact($to);
-        $permissionService = new \App\Services\CallPermissionService;
+        $permissionService = new CallPermissionService;
 
         // If permission ID provided, validate it
         if ($permissionId) {
-            $permission = \App\Models\CallPermission::findOrFail($permissionId);
+            $permission = CallPermission::findOrFail($permissionId);
 
             if (! $permissionService->validateCallingWindow($permission)) {
                 throw new \Exception('Call permission has expired or is not valid.');
@@ -1957,7 +2002,7 @@ class WhatsAppService
 
         // Check if calling is enabled
         $phoneId = $this->team->whatsapp_phone_number_id;
-        $settings = \App\Models\CallSettings::where('team_id', $this->team->id)
+        $settings = CallSettings::where('team_id', $this->team->id)
             ->where('phone_number_id', $phoneId)
             ->first();
 
@@ -1967,7 +2012,7 @@ class WhatsAppService
 
         // Check monthly call limits
         if ($this->team->max_call_minutes_per_month) {
-            $minutesUsed = \App\Models\WhatsAppCall::where('team_id', $this->team->id)
+            $minutesUsed = WhatsAppCall::where('team_id', $this->team->id)
                 ->whereMonth('created_at', now()->month)
                 ->whereYear('created_at', now()->year)
                 ->sum('duration_seconds') / 60;
@@ -1992,7 +2037,7 @@ class WhatsAppService
 
         // Add Session (SDP) if provided
         if ($sdp) {
-            $sdp = \App\Services\SDPValidator::sanitize($sdp);
+            $sdp = SDPValidator::sanitize($sdp);
             $payload['session'] = [
                 'sdp' => $sdp,
                 'sdp_type' => 'offer', // We are making the offer
@@ -2011,10 +2056,10 @@ class WhatsAppService
 
                 // Create call record
                 $contact = $this->getOrCreateContact($to);
-                $conversationService = new \App\Services\ConversationService;
+                $conversationService = new ConversationService;
                 $conversation = $conversationService->ensureActiveConversation($contact);
 
-                $call = \App\Models\WhatsAppCall::create([
+                $call = WhatsAppCall::create([
                     'team_id' => $this->team->id,
                     'contact_id' => $contact->id,
                     'conversation_id' => $conversation->id,
@@ -2031,10 +2076,10 @@ class WhatsAppService
                 ]);
 
                 // Emit CallOffered event
-                event(new \App\Events\CallOffered($call));
+                event(new CallOffered($call));
 
                 // Record for safeguards
-                $safeguardService = new \App\Services\CallSafeguardService;
+                $safeguardService = new CallSafeguardService;
                 $safeguardService->recordOutboundCall($this->team);
 
                 Log::info('Outbound call initiated', [
@@ -2067,7 +2112,7 @@ class WhatsAppService
      */
     public function answerCall(string $callId, ?array $session = null, ?string $phoneNumberId = null, ?string $bizOpaqueCallbackData = null)
     {
-        $call = \App\Models\WhatsAppCall::where('call_id', $callId)
+        $call = WhatsAppCall::where('call_id', $callId)
             ->where('team_id', $this->team->id)
             ->firstOrFail();
 
@@ -2077,10 +2122,10 @@ class WhatsAppService
 
         // Validate SDP if provided
         if ($session && isset($session['sdp'])) {
-            $validation = \App\Services\SDPValidator::validate($session['sdp']);
+            $validation = SDPValidator::validate($session['sdp']);
 
             if (! $validation['valid']) {
-                $errorMsg = \App\Services\SDPValidator::getValidationSummary($validation);
+                $errorMsg = SDPValidator::getValidationSummary($validation);
 
                 Log::error('SDP validation failed', [
                     'team_id' => $this->team->id,
@@ -2102,13 +2147,13 @@ class WhatsAppService
             }
 
             // Sanitize SDP
-            $session['sdp'] = \App\Services\SDPValidator::sanitize($session['sdp']);
+            $session['sdp'] = SDPValidator::sanitize($session['sdp']);
 
             // Log SDP exchange
             Log::info('SDP answer generated', [
                 'team_id' => $this->team->id,
                 'call_id' => $callId,
-                'codecs' => \App\Services\SDPValidator::extractCodecs($session['sdp']),
+                'codecs' => SDPValidator::extractCodecs($session['sdp']),
             ]);
         }
 
@@ -2165,7 +2210,7 @@ class WhatsAppService
                     $call->update(['metadata' => $metadata]);
 
                     // Dispatch event for real-time UI updates
-                    event(new \App\Events\CallAnswered($call));
+                    event(new CallAnswered($call));
 
                     Log::info('Call answered successfully', [
                         'team_id' => $this->team->id,
@@ -2231,7 +2276,7 @@ class WhatsAppService
      */
     public function preAcceptCall(string $callId, ?array $session = null, ?string $phoneNumberId = null, ?string $bizOpaqueCallbackData = null)
     {
-        $call = \App\Models\WhatsAppCall::where('call_id', $callId)
+        $call = WhatsAppCall::where('call_id', $callId)
             ->where('team_id', $this->team->id)
             ->firstOrFail();
 
@@ -2240,12 +2285,12 @@ class WhatsAppService
         }
 
         if ($session && isset($session['sdp'])) {
-            $validation = \App\Services\SDPValidator::validate($session['sdp']);
+            $validation = SDPValidator::validate($session['sdp']);
             if (! $validation['valid']) {
-                $errorMsg = \App\Services\SDPValidator::getValidationSummary($validation);
+                $errorMsg = SDPValidator::getValidationSummary($validation);
                 throw new \Exception("Invalid SDP: {$errorMsg}");
             }
-            $session['sdp'] = \App\Services\SDPValidator::sanitize($session['sdp']);
+            $session['sdp'] = SDPValidator::sanitize($session['sdp']);
             $session['sdp_type'] = 'answer';
         }
 
@@ -2280,7 +2325,7 @@ class WhatsAppService
      */
     public function rejectCall(string $callId)
     {
-        $call = \App\Models\WhatsAppCall::where('call_id', $callId)
+        $call = WhatsAppCall::where('call_id', $callId)
             ->where('team_id', $this->team->id)
             ->firstOrFail();
 
@@ -2309,7 +2354,7 @@ class WhatsAppService
                 $call->markAsRejected();
 
                 // Dispatch event for real-time UI updates
-                event(new \App\Events\CallRejected($call));
+                event(new CallRejected($call));
 
                 Log::info('Call rejected', [
                     'team_id' => $this->team->id,
@@ -2336,7 +2381,7 @@ class WhatsAppService
      */
     public function endCall(string $callId)
     {
-        $call = \App\Models\WhatsAppCall::where('call_id', $callId)
+        $call = WhatsAppCall::where('call_id', $callId)
             ->where('team_id', $this->team->id)
             ->firstOrFail();
 
@@ -2361,7 +2406,7 @@ class WhatsAppService
                 $call->markAsEnded();
 
                 // Dispatch event for real-time UI updates
-                event(new \App\Events\CallEnded($call));
+                event(new CallEnded($call));
 
                 Log::info('Call ended', [
                     'team_id' => $this->team->id,
@@ -2435,24 +2480,24 @@ class WhatsAppService
         }
 
         $state = $this->team->whatsapp_setup_state;
-        
-        if ($state === \App\Enums\IntegrationState::PROVISIONED) {
+
+        if ($state === IntegrationState::PROVISIONED) {
             if (! empty($this->team->whatsapp_access_token) && ! empty($this->team->whatsapp_phone_number_id)) {
-                $this->team->whatsapp_setup_state = \App\Enums\IntegrationState::READY;
+                $this->team->whatsapp_setup_state = IntegrationState::READY;
                 if (! $this->team->isDirty(['whatsapp_access_token', 'whatsapp_phone_number_id'])) {
                     $this->team->save();
                 }
-                $state = \App\Enums\IntegrationState::READY;
+                $state = IntegrationState::READY;
             }
         }
 
-        $isReady = $state && ($state->isReady() || in_array($state, [\App\Enums\IntegrationState::READY_WARNING, \App\Enums\IntegrationState::DEGRADED]));
+        $isReady = $state && ($state->isReady() || in_array($state, [IntegrationState::READY_WARNING, IntegrationState::DEGRADED]));
 
         if (! $isReady) {
             $label = $state ? $state->label() : 'Not Configured';
             $message = "Messaging blocked. Connection state: {$label}.";
 
-            if ($state === \App\Enums\IntegrationState::SUSPENDED) {
+            if ($state === IntegrationState::SUSPENDED) {
                 $message .= ' This is usually due to a permission issue (#200) or an invalid token. Please go to WhatsApp Settings to reconnect and resolve this.';
             }
 
@@ -2510,6 +2555,7 @@ class WhatsAppService
 
         return $this->updateBusinessProfile($payload);
     }
+
     /**
      * Distribute flat parameters into Header, Body, Footer based on template structure.
      */

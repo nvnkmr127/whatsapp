@@ -42,6 +42,12 @@ return [
     'system_waba_id' => env('WHATSAPP_SYSTEM_WABA_ID'),
     'system_access_token' => env('WHATSAPP_SYSTEM_ACCESS_TOKEN'),
 
+    // Fallback access token + optional ffmpeg/ffprobe path overrides.
+    // Read via config() so they survive config:cache (env() returns null then).
+    'access_token' => env('WHATSAPP_ACCESS_TOKEN'),
+    'ffmpeg_path' => env('FFMPEG_PATH'),
+    'ffprobe_path' => env('FFPROBE_PATH'),
+
     /*
     |--------------------------------------------------------------------------
     | WhatsApp Calling Configuration

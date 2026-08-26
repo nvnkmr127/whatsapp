@@ -2,9 +2,9 @@
 
 namespace Tests\Feature;
 
+use App\Livewire\Teams\MembersManager;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
-use App\Livewire\Teams\MembersManager;
 use Livewire\Livewire;
 use Tests\TestCase;
 
@@ -30,24 +30,47 @@ class UpdateTeamMemberRoleTest extends TestCase
         ));
     }
 
-    public function test_only_team_owner_can_update_team_member_roles(): void
+    public function test_admins_can_update_team_member_roles(): void
     {
-        $user = User::factory()->withPersonalTeam()->create();
+        // Policy deliberately grants owner OR admin the right to manage members.
+        $owner = User::factory()->withPersonalTeam()->create();
+        $admin = User::factory()->create();
+        $target = User::factory()->create();
+        $owner->currentTeam->users()->attach($admin, ['role' => 'admin']);
+        $owner->currentTeam->users()->attach($target, ['role' => 'agent']);
 
-        $user->currentTeam->users()->attach(
-            $otherUser = User::factory()->create(), ['role' => 'admin']
+        $this->actingAs($admin);
+
+        Livewire::test(MembersManager::class, ['team' => $owner->currentTeam])
+            ->set('managingRoleFor', $target)
+            ->set('currentRole', 'manager')
+            ->call('updateRole');
+
+        $this->assertDatabaseHas('team_user', [
+            'team_id' => $owner->currentTeam->id,
+            'user_id' => $target->id,
+            'role' => 'manager',
+        ]);
+    }
+
+    public function test_non_privileged_members_cannot_update_team_member_roles(): void
+    {
+        $owner = User::factory()->withPersonalTeam()->create();
+
+        $owner->currentTeam->users()->attach(
+            $agent = User::factory()->create(), ['role' => 'agent']
         );
 
-        $this->actingAs($otherUser);
+        $this->actingAs($agent);
 
-        Livewire::test(MembersManager::class, ['team' => $user->currentTeam])
-            ->set('managingRoleFor', $otherUser)
+        Livewire::test(MembersManager::class, ['team' => $owner->currentTeam])
+            ->set('managingRoleFor', $agent)
             ->set('currentRole', 'manager')
             ->call('updateRole')
             ->assertStatus(403);
 
-        $this->assertTrue($otherUser->fresh()->hasTeamRole(
-            $user->currentTeam->fresh(), 'admin'
+        $this->assertTrue($agent->fresh()->hasTeamRole(
+            $owner->currentTeam->fresh(), 'agent'
         ));
     }
 }

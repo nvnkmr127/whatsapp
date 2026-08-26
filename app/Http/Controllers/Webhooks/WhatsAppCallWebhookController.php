@@ -2,11 +2,21 @@
 
 namespace App\Http\Controllers\Webhooks;
 
+use App\Events\CallAnswered;
+use App\Events\CallEnded;
+use App\Events\CallFailed;
+use App\Events\CallMissed;
+use App\Events\CallOffered;
+use App\Events\CallRejected;
+use App\Events\CallRinging;
+use App\Helpers\PhoneNumberHelper;
 use App\Http\Controllers\Controller;
 use App\Models\Contact;
 use App\Models\Team;
 use App\Models\WhatsAppCall;
+use App\Services\CallPermissionService;
 use App\Services\ConversationService;
+use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
 
@@ -226,17 +236,13 @@ class WhatsAppCallWebhookController extends Controller
             // The DB requires to_number and from_number to not be null
             $call->from_number = $from ?? 'unknown';
             $call->to_number = $to ?? 'unknown';
-            $call->initiated_at = $timestamp ? \Carbon\Carbon::createFromTimestamp($timestamp) : now();
+            $call->initiated_at = $timestamp ? Carbon::createFromTimestamp($timestamp) : now();
             $call->metadata = $phoneNumberId ? ['phone_number_id' => $phoneNumberId] : [];
             try {
                 $call->save();
                 $call->wasRecentlyCreated = true;
             } catch (\Exception $e) {
                 Log::error('Failed to save call: '.$e->getMessage());
-                // For tests, we definitely want to know if it failed
-                if (app()->environment('testing')) {
-                    dump('FAILED TO SAVE', $e->getMessage());
-                }
 
                 // Fallback to minimal fields
                 $call = new WhatsAppCall;
@@ -321,12 +327,12 @@ class WhatsAppCallWebhookController extends Controller
                 'status' => 'in_progress', // Update status to in_progress upon answer
             ]);
 
-            event(new \App\Events\CallAnswered($call));
+            event(new CallAnswered($call));
         }
 
         // If newly created, emit CallOffered event
         if (! empty($call->wasRecentlyCreated)) {
-            event(new \App\Events\CallOffered($call));
+            event(new CallOffered($call));
         }
 
         // Handle different call statuses
@@ -382,7 +388,7 @@ class WhatsAppCallWebhookController extends Controller
             // This is effectively an implicit permission grant
             $contact = $call->contact;
             if ($contact) {
-                $permissionService = new \App\Services\CallPermissionService;
+                $permissionService = new CallPermissionService;
                 $permission = $permissionService->trackPermissionRequest($contact, $team, $team->whatsapp_phone_number_id);
                 $permissionService->grantPermission($permission);
 
@@ -429,7 +435,7 @@ class WhatsAppCallWebhookController extends Controller
                 'call_id' => $callId,
                 'direction' => 'inbound',
                 'status' => 'initiated',
-                'initiated_at' => $timestamp ? \Carbon\Carbon::createFromTimestamp($timestamp) : now(),
+                'initiated_at' => $timestamp ? Carbon::createFromTimestamp($timestamp) : now(),
                 'metadata' => $phoneNumberId ? ['phone_number_id' => $phoneNumberId] : [],
             ]);
         }
@@ -494,7 +500,7 @@ class WhatsAppCallWebhookController extends Controller
             ]);
 
             // Dispatch event for real-time notifications
-            event(new \App\Events\CallRinging($call));
+            event(new CallRinging($call));
         }
     }
 
@@ -513,7 +519,7 @@ class WhatsAppCallWebhookController extends Controller
             ]);
 
             // Dispatch event
-            event(new \App\Events\CallAnswered($call));
+            event(new CallAnswered($call));
         }
     }
 
@@ -544,7 +550,7 @@ class WhatsAppCallWebhookController extends Controller
             ]);
 
             // Dispatch event
-            event(new \App\Events\CallEnded($call));
+            event(new CallEnded($call));
         }
     }
 
@@ -563,7 +569,7 @@ class WhatsAppCallWebhookController extends Controller
         ]);
 
         // Dispatch event
-        event(new \App\Events\CallFailed($call));
+        event(new CallFailed($call));
     }
 
     /**
@@ -578,7 +584,7 @@ class WhatsAppCallWebhookController extends Controller
         ]);
 
         // Dispatch event
-        event(new \App\Events\CallRejected($call));
+        event(new CallRejected($call));
     }
 
     /**
@@ -593,7 +599,7 @@ class WhatsAppCallWebhookController extends Controller
         ]);
 
         // Dispatch event
-        event(new \App\Events\CallMissed($call));
+        event(new CallMissed($call));
     }
 
     /**
@@ -602,7 +608,7 @@ class WhatsAppCallWebhookController extends Controller
     protected function ensureContactAndConversation(Team $team, WhatsAppCall $call, string $phoneNumber)
     {
         // Normalize phone number
-        $normalizedPhone = \App\Helpers\PhoneNumberHelper::normalize($phoneNumber);
+        $normalizedPhone = PhoneNumberHelper::normalize($phoneNumber);
 
         // Find or create contact
         $contact = Contact::firstOrCreate(

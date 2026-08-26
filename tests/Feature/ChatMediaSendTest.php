@@ -20,7 +20,10 @@ class ChatMediaSendTest extends TestCase
     /** Picking a file persists it and exposes the path the send button reacts to. */
     public function test_media_upload_persists_file_and_sets_attachment_data(): void
     {
-        $disk = config('filesystems.default');
+        // MessageWindow remaps the 'local' disk to 'public' (full_media_url resolves
+        // against public), so fake the disk it actually writes to.
+        $default = config('filesystems.default');
+        $disk = $default === 'local' ? 'public' : $default;
         Storage::fake($disk);
         $team = Team::factory()->create();
         $user = User::factory()->create(['current_team_id' => $team->id]);
