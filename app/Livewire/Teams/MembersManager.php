@@ -64,7 +64,7 @@ class MembersManager extends TeamMemberManager
         $invitation = $this->team->teamInvitations()->findOrFail($invitationId);
 
         \Illuminate\Support\Facades\Mail::to($invitation->email)
-            ->send(new \Laravel\Jetstream\Mail\TeamInvitation($invitation));
+            ->queue(new \Laravel\Jetstream\Mail\TeamInvitation($invitation));
 
         session()->flash('message', __('Invitation resent to :email.', ['email' => $invitation->email]));
     }
