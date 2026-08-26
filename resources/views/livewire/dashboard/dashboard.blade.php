@@ -79,7 +79,9 @@
     @endif
 
     <!-- Onboarding Checklist -->
-    @livewire('onboarding.setup-checklist')
+    @can('manage-settings')
+        @livewire('onboarding.setup-checklist')
+    @endcan
 
     <!-- Stats Grid -->
     <div class="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-4">
@@ -171,6 +173,7 @@
 
     <!-- Quick Actions -->
     <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+        @if(auth()->user()->can('manage-campaigns') && auth()->user()->hasPlanFeature('campaigns'))
         <a href="{{ route('campaigns.create') }}"
             class="group bg-orange-500 p-6 rounded-[2rem] shadow-xl shadow-orange-500/20 hover:scale-[1.02] hover:bg-orange-400 transition-all">
             <div class="flex flex-col h-full justify-between">
@@ -185,7 +188,9 @@
                 </div>
             </div>
         </a>
+        @endif
 
+        @if(auth()->user()->can('manage-campaigns') && auth()->user()->hasPlanFeature('commerce'))
         <a href="{{ route('commerce.orders') }}"
             class="group bg-white dark:bg-zinc-900 p-6 rounded-[2rem] shadow-sm border border-black/[0.06] dark:border-zinc-800 hover:border-black/[0.12] dark:hover:border-zinc-700 hover:scale-[1.02] hover:shadow-xl transition-all">
             <div class="flex flex-col h-full justify-between">
@@ -201,7 +206,9 @@
                 </div>
             </div>
         </a>
+        @endif
 
+        @if(auth()->user()->can('manage-settings') && auth()->user()->hasPlanFeature('ai'))
         <a href="{{ route('knowledge-base.index') }}"
             class="group bg-white dark:bg-zinc-900 p-6 rounded-[2rem] shadow-sm border border-black/[0.06] dark:border-zinc-800 hover:border-black/[0.12] dark:hover:border-zinc-700 hover:scale-[1.02] hover:shadow-xl transition-all">
             <div class="flex flex-col h-full justify-between">
@@ -217,7 +224,9 @@
                 </div>
             </div>
         </a>
+        @endif
 
+        @can('manage-settings')
         <a href="{{ route('teams.whatsapp_config') }}"
             class="group bg-white dark:bg-zinc-900 p-6 rounded-[2rem] shadow-sm border border-black/[0.06] dark:border-zinc-800 hover:border-black/[0.12] dark:hover:border-zinc-700 hover:scale-[1.02] hover:shadow-xl transition-all">
             <div class="flex flex-col h-full justify-between">
@@ -233,6 +242,7 @@
                 </div>
             </div>
         </a>
+        @endcan
     </div>
 
     <!-- Analytics Section -->

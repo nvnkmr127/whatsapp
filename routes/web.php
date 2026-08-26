@@ -364,20 +364,3 @@ Route::get('/storage/{path}', function ($path) {
 if (app()->environment(['local', 'testing']) && file_exists(__DIR__.'/local.php')) {
     require __DIR__.'/local.php';
 }
-
-Route::get('/debug-last-msg', function() { $msg = \App\Models\Message::orderBy('id', 'desc')->take(5)->get(); return $msg; });
-Route::get('/restart-queue', function() {
-    \Illuminate\Support\Facades\Artisan::call('queue:restart');
-    return 'Queue Restarted';
-});
-Route::get('/debug-last-5', function() {
-    return response()->json(\App\Models\Message::orderBy('id', 'desc')->take(10)->get(['id', 'content', 'whatsapp_message_id', 'reply_to_message_id', 'direction', 'type', 'created_at']));
-});
-Route::get('/check-last', function() {
-    $messages = \App\Models\Message::orderBy('id', 'desc')->take(2)->get();
-    $output = '';
-    foreach($messages as $msg) {
-        $output .= "ID: " . $msg->id . " | Content: " . $msg->content . " | ReplyTo: " . $msg->reply_to_message_id . " | Direction: " . $msg->direction . "\n";
-    }
-    return $output;
-});

@@ -109,10 +109,16 @@
                                             x-transition:enter-end="opacity-100 translate-y-0"
                                             class="mt-1 ml-4 pl-4 border-l border-zinc-800 space-y-1">
                                             @foreach($link['children'] as $child)
-                                                <a wire:navigate href="{{ route($child['route']) }}"
-                                                    class="block px-4 py-2 text-[12px] font-bold tracking-wide transition-colors duration-200 {{ request()->routeIs($child['route']) ? 'text-orange-400 font-black' : 'text-zinc-500 hover:text-white' }}">
-                                                    {{ $child['label'] }}
-                                                </a>
+                                                @php
+                                                    $canAccessChild = (!isset($child['can']) || auth()->user()->can($child['can'])) &&
+                                                                      (!isset($child['plan_feature']) || auth()->user()->hasPlanFeature($child['plan_feature']));
+                                                @endphp
+                                                @if($canAccessChild)
+                                                    <a wire:navigate href="{{ route($child['route']) }}"
+                                                        class="block px-4 py-2 text-[12px] font-bold tracking-wide transition-colors duration-200 {{ request()->routeIs($child['route']) ? 'text-orange-400 font-black' : 'text-zinc-500 hover:text-white' }}">
+                                                        {{ $child['label'] }}
+                                                    </a>
+                                                @endif
                                             @endforeach
                                         </div>
                                     @else
