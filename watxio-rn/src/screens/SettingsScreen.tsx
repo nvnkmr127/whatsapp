@@ -21,6 +21,7 @@ import { useGlobalState, store } from '@/store';
 import { CustomDialog } from '@/components/Dialog';
 import { api } from '@/services/api';
 import { navigationRef } from '@/navigation/navigationRef';
+import { unregisterPushNotifications } from '@/services/notifications';
 
 export default function SettingsScreen({ navigation }: any) {
   const { tokens, scheme, toggleTheme } = useTokens();
@@ -105,6 +106,9 @@ export default function SettingsScreen({ navigation }: any) {
 
   const handleSignOut = async () => {
     setLoading(true);
+    // Unregister device push notification token from server & clear local notification tray
+    await unregisterPushNotifications().catch(() => {});
+
     // Fire and forget logout API call so user isn't blocked by slow network
     api.post('/v1/mobile/auth/logout').catch((err) => {
       console.warn('Logout endpoint mismatch or already unauthenticated:', err);

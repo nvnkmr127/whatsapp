@@ -33,6 +33,7 @@ import { store, useGlobalState } from '@/store';
 import { CustomDialog } from '@/components/Dialog';
 import { api } from '@/services/api';
 import { securityService } from '@/services/security';
+import { registerForPushNotifications } from '@/services/notifications';
 
 export default function OnboardingScreen({ navigation }: any) {
   const { tokens } = useTokens();
@@ -63,72 +64,10 @@ export default function OnboardingScreen({ navigation }: any) {
 
   const [cameraPermission, requestCameraPermission] = useCameraPermissions();
   const [showQrScanner, setShowQrScanner] = useState(false);
-  const [checkingSession, setCheckingSession] = useState(true);
 
   useEffect(() => {
     setServerUrl(globalState.baseUrl);
   }, [globalState.baseUrl]);
-
-  useEffect(() => {
-    const checkSession = async () => {
-      try {
-        const isBlocked = await securityService.shouldBlockExecution();
-        if (isBlocked) {
-          console.log('[Auth] Developer mode is active — halting session auto-navigation');
-          setCheckingSession(false);
-          return;
-        }
-
-        const hasSession = await store.loadSession();
-        if (hasSession && store.get().token) {
-          // Validate token with backend server on app launch
-          try {
-            const meResponse = await api.get('/v1/mobile/auth/me');
-            if (!meResponse || !meResponse.user) {
-              throw new Error('Invalid user payload');
-            }
-
-            const blockedNow = await securityService.shouldBlockExecution();
-            if (blockedNow) {
-              setCheckingSession(false);
-              return;
-            }
-
-            const userTeams = meResponse.teams || [];
-            const activeTeam = userTeams[0] || null;
-            const teamNumbers = meResponse.numbers || [];
-            const activeNumberObj = teamNumbers[0] || null;
-
-            store.set({
-              user: meResponse.user,
-              teams: userTeams,
-              activeTeamId: activeTeam ? activeTeam.id : store.get().activeTeamId,
-              businessName: activeTeam ? activeTeam.name : (store.get().businessName || 'Watxio Workspace'),
-              waNumber: activeNumberObj ? activeNumberObj.display_number : store.get().waNumber,
-              userName: meResponse.user.name,
-              userRole: meResponse.user.role || 'Member',
-              numbers: teamNumbers,
-            });
-
-            navigation.reset({ index: 0, routes: [{ name: 'Main' }] });
-            return;
-          } catch (valErr: any) {
-            console.warn('[Session] Stored session validation failed on startup (unauthenticated or invalid):', valErr);
-            await store.clearSession();
-            setCheckingSession(false);
-          }
-        } else {
-          await store.clearSession();
-          setCheckingSession(false);
-        }
-      } catch (e) {
-        console.error('Error loading session:', e);
-        await store.clearSession();
-        setCheckingSession(false);
-      }
-    };
-    checkSession();
-  }, [navigation]);
 
 
   // Dialog State
@@ -325,6 +264,11 @@ export default function OnboardingScreen({ navigation }: any) {
           websocket: response.websocket,
         });
 
+        // Trigger FCM device push token registration immediately on login
+        registerForPushNotifications().catch((e) =>
+          console.warn('[FCM] Registration failed after email login:', e)
+        );
+
         setLoading(false);
         navigation.reset({ index: 0, routes: [{ name: 'Main' }] });
       } catch (err: any) {
@@ -414,6 +358,11 @@ export default function OnboardingScreen({ navigation }: any) {
             numbers: teamNumbers,
             websocket: response.websocket,
           });
+
+          // Trigger FCM device push token registration immediately on login
+          registerForPushNotifications().catch((e) =>
+            console.warn('[FCM] Registration failed after OTP login:', e)
+          );
 
           setLoading(false);
           navigation.reset({ index: 0, routes: [{ name: 'Main' }] });

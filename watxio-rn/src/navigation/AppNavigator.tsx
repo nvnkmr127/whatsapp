@@ -114,12 +114,16 @@ function MainTabs() {
   );
 }
 
-export default function AppNavigator() {
+export default function AppNavigator({
+  initialRouteName = 'Onboarding',
+}: {
+  initialRouteName?: keyof RootStackParamList;
+}) {
   // Handle notification taps → navigate to the right screen
   useNotificationNavigation(navigationRef);
 
   return (
-    <Stack.Navigator screenOptions={{ headerShown: false }} initialRouteName="Onboarding">
+    <Stack.Navigator screenOptions={{ headerShown: false }} initialRouteName={initialRouteName}>
       <Stack.Screen name="Onboarding" component={OnboardingScreen} />
       <Stack.Screen name="Main"      component={MainTabs} />
       <Stack.Screen name="Chat"      component={ChatScreen} />

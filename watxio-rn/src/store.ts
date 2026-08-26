@@ -33,6 +33,7 @@ export interface WebsocketConfig {
 
 export interface GlobalState {
   token: string | null;
+  fcmToken?: string | null;
   baseUrl: string;
   activeTeamId: number | null;
   waNumber: string;
@@ -70,6 +71,7 @@ const defaultBaseUrl = 'https://flow.watxio.com/api';
 
 const state: GlobalState = {
   token: null,
+  fcmToken: null,
   baseUrl: defaultBaseUrl,
   activeTeamId: null,
   waNumber: '',
@@ -104,6 +106,7 @@ async function persistState(data: GlobalState) {
     } else {
       const serialized = JSON.stringify({
         token: data.token,
+        fcmToken: data.fcmToken,
         baseUrl: data.baseUrl,
         activeTeamId: data.activeTeamId,
         waNumber: data.waNumber,
@@ -167,8 +170,19 @@ export const store = {
     schedulePersist();
   },
   clearSession: async () => {
+    const lastFcmToken = state.fcmToken;
+    const currentAuthToken = state.token;
+
+    // 1. Deregister FCM token from backend so server stops sending pushes for this user
+    if (lastFcmToken && currentAuthToken) {
+      api.post('/v1/mobile/auth/fcm-token/remove', { token: lastFcmToken }).catch(() => {});
+      api.post('/v1/mobile/auth/logout', { fcm_token: lastFcmToken }).catch(() => {});
+    }
+
+    // 2. Clear store state
     store.set({
       token: null,
+      fcmToken: null,
       user: null,
       teams: [],
       numbers: [],
@@ -221,6 +235,7 @@ export const store = {
 
           store.set({
             token: data.token,
+            fcmToken: data.fcmToken || null,
             baseUrl: activeBaseUrl,
             activeTeamId: data.activeTeamId !== undefined ? data.activeTeamId : state.activeTeamId,
             waNumber: data.waNumber || state.waNumber,

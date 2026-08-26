@@ -16,17 +16,30 @@ import { Platform } from 'react-native';
 import * as Notifications from 'expo-notifications';
 import * as Device from 'expo-device';
 import { api } from '@/services/api';
+import { store } from '@/store';
 import { securityService } from '@/services/security';
 
 // ── Foreground display behaviour ─────────────────────────────────────────────
-// Show banner + sound even when the app is open (like WhatsApp).
+// Show banner + sound ONLY when the user is logged in (like native WhatsApp).
 Notifications.setNotificationHandler({
-  handleNotification: async () => ({
-    shouldPlaySound: true,
-    shouldSetBadge: true,
-    shouldShowBanner: true,
-    shouldShowList: true,
-  }),
+  handleNotification: async () => {
+    const hasAuth = !!api.getToken() || !!store.get().token;
+    if (!hasAuth) {
+      console.log('[FCM] Notification suppressed — user is not logged in.');
+      return {
+        shouldPlaySound: false,
+        shouldSetBadge: false,
+        shouldShowBanner: false,
+        shouldShowList: false,
+      };
+    }
+    return {
+      shouldPlaySound: true,
+      shouldSetBadge: true,
+      shouldShowBanner: true,
+      shouldShowList: true,
+    };
+  },
 });
 
 // ── Android notification channel ─────────────────────────────────────────────
@@ -123,6 +136,9 @@ export async function registerForPushNotifications(): Promise<string | null> {
 
     console.log('[FCM DEBUG] ✅ Token obtained (first 30 chars):', fcmToken.substring(0, 30) + '...');
 
+    // Save to global state so we know the token during session / logout
+    store.set({ fcmToken });
+
     // Register token with backend if user is authenticated
     if (api.getToken()) {
       const backendOk = await sendTokenToBackend(fcmToken);
@@ -180,9 +196,15 @@ async function sendTokenToBackend(token: string): Promise<boolean> {
 
 // ── Remove token on logout ───────────────────────────────────────────────────
 export async function unregisterPushNotifications(token?: string | null) {
-  if (!token) return;
+  const tokenToUnregister = token || store.get().fcmToken;
+  if (tokenToUnregister) {
+    try {
+      await api.post('/v1/mobile/auth/fcm-token/remove', { token: tokenToUnregister });
+    } catch (_) {}
+  }
   try {
-    await api.post('/v1/mobile/auth/fcm-token/remove', { token });
+    await Notifications.dismissAllNotificationsAsync();
+    await Notifications.setBadgeCountAsync(0);
   } catch (_) {}
 }
 
