@@ -115,7 +115,7 @@
                                     @endif
 
                                     <!-- Leave / Remove -->
-                                    @if ($this->user->id === $user->id && $user->id !== $team->owner->id)
+                                    @if (auth()->id() === $user->id && $user->id !== $team->owner->id)
                                         <button wire:click="confirmLeaving"
                                             class="flex items-center gap-1.5 px-3 py-1.5 text-[10px] font-black uppercase tracking-wider text-slate-600 dark:text-slate-400 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700/80 rounded-lg border border-slate-200/50 dark:border-slate-700/50 transition-all hover:scale-[1.02] active:scale-95" title="Leave Team">
                                             <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">

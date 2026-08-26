@@ -206,6 +206,7 @@ class MembersManager extends TeamMemberManager
 
         return view('teams.members', [
             'users' => $paginatedUsers,
+            'team' => $this->team,
         ]);
     }
 }
