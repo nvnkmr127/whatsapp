@@ -157,18 +157,8 @@ trait HasNodeEditing
         }
     }
 
-    public function updated($propertyName)
-    {
-        // sync local properties to the focused node in the array
-        if (str_starts_with($propertyName, 'node') || str_starts_with($propertyName, 'triggerConfig')) {
-            $this->updateNodeData();
-            
-            // Only run expensive validation for non-text fields to keep UI snappy
-            if (!in_array($propertyName, ['nodeText', 'nodeLabel', 'nodeDescription'])) {
-                $this->runValidation();
-            }
-        }
-    }
+    // NOTE: the generic updated() hook lives on the AutomationBuilder component itself; a
+    // duplicate here would be silently shadowed by the class method, so it was removed.
 
     public function updatedTriggerKeywordsString($value)
     {
@@ -361,7 +351,11 @@ trait HasNodeEditing
                 } elseif ($type === 'stop_flow') {
                     $node['data']['label'] = 'End Flow';
                 } elseif ($type === 'split_by_condition') {
-                    $node['data']['rules'] = $this->nodeOptions;
+                    // Rules are edited inline via Alpine on the entangled node data, so the node
+                    // is the source of truth. Mirror into nodeOptions instead of overwriting the
+                    // node from the stale selection-time snapshot (which reverted field edits).
+                    $node['data']['rules'] = $node['data']['rules'] ?? $this->nodeOptions;
+                    $this->nodeOptions = $node['data']['rules'];
                 }
                 break;
             }

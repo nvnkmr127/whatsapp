@@ -419,8 +419,9 @@ class AutomationBuilder extends Component
         $newNode['data']['label'] = ($newNode['data']['label'] ?? '').' (Copy)';
 
         $this->nodes[] = $newNode;
-        $this->updateNodeData();
+        $this->pushHistory();
         $this->selectNode($newNode['id']);
+        $this->runValidation();
     }
 
     public function updated($property)

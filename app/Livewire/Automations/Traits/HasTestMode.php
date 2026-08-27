@@ -49,9 +49,12 @@ trait HasTestMode
 
     public function selectTestContact(int $id): void
     {
-        $this->testContactId = $id;
-        $contact = Contact::find($id);
-        $this->testContactSearch = $contact ? "{$contact->name} ({$contact->phone_number})" : '';
+        $contact = Contact::where('team_id', \Illuminate\Support\Facades\Auth::user()->currentTeam->id)->find($id);
+        if (! $contact) {
+            return;
+        }
+        $this->testContactId = $contact->id;
+        $this->testContactSearch = "{$contact->name} ({$contact->phone_number})";
         $this->testContacts = [];
     }
 
@@ -63,7 +66,7 @@ trait HasTestMode
             return;
         }
 
-        $contact = Contact::find($this->testContactId);
+        $contact = Contact::where('team_id', \Illuminate\Support\Facades\Auth::user()->currentTeam->id)->find($this->testContactId);
         if (! $contact) {
             return;
         }
@@ -137,11 +140,11 @@ trait HasTestMode
                     break;
                 case 'delay':
                 case 'wait_until':
-                    $step['message'] = "⏳ Would pause for {$data['value']} {$data['time_unit']}.";
+                    $step['message'] = '⏳ Would pause for '.($data['value'] ?? 0).' '.($data['time_unit'] ?? 'seconds').'.';
                     $step['status'] = 'wait';
                     break;
                 case 'user_input':
-                    $step['message'] = "💬 Would wait for reply and save to \${{$data['variable']}}.";
+                    $step['message'] = '💬 Would wait for reply and save to $'.($data['variable'] ?? 'response').'.';
                     $step['status'] = 'wait';
                     break;
                 case 'condition':
@@ -156,18 +159,18 @@ trait HasTestMode
                     $step['message'] = "📝 Sets \${$key} = \"{$val}\"";
                     break;
                 case 'openai':
-                    $step['message'] = "🤖 Would call AI model ({$data['model']}). Saving to \${$data['save_to']}.";
+                    $step['message'] = '🤖 Would call AI model ('.($data['model'] ?? 'gpt-4o').'). Saving to $'.($data['save_to'] ?? 'ai_response').'.';
                     break;
                 case 'send_email':
                     $step['message'] = '📧 Would send email: '.($data['subject'] ?? 'No Subject');
                     break;
                 case 'webhook':
                 case 'api_request':
-                    $step['message'] = "🌐 Would call: {$data['method']} {$data['url']}";
+                    $step['message'] = '🌐 Would call: '.($data['method'] ?? 'GET').' '.($data['url'] ?? '');
                     break;
                 case 'tag_contact':
-                    $action = $data['action'] === 'remove' ? 'Remove' : 'Add';
-                    $step['message'] = "🏷 {$action} tag: \"{$data['tag']}\"";
+                    $action = ($data['action'] ?? 'add') === 'remove' ? 'Remove' : 'Add';
+                    $step['message'] = '🏷 '.$action.' tag: "'.($data['tag'] ?? '').'"';
                     break;
                 case 'handover':
                     $step['message'] = '👤 Would hand off to human agent. Flow ends.';

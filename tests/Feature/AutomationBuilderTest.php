@@ -74,6 +74,56 @@ class AutomationBuilderTest extends TestCase
         ]);
     }
 
+    public function test_split_condition_rule_edits_are_not_clobbered()
+    {
+        $user = $this->setupUser();
+
+        $component = Livewire::actingAs($user)
+            ->test(AutomationBuilder::class)
+            ->call('addNode', 'split_by_condition'); // auto-selects; nodeOptions snapshots empty rules
+
+        // Simulate the inline Alpine edit that entangles onto the node's data.rules.
+        $component->set('nodes.1.data.rules', [
+            ['variable' => 'status', 'operator' => 'eq', 'value' => 'active', 'label' => 'Active'],
+        ])
+            ->call('updateNodeData')
+            // Regression: updateNodeData must not overwrite the edited rules with the stale snapshot.
+            ->assertSet('nodes.1.data.rules.0.variable', 'status')
+            ->assertSet('nodes.1.data.rules.0.value', 'active')
+            ->assertSet('nodes.1.data.rules.0.label', 'Active');
+    }
+
+    public function test_add_edge_rejects_edge_into_trigger_and_self_loop()
+    {
+        $user = $this->setupUser();
+
+        $component = Livewire::actingAs($user)
+            ->test(AutomationBuilder::class)
+            ->call('addNode', 'text');
+
+        $textId = $component->get('nodes')[1]['id'];
+
+        $component->call('addEdge', $textId, 'Start')   // into trigger — rejected
+            ->assertCount('edges', 0)
+            ->call('addEdge', $textId, $textId)          // self-loop — rejected
+            ->assertCount('edges', 0)
+            ->call('addEdge', 'Start', $textId)          // valid
+            ->assertCount('edges', 1);
+    }
+
+    public function test_test_mode_rejects_foreign_team_contact()
+    {
+        $user = $this->setupUser();
+        $otherTeam = \App\Models\Team::factory()->create();
+        $foreign = \App\Models\Contact::factory()->create(['team_id' => $otherTeam->id]);
+
+        // Regression: selectTestContact / runTest must not resolve contacts from another team.
+        Livewire::actingAs($user)
+            ->test(AutomationBuilder::class)
+            ->call('selectTestContact', $foreign->id)
+            ->assertSet('testContactId', null);
+    }
+
     public function test_ab_split_validation()
     {
         $user = $this->setupUser();

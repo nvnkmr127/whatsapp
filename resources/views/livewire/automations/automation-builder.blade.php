@@ -42,7 +42,7 @@
                         class="p-1.5 rounded-lg transition-colors text-slate-400 hover:text-slate-600 hover:bg-slate-100 dark:hover:bg-slate-800 disabled:opacity-30 disabled:cursor-not-allowed">
                         <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 10h10a8 8 0 018 8v2M3 10l6 6m-6-6l6-6"/></svg>
                     </button>
-                    <button @click="$wire.redo()" title="Redo (Ctrl+Y)" :disabled="$wire.historyIndex >= ($wire.history?.length || 0) - 1"
+                    <button @click="$wire.redo()" title="Redo (Ctrl+Y)" :disabled="$wire.historyIndex >= ($wire.historyLength || 0) - 1"
                         class="p-1.5 rounded-lg transition-colors text-slate-400 hover:text-slate-600 hover:bg-slate-100 dark:hover:bg-slate-800 disabled:opacity-30 disabled:cursor-not-allowed">
                         <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 10H11a8 8 0 00-8 8v2M21 10l-6 6m6-6l-6-6"/></svg>
                     </button>
@@ -126,7 +126,9 @@
                 <!-- Canvas -->
                 <div id="canvas" class="absolute inset-0 origin-top-left" wire:ignore :style="`transform: translate(${panX}px, ${panY}px) scale(${scale});`" @click.self="deselectAll()">
                     <div class="absolute -top-[5000px] -left-[5000px] w-[10000px] h-[10000px] pointer-events-none opacity-[0.045] dark:opacity-[0.025]" style="background-image: radial-gradient(circle, #64748b 1px, transparent 1px); background-size: 32px 32px;"></div>
-                    <canvas x-ref="canvas" width="10000" height="10000" class="absolute -top-[5000px] -left-[5000px] w-[10000px] h-[10000px] pointer-events-none z-[1]"></canvas>
+                    {{-- Size/position are set dynamically in updateCanvas() to the node bounding box
+                         (a fixed 10000² backing store is ~400MB). --}}
+                    <canvas x-ref="canvas" class="absolute pointer-events-none z-[1]"></canvas>
                     <template x-for="node in nodes" :key="node.id">
                         <x-automations.node />
                     </template>

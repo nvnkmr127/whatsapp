@@ -68,34 +68,6 @@
                 });
             },
 
-            initTribute() {
-                this.$nextTick(() => {
-                    if (typeof window.Tribute === 'undefined') return;
-                    const tags = this.availableTags ? this.availableTags.map(t => ({ key: t.name, value: t.name })) : [];
-                    const vars = [
-                        { key: 'contact.name', value: 'contact.name' },
-                        { key: 'contact.phone', value: 'contact.phone' },
-                        { key: 'contact.email', value: 'contact.email' },
-                        ...tags
-                    ];
-
-                    let tribute = new window.Tribute({
-                        trigger: '@',
-                        values: vars,
-                        selectTemplate: function (item) {
-                            return '{{' + item.original.value + '}}';
-                        }
-                    });
-
-                    document.querySelectorAll('.mentionable').forEach((el) => {
-                        if (!el.hasAttribute('data-tribute')) {
-                            tribute.attach(el);
-                            el.setAttribute('data-tribute', 'true');
-                        }
-                    });
-                });
-            },
-
             init() {
                 const canvas = this.$refs.canvas;
                 this.ctx = canvas.getContext('2d');
@@ -160,21 +132,40 @@
             updateCanvas() {
                 if (!this.$refs.canvas) return;
                 const canvas = this.$refs.canvas;
-                if (canvas.width !== 10000) canvas.width = 10000;
-                if (canvas.height !== 10000) canvas.height = 10000;
-                this.ctx.clearRect(0, 0, canvas.width, canvas.height);
-                if (!this.edges) return;
-                const edges = this.edgesArray;
                 const nodes = this.nodesArray;
+                const edges = this.edgesArray;
+
+                // Size the canvas to the node bounding box (+padding) rather than a fixed
+                // 10000² plane (~400MB). Pan/zoom is handled by the #canvas CSS transform.
+                const PAD = 1500, MAXD = 8000;
+                let minX = 0, minY = 0, maxX = 1000, maxY = 1000;
+                if (nodes.length) {
+                    minX = Math.min(...nodes.map(n => n.x));
+                    minY = Math.min(...nodes.map(n => n.y));
+                    maxX = Math.max(...nodes.map(n => n.x + 288));
+                    maxY = Math.max(...nodes.map(n => n.y + 96));
+                }
+                const offX = PAD - minX, offY = PAD - minY;
+                const w = Math.min(MAXD, Math.round((maxX - minX) + PAD * 2));
+                const h = Math.min(MAXD, Math.round((maxY - minY) + PAD * 2));
+                if (canvas.width !== w) canvas.width = w;
+                if (canvas.height !== h) canvas.height = h;
+                canvas.style.width = w + 'px';
+                canvas.style.height = h + 'px';
+                canvas.style.left = (minX - PAD) + 'px';
+                canvas.style.top = (minY - PAD) + 'px';
+
+                this.ctx.clearRect(0, 0, canvas.width, canvas.height);
+                if (!edges) return;
 
                 edges.forEach((edge, index) => {
                     const source = nodes.find(n => n.id === edge.source);
                     const target = nodes.find(n => n.id === edge.target);
                     if (source && target) {
-                        const startX = source.x + 288 + 16 + 5000;
-                        const startY = source.y + 48 + 5000;
-                        const endX = target.x - 16 + 5000;
-                        const endY = target.y + 48 + 5000;
+                        const startX = source.x + 288 + 16 + offX;
+                        const startY = source.y + 48 + offY;
+                        const endX = target.x - 16 + offX;
+                        const endY = target.y + 48 + offY;
 
                         this.ctx.beginPath();
                         this.ctx.moveTo(startX, startY);
@@ -214,14 +205,14 @@
                 });
 
                 if (this.drawing && this.connectSourceId) {
-                    const source = this.nodes.find(n => n.id === this.connectSourceId);
+                    const source = nodes.find(n => n.id === this.connectSourceId);
                     if (source) {
-                        const startX = source.x + 288 + 16 + 5000;
-                        const startY = source.y + 48 + 5000;
+                        const startX = source.x + 288 + 16 + offX;
+                        const startY = source.y + 48 + offY;
                         const mouseX_in_Canvas = (this.mouse.x - this.panX) / this.scale;
                         const mouseY_in_Canvas = (this.mouse.y - this.panY) / this.scale;
-                        const targetX = mouseX_in_Canvas + 5000;
-                        const targetY = mouseY_in_Canvas + 5000;
+                        const targetX = mouseX_in_Canvas + offX;
+                        const targetY = mouseY_in_Canvas + offY;
                         this.ctx.beginPath();
                         this.ctx.moveTo(startX, startY);
                         const cpDist = Math.abs(targetX - startX) * 0.5;
@@ -317,7 +308,8 @@
                 if (e.ctrlKey || e.metaKey) {
                     if (e.key === 's') { e.preventDefault(); this.$wire.save(); }
                     if (e.key === 'p') { e.preventDefault(); this.$wire.publish(); }
-                    if (e.key === 'z') { e.preventDefault(); this.$wire.undo?.(); }
+                    if (e.key === 'z' && !e.shiftKey) { e.preventDefault(); this.$wire.undo?.(); }
+                    if (e.key === 'y' || (e.key === 'z' && e.shiftKey)) { e.preventDefault(); this.$wire.redo?.(); }
                     if (e.key === 'd' && this.selectedId) {
                         e.preventDefault();
                         this.$wire.duplicateNode(this.selectedId);

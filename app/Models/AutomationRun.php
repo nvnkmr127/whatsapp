@@ -10,6 +10,7 @@ class AutomationRun extends Model
 
     protected $casts = [
         'state_data' => 'array',
+        'flow_snapshot' => 'array',
         'resume_at' => 'datetime',
         'execution_history' => 'array',
     ];

@@ -43,9 +43,10 @@ class AutomationValidationService
 
         $visited = [];
         $stack = [];
+        $typeById = $nodeMap->map(fn ($n) => $n['type'] ?? '')->all();
 
         foreach ($triggerNodes as $trigger) {
-            $this->detectCycles($trigger['id'], $adj, $visited, $stack, $results);
+            $this->detectCycles($trigger['id'], $adj, $visited, $stack, $results, $typeById);
         }
 
         // Detect unreachable nodes (not reachable from any trigger)
@@ -62,6 +63,11 @@ class AutomationValidationService
 
         // 3. Node-Specific Content Validation
         foreach ($nodes as $node) {
+            // 'note' is a canvas-only annotation — it never executes and has no edges.
+            if (($node['type'] ?? '') === 'note') {
+                continue;
+            }
+
             $this->validateNode($node, $automation->team_id, $results, $flow);
 
             // 4. Edge Connectivity Check for this node
@@ -76,7 +82,7 @@ class AutomationValidationService
         return $results;
     }
 
-    protected function detectCycles($u, $adj, &$visited, &$stack, &$results)
+    protected function detectCycles($u, $adj, &$visited, &$stack, &$results, array $typeById = [])
     {
         $visited[$u] = true;
         $stack[$u] = true;
@@ -84,9 +90,16 @@ class AutomationValidationService
         if (isset($adj[$u])) {
             foreach ($adj[$u] as $v) {
                 if (! isset($visited[$v])) {
-                    $this->detectCycles($v, $adj, $visited, $stack, $results);
+                    $this->detectCycles($v, $adj, $visited, $stack, $results, $typeById);
                 } elseif (isset($stack[$v])) {
-                    $this->addIssue($results, 'error', 'Circular loop detected. This will cause an infinite loop.', $u);
+                    // A loop_over_items node relies on a back-edge to iterate, so a cycle that
+                    // passes through one is intentional — flag it as a warning, not a hard error.
+                    $cycleTypes = array_map(fn ($id) => $typeById[$id] ?? '', array_keys($stack));
+                    if (in_array('loop_over_items', $cycleTypes, true)) {
+                        $this->addIssue($results, 'warning', 'Loop detected. Ensure the loop has an exit path to avoid running indefinitely.', $u);
+                    } else {
+                        $this->addIssue($results, 'error', 'Circular loop detected. This will cause an infinite loop.', $u);
+                    }
                 }
             }
         }
@@ -154,9 +167,9 @@ class AutomationValidationService
                 break;
 
             case 'delay':
-                $min = (int) ($data['minutes'] ?? 0);
-                $hrs = (int) ($data['hours'] ?? 0);
-                if (($min + $hrs) <= 0) {
+            case 'wait_until':
+                // Editor saves { value, time_unit }.
+                if ((int) ($data['value'] ?? 0) <= 0 && ($data['mode'] ?? null) === null) {
                     $this->addIssue($results, 'warning', 'Delay is set to 0. It will execute instantly.', $node['id'], 'nodeDelayValue');
                 }
                 break;
@@ -226,6 +239,14 @@ class AutomationValidationService
                     $this->addIssue($results, 'error', 'A/B Split needs at least 2 outgoing paths (Path A and Path B).', $node['id']);
                 }
                 break;
+
+            case 'payment':
+            case 'retry':
+            case 'wait_for_event':
+                // Present in the builder palette but not yet implemented in the engine — it
+                // would silently do nothing at runtime. Surface it instead of failing quietly.
+                $this->addIssue($results, 'warning', "The '{$node['type']}' node is not supported yet and will be skipped at runtime.", $node['id']);
+                break;
         }
     }
 
@@ -244,30 +265,5 @@ class AutomationValidationService
         } else {
             $results['warnings']++;
         }
-    }
-
-    protected function evaluateOperator($actual, $operator, $value): bool
-    {
-        $strActual = strtolower((string) $actual);
-        $strValue = strtolower((string) $value);
-
-        return match ($operator) {
-            'eq' => (string) $actual === (string) $value,
-            'neq' => (string) $actual !== (string) $value,
-            'gt' => (float) $actual > (float) $value,
-            'gte' => (float) $actual >= (float) $value,
-            'lt' => (float) $actual < (float) $value,
-            'lte' => (float) $actual <= (float) $value,
-            'contains' => str_contains($strActual, $strValue),
-            'not_contains' => ! str_contains($strActual, $strValue),
-            'starts_with' => str_starts_with($strActual, $strValue),
-            'ends_with' => str_ends_with($strActual, $strValue),
-            'is_empty',
-            'empty' => empty($actual),
-            'is_not_empty',
-            'not_empty' => ! empty($actual),
-            'regex' => (bool) @preg_match('#'.str_replace('#', '\#', $value).'#i', (string) $actual),
-            default => false,
-        };
     }
 }

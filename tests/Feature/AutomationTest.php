@@ -108,6 +108,86 @@ class AutomationTest extends TestCase
         $this->assertEquals('3', $run->state_data['current_node_id']);
     }
 
+    public function test_interactive_button_node_parks_run_in_waiting_input()
+    {
+        $team = \App\Models\Team::factory()->create();
+        $contact = \App\Models\Contact::factory()->create(['team_id' => $team->id]);
+
+        $this->mock(\App\Services\WhatsAppService::class, function ($mock) {
+            $mock->shouldReceive('setTeam');
+            $mock->shouldReceive('sendInteractiveButtons')->once();
+        });
+
+        \App\Models\Automation::create([
+            'team_id' => $team->id,
+            'name' => 'Button Bot',
+            'is_active' => true,
+            'trigger_type' => 'keyword',
+            'trigger_config' => ['keywords' => ['menu']],
+            'flow_data' => [
+                'nodes' => [
+                    ['id' => '1', 'type' => 'trigger'],
+                    ['id' => '2', 'type' => 'interactive_button', 'data' => [
+                        'text' => 'Pick one',
+                        'buttons' => [['id' => 'opt_a', 'title' => 'A']],
+                    ]],
+                    ['id' => '3', 'type' => 'message', 'data' => ['text' => 'done']],
+                ],
+                'edges' => [
+                    ['source' => '1', 'target' => '2'],
+                    ['source' => '2', 'target' => '3', 'condition' => 'opt_a'],
+                ],
+            ],
+        ]);
+
+        app(\App\Services\AutomationService::class)->checkTriggers($contact, 'menu');
+
+        $run = \App\Models\AutomationRun::where('contact_id', $contact->id)->first();
+        $this->assertNotNull($run);
+        // Regression: interactive button/list nodes must park the run so the reply is matched.
+        $this->assertEquals('waiting_input', $run->status);
+        $this->assertEquals('2', $run->state_data['current_node_id']);
+    }
+
+    public function test_delay_node_pauses_run_using_editor_schema()
+    {
+        $team = \App\Models\Team::factory()->create();
+        $contact = \App\Models\Contact::factory()->create(['team_id' => $team->id]);
+
+        $this->mock(\App\Services\WhatsAppService::class, function ($mock) {
+            $mock->shouldReceive('setTeam');
+            $mock->shouldReceive('sendText')->never();
+        });
+
+        \App\Models\Automation::create([
+            'team_id' => $team->id,
+            'name' => 'Delay Bot',
+            'is_active' => true,
+            'trigger_type' => 'keyword',
+            'trigger_config' => ['keywords' => ['wait']],
+            'flow_data' => [
+                'nodes' => [
+                    ['id' => '1', 'type' => 'trigger'],
+                    // Editor persists { value, time_unit } — the engine must honour it.
+                    ['id' => '2', 'type' => 'delay', 'data' => ['value' => 2, 'time_unit' => 'hours']],
+                    ['id' => '3', 'type' => 'message', 'data' => ['text' => 'later']],
+                ],
+                'edges' => [
+                    ['source' => '1', 'target' => '2'],
+                    ['source' => '2', 'target' => '3'],
+                ],
+            ],
+        ]);
+
+        app(\App\Services\AutomationService::class)->checkTriggers($contact, 'wait');
+
+        $run = \App\Models\AutomationRun::where('contact_id', $contact->id)->first();
+        $this->assertNotNull($run);
+        $this->assertEquals('paused', $run->status);
+        $this->assertNotNull($run->resume_at);
+        $this->assertEquals('2', $run->state_data['current_node_id']);
+    }
+
     public function test_can_save_automation_builder()
     {
         $user = \App\Models\User::factory()->withPersonalTeam()->create();

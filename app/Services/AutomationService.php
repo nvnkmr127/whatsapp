@@ -409,6 +409,10 @@ class AutomationService
             return false;
         }
 
+        if (! $this->handoff->shouldProcess($contact)) {
+            return false;
+        }
+
         $automations = Automation::where('team_id', $contact->team_id)
             ->where('is_active', true)
             ->where('trigger_type', 'template_delivered')
@@ -546,6 +550,9 @@ class AutomationService
                     'status' => 'active',
                     'version' => 1,
                     'step_count' => 0,
+                    // Pin the flow graph as it was at start; edits to the automation won't
+                    // change node IDs under an in-flight run.
+                    'flow_snapshot' => $flowData,
                     'state_data' => ['current_node_id' => $startNodeId, 'variables' => $initialVariables],
                     'execution_history' => [['node_id' => $startNodeId, 'timestamp' => now()->toDateTimeString(), 'event' => 'started']],
                 ]);
@@ -612,7 +619,7 @@ class AutomationService
 
             return;
         }
-        $flowData = $run->automation->flow_data;
+        $flowData = $this->flowFor($run);
         $node = $this->getNodeById($flowData, $nodeId);
 
         if (! $node) {
@@ -625,8 +632,8 @@ class AutomationService
         Log::info("AutomationRun #{$run->id}: Executing node {$nodeId} (type: {$node['type']})");
 
         // Infinite Loop protection (recursion gate)
-        if ($run->step_count > 50) {
-            Log::error("AutomationRun #{$run->id}: Max step count (50) exceeded. Suspected infinite loop. Aborting.");
+        if ($run->step_count > $this->maxSteps) {
+            Log::error("AutomationRun #{$run->id}: Max step count ({$this->maxSteps}) exceeded. Suspected infinite loop. Aborting.");
             $run->update(['status' => 'failed', 'error_message' => 'Recursion limit exceeded']);
 
             return;
@@ -654,7 +661,13 @@ class AutomationService
 
             // Move or Wait
             if ($workPerformed === 'wait') {
-                // Wait for input (status updated inside performNodeWork)
+                // Ensure the run is parked in 'waiting_input' so handleReply() can match the
+                // user's next message. Some node types set this themselves; interactive
+                // button/list nodes did not, which stranded the run in 'executing'.
+                $run->refresh();
+                if ($run->status !== 'waiting_input') {
+                    $run->update(['status' => 'waiting_input']);
+                }
             } elseif ($workPerformed === 'pause') {
                 // Delay node (status updated inside performNodeWork)
             } else {
@@ -705,13 +718,9 @@ class AutomationService
                 'status' => 'success',
             ]);
 
-            $precision = config('automation.dispatch_precision_seconds', 900);
-            if ($nodeDelaySeconds <= $precision) { // precision cutoff
-                ExecuteAutomationNodeJob::dispatch($run->id, $node['id'])
-                    ->onQueue('messages')
-                    ->delay($resumeAt);
-            }
-
+            // ponytail: resumed by the automation:resume cron (runs every minute). A direct
+            // ->delay() dispatch here is dead code — the run is 'paused', which fails the
+            // job's atomic active/executing claim. Sub-minute precision would need its own worker.
             return 'pause';
         }
 
@@ -888,15 +897,12 @@ class AutomationService
 
                 return 'continue';
 
+            case 'delay':
+                // Editor saves { value, time_unit }. Pause the run; the automation:resume
+                // cron picks it up once resume_at passes.
+                $seconds = $this->delaySecondsFromNode($node);
                 if ($seconds > 0) {
-                    $resumeAt = now()->addSeconds($seconds);
-                    $run->update(['status' => 'paused', 'resume_at' => $resumeAt]);
-
-                    if ($seconds <= 900) {
-                        ExecuteAutomationNodeJob::dispatch($run->id, $run->state_data['current_node_id'])
-                            ->onQueue('messages')
-                            ->delay($resumeAt);
-                    }
+                    $run->update(['status' => 'paused', 'resume_at' => now()->addSeconds($seconds)]);
 
                     return 'pause';
                 }
@@ -905,8 +911,10 @@ class AutomationService
 
             case 'condition':
             case 'split_by_condition':
-                $branches = $node['data']['branches'] ?? [];
-                $result = 'default';
+                // Editor saves multi-branch rules as data.rules[{label,variable,operator,value}].
+                // Fall back to legacy data.branches / single-condition shapes.
+                $branches = $node['data']['rules'] ?? $node['data']['branches'] ?? [];
+                $result = 'false';
 
                 if (empty($branches)) {
                     // Legacy single-condition support
@@ -915,21 +923,17 @@ class AutomationService
                     $value = $this->resolveVariable($run, $node['data']['value'] ?? '');
                     $actual = $run->state_data['variables'][$variable] ?? $run->contact->{$variable} ?? null;
 
-                    if ($this->evaluateOperator($actual, $operator, $value)) {
-                        $result = 'true';
-                    } else {
-                        $result = 'false';
-                    }
+                    $result = $this->evaluateOperator($actual, $operator, $value) ? 'true' : 'false';
                 } else {
-                    // Multi-branch split_by_condition
-                    foreach ($branches as $branch) {
+                    // Multi-branch: first matching rule wins; its label matches the edge condition.
+                    foreach ($branches as $i => $branch) {
                         $variable = $branch['variable'] ?? '';
                         $operator = $branch['operator'] ?? 'eq';
                         $value = $this->resolveVariable($run, $branch['value'] ?? '');
                         $actual = $run->state_data['variables'][$variable] ?? $run->contact->{$variable} ?? null;
 
                         if ($this->evaluateOperator($actual, $operator, $value)) {
-                            $result = $branch['name'] ?? 'match';
+                            $result = $branch['label'] ?? $branch['name'] ?? ('branch_'.($i + 1));
                             break;
                         }
                     }
@@ -942,14 +946,22 @@ class AutomationService
                 return 'continue';
 
             case 'send_email':
-                $templateSlug = $node['data']['template_name'] ?? $node['data']['template_slug'] ?? null;
                 $to = $this->resolveVariable($run, $node['data']['to'] ?? '{{email}}');
-                if ($templateSlug && $to) {
-                    app(\App\Services\Email\EmailDispatcher::class)->dispatchByTemplate($to, $templateSlug, [
-                        'contact' => $run->contact,
-                        'run' => $run,
-                        'variables' => $run->state_data['variables'] ?? [],
-                    ]);
+                $body = $this->resolveVariable($run, $node['data']['body'] ?? '');
+                $subject = $this->resolveVariable($run, $node['data']['subject'] ?? 'Message');
+                $templateSlug = $node['data']['template_slug'] ?? null;
+                if ($to && filter_var($to, FILTER_VALIDATE_EMAIL)) {
+                    if ($templateSlug) {
+                        app(\App\Services\Email\EmailDispatcher::class)->dispatchByTemplate($to, $templateSlug, [
+                            'contact' => $run->contact,
+                            'run' => $run,
+                            'variables' => $run->state_data['variables'] ?? [],
+                        ]);
+                    } elseif ($body !== '') {
+                        \Illuminate\Support\Facades\Mail::raw($body, function ($m) use ($to, $subject) {
+                            $m->to($to)->subject($subject);
+                        });
+                    }
                 }
 
                 return 'continue';
@@ -1011,7 +1023,11 @@ class AutomationService
                 if (! empty($cards)) {
                     // Resolve variables in card text
                     $resolvedCards = array_map(function ($card) use ($run) {
-                        $card['body'] = $this->resolveVariable($run, $card['body'] ?? '');
+                        // Editor stores the card copy under 'description'; the sender expects 'body'.
+                        $card['body'] = $this->resolveVariable($run, $card['body'] ?? $card['description'] ?? '');
+                        if (isset($card['title'])) {
+                            $card['title'] = $this->resolveVariable($run, $card['title']);
+                        }
                         if (isset($card['footer'])) {
                             $card['footer'] = $this->resolveVariable($run, $card['footer']);
                         }
@@ -1084,7 +1100,8 @@ class AutomationService
                 return 'pause'; // Terminates naturally
 
             case 'loop_over_items':
-                $varName = $node['data']['variable'] ?? '';
+                // Editor saves the source variable name under 'items_path'.
+                $varName = $node['data']['items_path'] ?? $node['data']['variable'] ?? '';
                 $items = $run->state_data['variables'][$varName] ?? [];
                 if (! is_array($items)) {
                     $items = [];
@@ -1109,7 +1126,8 @@ class AutomationService
                 return 'continue';
 
             case 'sub_flow':
-                $subAutomationId = $node['data']['automation_id'] ?? null;
+                // Editor saves the target automation under 'target_flow_id'.
+                $subAutomationId = $node['data']['target_flow_id'] ?? $node['data']['automation_id'] ?? null;
                 if ($subAutomationId) {
                     $subAutomation = Automation::find($subAutomationId);
                     if ($subAutomation) {
@@ -1131,20 +1149,27 @@ class AutomationService
                 return 'continue';
 
             case 'wait_until':
-                $mode = $node['data']['mode'] ?? 'business_hours';
                 $resumeAt = null;
 
+                // Legacy modes kept for backward compatibility; the editor now only exposes value/time_unit.
+                $mode = $node['data']['mode'] ?? null;
                 if ($mode === 'business_hours') {
                     if (! $run->automation->team->isWithinBusinessHours()) {
                         $resumeAt = $run->automation->team->getNextOpeningTime();
                     }
                 } elseif ($mode === 'specific_time') {
-                    $time = $node['data']['time'] ?? '09:00';
-                    $target = \Carbon\Carbon::createFromTimeString($time);
+                    $tz = $run->automation->team->timezone ?? config('app.timezone', 'UTC');
+                    $target = \Carbon\Carbon::createFromTimeString($node['data']['time'] ?? '09:00', $tz);
                     if ($target->isPast()) {
                         $target->addDay();
                     }
                     $resumeAt = $target->setTimezone('UTC');
+                } else {
+                    // Relative wait: { value, time_unit }
+                    $seconds = $this->delaySecondsFromNode($node);
+                    if ($seconds > 0) {
+                        $resumeAt = now()->addSeconds($seconds);
+                    }
                 }
 
                 if ($resumeAt) {
@@ -1157,7 +1182,8 @@ class AutomationService
 
             case 'set_variable':
                 $vars = $run->state_data['variables'] ?? [];
-                $key = $node['data']['variable'] ?? null;
+                // Editor saves the target variable name under 'key'.
+                $key = $node['data']['key'] ?? $node['data']['variable'] ?? null;
                 $value = $this->resolveVariable($run, $node['data']['value'] ?? '');
                 $operation = $node['data']['operation'] ?? 'set';
 
@@ -1182,13 +1208,17 @@ class AutomationService
 
             case 'rate_limit_gate':
                 $max = (int) ($node['data']['max_executions'] ?? 1);
-                $period = $node['data']['period'] ?? '24_hours';
-                $minutes = match ($period) {
-                    '1_hour' => 60,
-                    '24_hours' => 1440,
-                    '7_days' => 10080,
-                    default => 1440
-                };
+                // Editor saves the window as 'window_hours'; keep legacy 'period' as a fallback.
+                if (isset($node['data']['window_hours'])) {
+                    $minutes = max(1, (int) $node['data']['window_hours']) * 60;
+                } else {
+                    $minutes = match ($node['data']['period'] ?? '24_hours') {
+                        '1_hour' => 60,
+                        '24_hours' => 1440,
+                        '7_days' => 10080,
+                        default => 1440
+                    };
+                }
 
                 $ledgerCount = \App\Models\AutomationStepLedger::where('node_id', $node['id'])
                     ->where('automation_run_id', '!=', $run->id)
@@ -1286,9 +1316,12 @@ class AutomationService
                 return 'continue';
 
             case 'assign_agent':
-                $agentId = $node['data']['agent_id'] ?? null;
+            case 'assign_to_agent':
+                // Editor node type is 'assign_to_agent' and saves the agent under 'user_id'
+                // ('round_robin' means auto-assign).
+                $agentId = $node['data']['user_id'] ?? $node['data']['agent_id'] ?? null;
                 $contact = $run->contact;
-                if ($agentId) {
+                if ($agentId && $agentId !== 'round_robin' && is_numeric($agentId)) {
                     $contact->update(['assigned_to' => $agentId]);
                     $conversation = app(ConversationService::class)->ensureActiveConversation($contact);
                     $conversation->update(['assigned_to' => $agentId]);
@@ -1305,9 +1338,12 @@ class AutomationService
                 return 'pause'; // terminates naturally
 
             case 'trigger':
-                return 'continue'; // Triggers are just entry points
+            case 'note':
+                return 'continue'; // Entry points / canvas annotations — no runtime action.
 
             default:
+                Log::warning("AutomationRun #{$run->id}: Unhandled node type '{$node['type']}' (node {$node['id']}). Skipping.");
+
                 return 'continue';
         }
     }
@@ -1320,9 +1356,11 @@ class AutomationService
             return;
         }
 
-        $flowData = $run->automation->flow_data;
+        $flowData = $this->flowFor($run);
         $currentNodeId = $run->state_data['current_node_id'];
-        $edges = array_filter($flowData['edges'], fn ($e) => $e['source'] === $currentNodeId);
+        // array_values() so numeric fallbacks like $edges[0] are always valid (array_filter
+        // preserves original keys, which may not start at 0).
+        $edges = array_values(array_filter($flowData['edges'] ?? [], fn ($e) => $e['source'] === $currentNodeId));
 
         Log::info("AutomationRun #{$run->id}: Moving from node {$currentNodeId}. Found ".count($edges).' edges.');
 
@@ -1339,7 +1377,9 @@ class AutomationService
             $ratio = (int) ($currentNode['data']['ratio'] ?? 50);
             $edgeArray = array_values($edges);
             if (count($edgeArray) >= 2) {
-                $nextNodeId = (rand(1, 100) <= $ratio) ? $edgeArray[0]['target'] : $edgeArray[1]['target'];
+                // Deterministic per (run, node) so a job retry re-picks the same branch.
+                $bucket = (crc32($run->id.'_'.$currentNodeId) % 100) + 1;
+                $nextNodeId = ($bucket <= $ratio) ? $edgeArray[0]['target'] : $edgeArray[1]['target'];
                 Log::info("AutomationRun #{$run->id}: A/B Split decision made. Ratio: {$ratio}%. Chosen Node: {$nextNodeId}");
             } else {
                 $nextNodeId = $edgeArray[0]['target'] ?? null;
@@ -1400,11 +1440,9 @@ class AutomationService
         if ($nextNodeId) {
             $state = $run->state_data;
             $state['current_node_id'] = $nextNodeId;
-            $run->update(['state_data' => $state]);
 
-            // DISPATCH JOB INSTEAD OF RECURSION
+            // Advance the pointer and reset status to 'active' so the next job can claim it.
             Log::info("AutomationRun #{$run->id}: Dispatching SYNC job for next node: {$nextNodeId}");
-            // Reset status to active so the next job can claim it
             $run->update(['status' => 'active', 'state_data' => $state]);
             ExecuteAutomationNodeJob::dispatch($run->id, $nextNodeId);
         } else {
@@ -1502,7 +1540,7 @@ class AutomationService
 
         // 2. Identify and Process Response Data
         $input = $messageContent;
-        $flowData = $run->automation->flow_data;
+        $flowData = $this->flowFor($run);
         $currentNodeId = data_get($run->state_data, 'current_node_id');
         if (! $currentNodeId) {
             Log::warning("AutomationRun #{$run->id}: Missing current_node_id in state_data during handleReply.", [
@@ -1620,11 +1658,12 @@ STRICT GROUNDING RULES:
             }
         }
 
-            $response = retry(3, function () use ($apiKey, $prompt) {
+            $model = $node['data']['model'] ?? 'gpt-4o';
+            $response = retry(3, function () use ($apiKey, $prompt, $model) {
                 return \Illuminate\Support\Facades\Http::withToken($apiKey)
                     ->timeout(30)
                     ->post('https://api.openai.com/v1/chat/completions', [
-                        'model' => 'gpt-4o',
+                        'model' => $model,
                         'messages' => [['role' => 'user', 'content' => $prompt]],
                     ]);
             }, 500);
@@ -1662,6 +1701,16 @@ STRICT GROUNDING RULES:
         $method = strtoupper($node['data']['method'] ?? 'GET');
         $headers = $node['data']['headers'] ?? [];
         $body = $this->resolveVariable($run, $node['data']['json_body'] ?? '');
+
+        // SSRF guard: block requests to private/loopback/link-local hosts.
+        if ($this->isBlockedRequestUrl($url)) {
+            Log::warning("AutomationRun #{$run->id}: API Request blocked (SSRF guard) for URL: {$url}");
+            $state = $run->state_data;
+            $state['api_result'] = 'error';
+            $run->update(['state_data' => $state]);
+
+            return;
+        }
 
         $request = \Illuminate\Support\Facades\Http::timeout(15);
 
@@ -1820,6 +1869,15 @@ STRICT GROUNDING RULES:
         $run->update(['status' => 'failed', 'error_message' => $error]);
     }
 
+    /**
+     * The flow graph an in-flight run executes against: the snapshot taken at start,
+     * falling back to the automation's live flow_data for legacy runs with no snapshot.
+     */
+    protected function flowFor(AutomationRun $run): array
+    {
+        return $run->flow_snapshot ?: ($run->automation->flow_data ?? []);
+    }
+
     protected function findStartNode($flowData)
     {
         if (! isset($flowData['nodes']) || ! is_array($flowData['nodes'])) {
@@ -1852,7 +1910,7 @@ STRICT GROUNDING RULES:
 
     protected function hasErrorEdge(AutomationRun $run, $nodeId): bool
     {
-        $flowData = $run->automation->flow_data;
+        $flowData = $this->flowFor($run);
         $edges = array_filter($flowData['edges'] ?? [], fn ($e) => $e['source'] === $nodeId);
         foreach ($edges as $edge) {
             if (($edge['condition'] ?? '') === 'error') {
@@ -1886,6 +1944,75 @@ STRICT GROUNDING RULES:
             'regex' => (bool) @preg_match('#'.str_replace('#', '\#', $value).'#i', (string) $actual),
             default => false,
         };
+    }
+
+    /**
+     * Convert a { value, time_unit } node config into seconds.
+     */
+    protected function delaySecondsFromNode(array $node): int
+    {
+        $val = (int) ($node['data']['value'] ?? 0);
+        $unit = $node['data']['time_unit'] ?? 'seconds';
+
+        return match ($unit) {
+            'minutes' => $val * 60,
+            'hours' => $val * 3600,
+            'days' => $val * 86400,
+            default => $val, // seconds
+        };
+    }
+
+    /**
+     * SSRF guard for outbound API/webhook nodes. Blocks non-http(s) schemes and any host
+     * that resolves to a loopback, private, or link-local address (e.g. cloud metadata).
+     */
+    protected function isBlockedRequestUrl(?string $url): bool
+    {
+        if (! $url || ! filter_var($url, FILTER_VALIDATE_URL)) {
+            return true;
+        }
+
+        $parts = parse_url($url);
+        $scheme = strtolower($parts['scheme'] ?? '');
+        if (! in_array($scheme, ['http', 'https'], true)) {
+            return true;
+        }
+
+        $host = $parts['host'] ?? '';
+        if ($host === '') {
+            return true;
+        }
+
+        // Resolve host to IPs (covers both literal IPs and DNS names).
+        $ips = [];
+        if (filter_var($host, FILTER_VALIDATE_IP)) {
+            $ips[] = $host;
+        } else {
+            $records = @dns_get_record($host, DNS_A | DNS_AAAA) ?: [];
+            foreach ($records as $r) {
+                $ips[] = $r['ip'] ?? $r['ipv6'] ?? null;
+            }
+            $ips = array_filter($ips);
+            if (empty($ips)) {
+                $resolved = gethostbyname($host);
+                if ($resolved && $resolved !== $host) {
+                    $ips[] = $resolved;
+                }
+            }
+        }
+
+        if (empty($ips)) {
+            return true; // unresolvable → block
+        }
+
+        foreach ($ips as $ip) {
+            // Reject anything that is not a public, routable address.
+            if (! filter_var($ip, FILTER_VALIDATE_IP, FILTER_FLAG_NO_PRIV_RANGE | FILTER_FLAG_NO_RES_RANGE)) {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     protected function resolveVariable(AutomationRun $run, string $template): string

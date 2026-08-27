@@ -80,20 +80,23 @@ class ExecuteAutomationNodeJob implements ShouldQueue
             return;
         }
 
-        // 2. Idempotency Check via Ledger
-        $executionKey = "{$this->runId}_{$this->nodeId}";
-        $ledgerEntry = AutomationStepLedger::where('execution_key', $executionKey)->first();
-        if ($ledgerEntry && $ledgerEntry->status === 'success') {
-            Log::info("Node {$this->nodeId} already succeeded for run {$this->runId}. Skipping.");
-            $this->dispatchNext($run);
+        // 2. Deterministic State Check — MUST run before the idempotency short-circuit below.
+        // A stale/redelivered job for an already-completed node would otherwise advance the
+        // flow from wherever the run currently sits, skipping nodes and duplicating messages.
+        if ($run->state_data['current_node_id'] !== $this->nodeId) {
+            Log::warning("Divergence detected: Run #{$this->runId} expected node {$run->state_data['current_node_id']}, Job ordered {$this->nodeId}. Aborting stale job.");
+
             return;
         }
 
-        // 2. Deterministic State Check
-        if ($run->state_data['current_node_id'] !== $this->nodeId) {
-            Log::warning("Divergence detected: Run #{$this->runId} expected node {$run->state_data['current_node_id']}, Job ordered {$this->nodeId}. Correcting.");
+        // 3. Idempotency Check via Ledger — pointer still on this node but it already succeeded
+        // (e.g. crashed after the ledger write but before advancing). Safe to move forward.
+        $executionKey = "{$this->runId}_{$this->nodeId}";
+        $ledgerEntry = AutomationStepLedger::where('execution_key', $executionKey)->first();
+        if ($ledgerEntry && $ledgerEntry->status === 'success') {
+            Log::info("Node {$this->nodeId} already succeeded for run {$this->runId}. Advancing.");
+            $this->dispatchNext($run);
 
-            // Optional: Terminate or Correct. Let's correct to the expected state.
             return;
         }
 
@@ -107,7 +110,7 @@ class ExecuteAutomationNodeJob implements ShouldQueue
                 $run->increment('version');
                 $run->increment('step_count');
 
-                if ($run->step_count > 50) {
+                if ($run->step_count > config('automation.max_steps', 50)) {
                     throw new \Exception('Max step limit reached for safety.');
                 }
 

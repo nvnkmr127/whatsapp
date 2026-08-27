@@ -59,7 +59,6 @@ trait HasNodes
 
     public function addNode($type)
     {
-        $id = uniqid();
         $data = ['label' => ucfirst(str_replace('_', ' ', $type)), 'tag' => ''];
 
         switch ($type) {
@@ -281,6 +280,15 @@ trait HasNodes
 
     public function addEdge($source, $target)
     {
+        // A trigger is an entry point — it can't be the target of an edge, and self-loops are invalid.
+        if ($source === $target) {
+            return;
+        }
+        $targetNode = collect($this->nodes)->firstWhere('id', $target);
+        if (($targetNode['type'] ?? '') === 'trigger') {
+            return;
+        }
+
         foreach ($this->edges as $edge) {
             if ($edge['source'] == $source && $edge['target'] == $target) {
                 return;
@@ -314,27 +322,6 @@ trait HasNodes
         $this->runValidation();
     }
 
-    public function duplicateNode($id = null)
-    {
-        $nodeId = $id ?? $this->selectedNodeId;
-        if (! $nodeId) {
-            return;
-        }
-
-        $node = collect($this->nodes)->firstWhere('id', $nodeId);
-        if (! $node || ($node['type'] ?? '') === 'trigger') {
-            return;
-        }
-
-        $newNode = $node;
-        $newNode['id'] = uniqid('node-');
-        $newNode['x'] += 60;
-        $newNode['y'] += 60;
-        $newNode['data']['label'] = ($newNode['data']['label'] ?? '').' (Copy)';
-
-        $this->nodes[] = $newNode;
-        $this->pushHistory();
-        $this->selectNode($newNode['id']);
-        $this->runValidation();
-    }
+    // NOTE: duplicateNode() lives on the AutomationBuilder component itself; a duplicate here
+    // would be silently shadowed by the class method, so it was removed.
 }
