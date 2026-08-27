@@ -16,8 +16,8 @@
 
     <!-- Chat Header -->
     <div
-        class="px-6 py-4 bg-white/80 dark:bg-slate-900/80 backdrop-blur-xl border-b border-slate-200 dark:border-slate-800 flex items-center justify-between z-20 shrink-0">
-        <div class="flex items-center gap-4">
+        class="px-6 py-4 bg-white/80 dark:bg-slate-900/80 backdrop-blur-xl border-b border-slate-200 dark:border-slate-800 flex items-center justify-between gap-3 z-20 shrink-0">
+        <div class="flex items-center gap-4 min-w-0 flex-1">
             <!-- Mobile Back Button -->
             <x-app-button variant="ghost" @click="$dispatch('toggle-mobile-pane', 'list')" class="lg:hidden p-2 -ml-2">
                 <x-icon name="chevron-left" class="w-6 h-6" />
@@ -36,9 +36,9 @@
                 </div>
             </div>
 
-            <div>
-                <div class="flex items-center gap-2">
-                    <h2 class="text-sm font-black text-slate-900 dark:text-white uppercase tracking-tight">
+            <div class="min-w-0">
+                <div class="flex items-center gap-2 min-w-0">
+                    <h2 class="text-sm font-black text-slate-900 dark:text-white uppercase tracking-tight truncate">
                         {{ $conversation?->contact?->name ?? $conversation?->contact?->phone_number ?? __('Unknown Recipient') }}
                     </h2>
                     @if($isSessionOpen)
@@ -64,10 +64,10 @@
             </div>
         </div>
 
-        <div class="flex items-center gap-1 sm:gap-3">
+        <div class="flex items-center gap-1 sm:gap-2 shrink-0">
             <!-- Sound Mute Toggle -->
-            <button type="button" @click="$store.chat.toggleSoundMute()" 
-                class="p-2 text-slate-400 hover:text-wa-teal rounded-xl transition-all"
+            <button type="button" @click="$store.chat.toggleSoundMute()"
+                class="hidden 2xl:flex p-2 text-slate-400 hover:text-wa-teal rounded-xl transition-all"
                 :aria-label="$store.chat.soundMuted ? '{{ __('Unmute Sounds') }}' : '{{ __('Mute Sounds') }}'"
                 :title="$store.chat.soundMuted ? '{{ __('Unmute Sounds') }}' : '{{ __('Mute Sounds') }}'">
                 <template x-if="!$store.chat.soundMuted">
@@ -82,7 +82,7 @@
             <div class="relative" x-data="{ showTags: false }">
                 <x-app-button variant="secondary" @click="showTags = !showTags" class="hidden sm:flex items-center gap-2" title="{{ __('Manage Tags') }}">
                     <x-icon name="tag" class="w-3.5 h-3.5" />
-                    <span>{{ __('Tags') }}</span>
+                    <span class="sr-only">{{ __('Tags') }}</span>
 
                     @php
                         $activeTags = $conversation?->metadata['tags'] ?? [];
@@ -140,7 +140,7 @@
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                             d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4" />
                     </svg>
-                    <span>{{ __('Transfer') }}</span>
+                    <span class="sr-only">{{ __('Transfer') }}</span>
                 </button>
 
                 <!-- Transfer Dropdown Menu -->
@@ -197,7 +197,7 @@
                         </span>
                     @endif
                 </div>
-                <span>{{ $conversation?->contact?->is_bot_paused ? __('Bot Paused') : __('Bot Active') }}</span>
+                <span class="sr-only">{{ $conversation?->contact?->is_bot_paused ? __('Bot Paused') : __('Bot Active') }}</span>
 
                 @if($conversation?->contact?->is_bot_paused)
                     <div class="absolute top-full left-1/2 -translate-x-1/2 mt-2 w-48 bg-white dark:bg-slate-800 p-2 rounded-xl shadow-2xl border border-slate-100 dark:border-slate-700 opacity-0 group-hover/bot-status:opacity-100 transition-opacity z-50 pointer-events-none">
@@ -221,7 +221,7 @@
 
             <!-- AI Assistant Button -->
             <button wire:click="$dispatch('triggerAiAssistant', { conversationId: {{ $conversationId }} })"
-                class="hidden sm:flex items-center gap-2 px-3 py-2 bg-indigo-50 dark:bg-indigo-900/20 text-indigo-600 rounded-xl text-tiny font-black uppercase tracking-widest hover:scale-105 active:scale-95 transition-all outline outline-1 outline-indigo-200/50">
+                class="hidden 2xl:flex items-center gap-2 px-3 py-2 bg-indigo-50 dark:bg-indigo-900/20 text-indigo-600 rounded-xl text-tiny font-black uppercase tracking-widest hover:scale-105 active:scale-95 transition-all outline outline-1 outline-indigo-200/50">
                 <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z" />
                 </svg>
@@ -229,13 +229,13 @@
             </button>
 
             <!-- Template Picker Button -->
-            <button wire:click="$dispatch('openTemplatePicker')"
-                class="flex items-center gap-2 px-6 py-3 bg-wa-teal text-white rounded-xl text-xs font-black uppercase tracking-widest hover:scale-105 active:scale-95 transition-all shadow-xl shadow-wa-teal/20">
-                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <button wire:click="$dispatch('openTemplatePicker')" title="{{ __('Choose Template') }}"
+                class="flex items-center gap-2 px-4 py-2.5 bg-wa-teal text-white rounded-xl text-xs font-black uppercase tracking-widest hover:scale-105 active:scale-95 transition-all shadow-xl shadow-wa-teal/20 shrink-0">
+                <svg class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="3"
                         d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2.586a1 1 0 00-.707.293l-2.414 2.414a1 1 0 01-.707.293h-3.172a1 1 0 01-.707-.293l-2.414-2.414A1 1 0 006.586 13H4" />
                 </svg>
-                <span>{{ __('Choose Template') }}</span>
+                <span class="sr-only">{{ __('Choose Template') }}</span>
             </button>
 
             <!-- Call Button Component -->

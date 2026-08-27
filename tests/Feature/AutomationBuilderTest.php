@@ -124,6 +124,36 @@ class AutomationBuilderTest extends TestCase
             ->assertSet('testContactId', null);
     }
 
+    public function test_catalog_message_fields_persist()
+    {
+        $user = $this->setupUser();
+
+        Livewire::actingAs($user)
+            ->test(AutomationBuilder::class)
+            ->call('addNode', 'catalog_message')
+            ->set('nodeProvider', 'CAT123')     // catalog_id
+            ->set('nodeText', 'SKU-1, SKU-2')    // product_retailer_ids
+            ->set('nodeAction', 'single_product')// send_type
+            ->call('updateNodeData')
+            ->assertSet('nodes.1.data.catalog_id', 'CAT123')
+            ->assertSet('nodes.1.data.product_retailer_ids', 'SKU-1, SKU-2')
+            ->assertSet('nodes.1.data.send_type', 'single_product');
+    }
+
+    public function test_update_contact_fields_persist()
+    {
+        $user = $this->setupUser();
+
+        Livewire::actingAs($user)
+            ->test(AutomationBuilder::class)
+            ->call('addNode', 'update_contact')
+            ->set('nodeProvider', 'email')       // field
+            ->set('nodeText', '{{form_email}}')  // value
+            ->call('updateNodeData')
+            ->assertSet('nodes.1.data.field', 'email')
+            ->assertSet('nodes.1.data.value', '{{form_email}}');
+    }
+
     public function test_ab_split_validation()
     {
         $user = $this->setupUser();

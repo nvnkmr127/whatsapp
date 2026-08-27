@@ -54,6 +54,14 @@
                     <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 5a1 1 0 011-1h14a1 1 0 011 1v2a1 1 0 01-1 1H5a1 1 0 01-1-1V5zM4 13a1 1 0 011-1h6a1 1 0 011 1v6a1 1 0 01-1 1H5a1 1 0 01-1-1v-6zM16 13a1 1 0 011-1h2a1 1 0 011 1v6a1 1 0 01-1 1h-2a1 1 0 01-1-1v-6z"/></svg>
                     Templates
                 </button>
+
+                <!-- Debug Toggle -->
+                <button wire:click="$toggle('debugMode')" title="Toggle debug log"
+                    class="flex items-center gap-1.5 text-[10px] font-black uppercase tracking-widest px-3 py-1.5 rounded-xl border transition-all"
+                    :class="$wire.debugMode ? 'border-amber-400 text-amber-600 bg-amber-50 dark:bg-amber-900/20' : 'border-slate-200 dark:border-slate-700 text-slate-500 hover:text-wa-teal hover:border-wa-teal/40'">
+                    <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                    Debug
+                </button>
             </div>
 
             <div class="flex items-center gap-3">
@@ -147,6 +155,26 @@
                     <!-- Keyboard shortcuts hint -->
                     <div class="bg-white/80 dark:bg-slate-900/80 backdrop-blur-sm rounded-lg border border-slate-200 dark:border-slate-700 px-2.5 py-1.5 text-[9px] text-slate-400 font-mono hidden lg:block">
                         F fit · Del remove · Ctrl+Z undo · Ctrl+D copy
+                    </div>
+                </div>
+
+                <!-- Debug Log Panel -->
+                <div x-show="$wire.debugMode" x-cloak
+                    class="absolute bottom-6 left-6 z-50 w-96 max-w-[80vw] bg-slate-900/95 text-slate-100 rounded-xl shadow-2xl border border-slate-700 overflow-hidden">
+                    <div class="flex items-center justify-between px-3 py-2 border-b border-slate-700 bg-slate-800/80">
+                        <span class="text-[10px] font-black uppercase tracking-widest text-amber-400">Debug Log</span>
+                        <button wire:click="$set('debugMode', false)" class="text-slate-400 hover:text-white text-xs">✕</button>
+                    </div>
+                    <div class="max-h-64 overflow-y-auto p-2 space-y-1 text-[10px] font-mono custom-scrollbar">
+                        <template x-if="!($wire.debugLogs || []).length">
+                            <p class="text-slate-500 p-2">No debug entries yet. Actions like Save will log here.</p>
+                        </template>
+                        <template x-for="(log, i) in ($wire.debugLogs || [])" :key="i">
+                            <div class="border-b border-slate-800 pb-1">
+                                <span class="text-slate-500" x-text="log.time"></span>
+                                <span class="text-emerald-400 ml-1" x-text="log.message"></span>
+                            </div>
+                        </template>
                     </div>
                 </div>
             </div>

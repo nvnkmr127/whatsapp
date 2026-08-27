@@ -151,6 +151,20 @@ trait HasNodeEditing
                     $this->nodeAction = $data['action'] ?? 'append_row';
                 } elseif ($type === 'handover') {
                     $this->nodeProvider = $data['dept'] ?? 'default';
+                } elseif ($type === 'catalog_message') {
+                    $this->nodeAction = $data['send_type'] ?? 'multi_product';
+                    $this->nodeProvider = $data['catalog_id'] ?? '';
+                    $pids = $data['product_retailer_ids'] ?? '';
+                    $this->nodeText = is_array($pids) ? implode(', ', $pids) : (string) $pids;
+                    $this->nodeButtonText = $data['section_title'] ?? 'Products';
+                    $this->nodeLabel = $data['header_text'] ?? '';
+                    $this->nodeUrl = $data['body_text'] ?? '';
+                } elseif ($type === 'update_contact') {
+                    $this->nodeProvider = $data['field'] ?? 'name';
+                    $this->nodeText = $data['value'] ?? '';
+                } elseif ($type === 'note') {
+                    $this->nodeText = $data['content'] ?? '';
+                    $this->nodeAction = $data['color'] ?? 'yellow';
                 }
                 break;
             }
@@ -356,6 +370,19 @@ trait HasNodeEditing
                     // node from the stale selection-time snapshot (which reverted field edits).
                     $node['data']['rules'] = $node['data']['rules'] ?? $this->nodeOptions;
                     $this->nodeOptions = $node['data']['rules'];
+                } elseif ($type === 'catalog_message') {
+                    $node['data']['send_type'] = $this->nodeAction ?: 'multi_product';
+                    $node['data']['catalog_id'] = $this->nodeProvider;
+                    $node['data']['product_retailer_ids'] = $this->nodeText;
+                    $node['data']['section_title'] = $this->nodeButtonText;
+                    $node['data']['header_text'] = $this->nodeLabel;
+                    $node['data']['body_text'] = $this->nodeUrl;
+                } elseif ($type === 'update_contact') {
+                    $node['data']['field'] = $this->nodeProvider ?: 'name';
+                    $node['data']['value'] = $this->nodeText;
+                } elseif ($type === 'note') {
+                    $node['data']['content'] = $this->nodeText;
+                    $node['data']['color'] = $this->nodeAction ?: 'yellow';
                 }
                 break;
             }

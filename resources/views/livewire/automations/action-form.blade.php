@@ -635,6 +635,55 @@
         <p class="text-[9px] text-slate-400">Connect 2 edges: "paid" (payment success) and "failed" (payment timeout/failure).</p>
     </div>
 
+    {{-- Update Contact Node --}}
+    <div x-show="selectedNode.type === 'update_contact'" class="space-y-4">
+        <div class="p-3 bg-orange-50 dark:bg-orange-900/20 border border-orange-100 dark:border-orange-800 rounded-xl">
+            <p class="text-xs font-bold text-orange-700 dark:text-orange-300">✏️ Updates a field on the contact. Standard fields: name, email, phone_number — anything else is saved as a custom attribute.</p>
+        </div>
+        <div class="space-y-1">
+            <label class="block text-[10px] font-black uppercase text-slate-400">Field <span class="text-rose-400">*</span></label>
+            <input type="text" wire:model.blur="nodeProvider" list="update-contact-fields"
+                class="w-full bg-slate-50 dark:bg-slate-800 border-slate-200 dark:border-slate-700 rounded-xl text-sm"
+                placeholder="name, email, phone_number, or a custom field">
+            <datalist id="update-contact-fields">
+                <option value="name"></option>
+                <option value="email"></option>
+                <option value="phone_number"></option>
+            </datalist>
+        </div>
+        <div class="space-y-1">
+            <label class="block text-[10px] font-black uppercase text-slate-400">Value <span class="text-rose-400">*</span></label>
+            <input type="text" wire:model.blur="nodeText"
+                class="w-full bg-slate-50 dark:bg-slate-800 border-slate-200 dark:border-slate-700 rounded-xl text-sm"
+                placeholder="New value or @{{variable}}">
+            <p class="text-[9px] text-slate-400">Empty values are ignored to avoid wiping the field.</p>
+        </div>
+    </div>
+
+    {{-- External CRM Sync Node --}}
+    <div x-show="selectedNode.type === 'crm_sync'" class="space-y-4">
+        <div class="p-3 bg-purple-50 dark:bg-purple-900/20 border border-purple-100 dark:border-purple-800 rounded-xl">
+            <p class="text-xs font-bold text-purple-700 dark:text-purple-300">🔄 Syncs the contact to a CRM. "Internal" updates this app's CRM directly; others emit a workflow event for your integration.</p>
+        </div>
+        <div class="space-y-1">
+            <label class="block text-[10px] font-black uppercase text-slate-400">Provider</label>
+            <select wire:model.live="nodeProvider" class="w-full bg-slate-50 dark:bg-slate-800 border-slate-200 dark:border-slate-700 rounded-xl text-sm">
+                <option value="internal">Internal CRM</option>
+                <option value="salesforce">Salesforce</option>
+                <option value="hubspot">HubSpot</option>
+                <option value="zoho">Zoho</option>
+                <option value="pipedrive">Pipedrive</option>
+            </select>
+        </div>
+        <div class="space-y-1">
+            <label class="block text-[10px] font-black uppercase text-slate-400">Action</label>
+            <select wire:model.live="nodeAction" class="w-full bg-slate-50 dark:bg-slate-800 border-slate-200 dark:border-slate-700 rounded-xl text-sm">
+                <option value="update_lead">Update / Create Lead</option>
+                <option value="create_deal">Create Deal</option>
+            </select>
+        </div>
+    </div>
+
     {{-- Universal Variable Reference Chips --}}
     <div class="pt-4 border-t border-slate-100 dark:border-slate-800">
         <p class="text-[9px] font-black uppercase tracking-widest text-slate-400 mb-2">Available Variables</p>

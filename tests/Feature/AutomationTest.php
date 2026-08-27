@@ -188,6 +188,38 @@ class AutomationTest extends TestCase
         $this->assertEquals('2', $run->state_data['current_node_id']);
     }
 
+    public function test_update_contact_ignores_empty_value()
+    {
+        $team = \App\Models\Team::factory()->create();
+        $contact = \App\Models\Contact::factory()->create(['team_id' => $team->id, 'name' => 'Original']);
+
+        $this->mock(\App\Services\WhatsAppService::class, function ($mock) {
+            $mock->shouldReceive('setTeam');
+            $mock->shouldReceive('sendText');
+        });
+
+        \App\Models\Automation::create([
+            'team_id' => $team->id,
+            'name' => 'Update Bot',
+            'is_active' => true,
+            'trigger_type' => 'keyword',
+            'trigger_config' => ['keywords' => ['go']],
+            'flow_data' => [
+                'nodes' => [
+                    ['id' => '1', 'type' => 'trigger'],
+                    // Misconfigured: empty value must NOT blank the contact's name.
+                    ['id' => '2', 'type' => 'update_contact', 'data' => ['field' => 'name', 'value' => '']],
+                ],
+                'edges' => [['source' => '1', 'target' => '2']],
+            ],
+        ]);
+
+        app(\App\Services\AutomationService::class)->checkTriggers($contact, 'go');
+
+        $contact->refresh();
+        $this->assertEquals('Original', $contact->name);
+    }
+
     public function test_can_save_automation_builder()
     {
         $user = \App\Models\User::factory()->withPersonalTeam()->create();

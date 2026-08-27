@@ -84,7 +84,8 @@ class TemplatePicker extends Component
 
     public function sendTemplate()
     {
-        $template = WhatsappTemplate::find($this->selectedTemplateId);
+        $template = WhatsappTemplate::where('team_id', Auth::user()->currentTeam->id)
+            ->find($this->selectedTemplateId);
         if (! $template) {
             return;
         }

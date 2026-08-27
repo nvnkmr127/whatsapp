@@ -41,12 +41,14 @@ class ContactDetails extends Component
 
     public function loadData()
     {
+        // Tenant scope: conversationId is a public (client-mutable) property, so every load
+        // must verify the conversation belongs to the current team.
         $this->conversation = Conversation::with([
             'contact.tags',
             'tags',
             'notes.user',
             'assignee',
-        ])->find($this->conversationId);
+        ])->where('team_id', Auth::user()->currentTeam->id)->find($this->conversationId);
 
         $this->availableTags = \App\Models\ConversationTag::where('team_id', Auth::user()->currentTeam->id)->get();
 

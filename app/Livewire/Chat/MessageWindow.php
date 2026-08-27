@@ -4,7 +4,6 @@ namespace App\Livewire\Chat;
 
 use App\Events\ConversationAssigned;
 // use App\Services\WhatsAppService;
-use App\Events\MessageReceived;
 use App\Events\MessageStatusUpdated;
 use App\Jobs\DownloadMediaJob;
 use App\Jobs\MarkAsReadJob;
@@ -490,7 +489,7 @@ class MessageWindow extends Component
 
     public function sendVoiceNote($audioFile)
     {
-        Log::info('[VN:B1] sendVoiceNote() called', [
+        Log::debug('[VN:B1] sendVoiceNote() called', [
             'audioFile_raw' => $audioFile,
             'audioFile_type' => gettype($audioFile),
             'voiceNote_property_set' => ! is_null($this->voiceNote),
@@ -500,21 +499,21 @@ class MessageWindow extends Component
         // Support array wrap in case Livewire passes it as an array
         if (is_array($audioFile)) {
             $audioFile = head($audioFile);
-            Log::info('[VN:B1] audioFile was array, unwrapped to: '.$audioFile);
+            Log::debug('[VN:B1] audioFile was array, unwrapped to: '.$audioFile);
         }
 
         // Try resolving from local property first, fallback to manual creation from temporary file path
         $file = $this->voiceNote;
-        Log::info('[VN:B2] $this->voiceNote resolved', [
+        Log::debug('[VN:B2] $this->voiceNote resolved', [
             'is_null' => is_null($file),
             'class' => $file ? get_class($file) : 'null',
         ]);
 
         if (! $file && $audioFile) {
-            Log::info('[VN:B3] voiceNote property null, trying createFromLivewire fallback with: '.$audioFile);
+            Log::debug('[VN:B3] voiceNote property null, trying createFromLivewire fallback with: '.$audioFile);
             try {
                 $file = TemporaryUploadedFile::createFromLivewire($audioFile);
-                Log::info('[VN:B3] createFromLivewire success', [
+                Log::debug('[VN:B3] createFromLivewire success', [
                     'class' => get_class($file),
                     'originalName' => $file->getClientOriginalName(),
                     'size' => $file->getSize(),
@@ -546,7 +545,7 @@ class MessageWindow extends Component
             return;
         }
 
-        Log::info('[VN:B4] File and conversation OK', [
+        Log::debug('[VN:B4] File and conversation OK', [
             'conversationId' => $this->conversation->id,
             'contact_id' => $this->conversation->contact_id,
         ]);
@@ -559,7 +558,7 @@ class MessageWindow extends Component
         $uploadedExt = strtolower(pathinfo($file->getClientOriginalName(), PATHINFO_EXTENSION));
         $srcExt = in_array($uploadedExt, ['ogg', 'webm', 'mp3', 'mp4', 'm4a', 'opus']) ? $uploadedExt : 'ogg';
 
-        Log::info('[VN:B5] Extension resolved', [
+        Log::debug('[VN:B5] Extension resolved', [
             'uploadedExt' => $uploadedExt,
             'srcExt' => $srcExt,
             'file_size' => $file->getSize(),
@@ -601,7 +600,7 @@ class MessageWindow extends Component
             $srcTmp = sys_get_temp_dir().'/'.Str::random(20).'.webm';
             file_put_contents($srcTmp, $file->get());
 
-            Log::info('[VN:B5a] webm detected — attempting FFmpeg transcoding via Process', [
+            Log::debug('[VN:B5a] webm detected — attempting FFmpeg transcoding via Process', [
                 'ffmpeg' => $ffmpegBin,
                 'src' => $srcTmp,
                 'target' => $tmpOgg,
@@ -627,7 +626,7 @@ class MessageWindow extends Component
                 @unlink($srcTmp); // ffmpeg has finished reading the source
 
                 if ($process->isSuccessful() && file_exists($tmpOgg) && filesize($tmpOgg) > 100) {
-                    Log::info('[VN:B5a] FFmpeg transcoding SUCCESS', [
+                    Log::debug('[VN:B5a] FFmpeg transcoding SUCCESS', [
                         'ogg_size' => filesize($tmpOgg),
                     ]);
                     $srcPath = $tmpOgg;
@@ -665,7 +664,7 @@ class MessageWindow extends Component
         }
 
         $fileName = Str::random(40).'.'.$ext;
-        Log::info('[VN:B6] Calling storeAs()', [
+        Log::debug('[VN:B6] Calling storeAs()', [
             'directory' => 'voice-notes',
             'fileName' => $fileName,
             'disk' => $disk,
@@ -690,7 +689,7 @@ class MessageWindow extends Component
             return;
         }
 
-        Log::info('[VN:B7] File stored on disk', [
+        Log::debug('[VN:B7] File stored on disk', [
             'path' => $path,
             'ext' => $ext,
             'mimeType' => $mimeType,
@@ -874,13 +873,17 @@ class MessageWindow extends Component
             return;
         }
 
-        $sourceMessage = Message::find($this->forwardingMessageId);
+        $teamId = Auth::user()->currentTeam->id;
+
+        // Tenant scope: only the current team's message may be forwarded, and only into
+        // the current team's conversations. IDs arrive from the client and must be verified.
+        $sourceMessage = Message::where('team_id', $teamId)->find($this->forwardingMessageId);
         if (! $sourceMessage) {
             return;
         }
 
         foreach ($this->forwardSelectedConversations as $convId) {
-            $conv = Conversation::find($convId);
+            $conv = Conversation::where('team_id', $teamId)->find($convId);
             if (! $conv) {
                 continue;
             }
@@ -1190,9 +1193,9 @@ class MessageWindow extends Component
         try {
             // Prepare buttons
             $buttons = [];
-            foreach ($this->interactiveButtons as $title) {
-                $id = 'btn_'.Str::slug($title);
-                $buttons[$id] = $title;
+            foreach (array_values($this->interactiveButtons) as $i => $title) {
+                // Index-based id keeps buttons unique even when two titles slug identically.
+                $buttons['btn_'.$i] = $title;
             }
 
             // 1. Pre-persist
@@ -1336,6 +1339,8 @@ class MessageWindow extends Component
             'status' => 'queued',
             'type' => 'text',
             'content' => $body,
+            // Column (not just metadata) so loadMessagesJson()'s replyTo relation renders the quote.
+            'reply_to_message_id' => $this->replyToMessageId,
             'metadata' => [
                 'agent_id' => Auth::id(),
                 'agent_name' => Auth::user()->name,
@@ -1411,51 +1416,27 @@ class MessageWindow extends Component
     {
         Log::info("[LIVEWIRE_RETRY_MEDIA] Retry requested for Message #{$messageId}");
 
-        $message = Message::find($messageId);
+        // Tenant scope: never let a client-supplied id reach another team's message.
+        $teamId = Auth::user()->currentTeam?->id;
+        $message = Message::where('team_id', $teamId)->find($messageId);
         if (! $message || ! $message->media_id) {
             Log::warning("[LIVEWIRE_RETRY_MEDIA] Message or media ID missing for Message #{$messageId}");
 
             return ['status' => 'error', 'message' => 'Message or media ID not found'];
         }
 
+        // Clear the failure flag and re-queue. Downloading inline (dispatchSync) blocked the
+        // whole Livewire request for up to the job timeout; DownloadMediaJob broadcasts
+        // MessageReceived on completion, so the bubble updates over the realtime channel.
         $meta = is_array($message->metadata) ? $message->metadata : [];
         unset($meta['media_failed'], $meta['media_failed_reason']);
         $message->update(['metadata' => $meta]);
 
-        try {
-            DownloadMediaJob::dispatchSync($message->id, $message->media_id, $message->team_id);
-            $message->refresh();
-            Log::info("[LIVEWIRE_RETRY_MEDIA] Successfully downloaded media for Message #{$messageId}", [
-                'media_url' => $message->full_media_url,
-            ]);
-        } catch (\Throwable $e) {
-            Log::error("[LIVEWIRE_RETRY_MEDIA] Media download failed for Message #{$messageId}", [
-                'error' => $e->getMessage(),
-                'media_id' => $message->media_id,
-                'team_id' => $message->team_id,
-                'trace' => $e->getTraceAsString(),
-            ]);
-
-            $meta = is_array($message->metadata) ? $message->metadata : [];
-            $meta['media_failed'] = true;
-            $meta['media_failed_reason'] = $e->getMessage();
-            $message->update(['metadata' => $meta]);
-
-            return [
-                'status' => 'error',
-                'error' => $e->getMessage(),
-                'message' => 'Media download failed: '.$e->getMessage(),
-                'media_url' => null,
-                'metadata' => $message->fresh()->metadata,
-            ];
-        }
-
-        MessageReceived::dispatch($message);
+        DownloadMediaJob::dispatch($message->id, $message->media_id, $message->team_id);
 
         return [
-            'status' => 'success',
-            'media_url' => $message->full_media_url,
-            'metadata' => $message->metadata,
+            'status' => 'queued',
+            'message' => 'Media download re-queued.',
         ];
     }
 

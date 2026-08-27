@@ -1272,7 +1272,8 @@ class AutomationService
             case 'update_contact':
                 $field = $node['data']['field'] ?? '';
                 $value = $this->resolveVariable($run, $node['data']['value'] ?? '');
-                if ($field) {
+                // Guard: never blank out a core field with an empty value (misconfigured node).
+                if ($field && $value !== '') {
                     $contact = $run->contact;
                     if (in_array($field, ['name', 'email', 'phone_number'])) {
                         $contact->update([$field => $value]);
@@ -1336,6 +1337,10 @@ class AutomationService
                 $run->update(['status' => 'completed']);
 
                 return 'pause'; // terminates naturally
+
+            case 'ab_split':
+                // Routing happens in moveToNextNode() by ratio; nothing to do here.
+                return 'continue';
 
             case 'trigger':
             case 'note':
