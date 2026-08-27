@@ -141,22 +141,25 @@ class ContactManager extends Component
         $teamId = Auth::user()->currentTeam->id;
         $query = Contact::query()->where('team_id', $teamId);
 
-        if ($this->search) {
-            $query->where(function ($q) {
-                $q->where('name', 'like', '%'.$this->search.'%')
-                    ->orWhere('phone_number', 'like', '%'.$this->search.'%')
-                    ->orWhere('email', 'like', '%'.$this->search.'%');
+        $search = is_string($this->search) ? trim($this->search) : '';
+        if ($search) {
+            $query->where(function ($q) use ($search) {
+                $q->where('name', 'like', '%'.$search.'%')
+                    ->orWhere('phone_number', 'like', '%'.$search.'%')
+                    ->orWhere('email', 'like', '%'.$search.'%');
             });
         }
 
-        if ($this->filterTag) {
-            $query->whereHas('tags', function ($q) {
-                $q->where('contact_tags.id', $this->filterTag);
+        $filterTag = is_scalar($this->filterTag) ? $this->filterTag : '';
+        if ($filterTag) {
+            $query->whereHas('tags', function ($q) use ($filterTag) {
+                $q->where('contact_tags.id', $filterTag);
             });
         }
 
-        if ($this->filterStatus) {
-            $query->where('opt_in_status', $this->filterStatus);
+        $filterStatus = is_scalar($this->filterStatus) ? $this->filterStatus : '';
+        if ($filterStatus) {
+            $query->where('opt_in_status', $filterStatus);
         }
 
         $contacts = $query
