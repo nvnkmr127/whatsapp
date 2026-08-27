@@ -126,6 +126,9 @@ class AssignmentService
 
         foreach ($sortedRules as $rule) {
             if ($this->evaluateConditions($contact, $rule['conditions'] ?? [])) {
+                // First matching rule wins. If its target is unavailable this returns null and
+                // determineAgent() falls back to round-robin (it does NOT try lower rules) —
+                // a matched rule is treated as authoritative.
                 return $this->resolveTarget($contact->team, $rule['assign_to'] ?? null);
             }
         }
@@ -143,10 +146,15 @@ class AssignmentService
         }
 
         foreach ($conditions as $condition) {
+            $value = (string) ($condition['value'] ?? '');
+            // Contact origin lives in opt_in_source (set by consent/import/call flows); allow a
+            // custom_attributes['source'] fallback. The phone column is phone_number.
+            $contactSource = $contact->opt_in_source ?? ($contact->custom_attributes['source'] ?? null);
+
             $match = match ($condition['type'] ?? '') {
                 'tag' => $contact->tags->contains('name', $condition['value']),
-                'source' => $contact->source === $condition['value'],
-                'phone_country' => str_starts_with($contact->phone, $condition['value']),
+                'source' => $contactSource !== null && $contactSource === $condition['value'],
+                'phone_country' => $value !== '' && str_starts_with((string) $contact->phone_number, $value),
                 default => false
             };
 

@@ -6,10 +6,13 @@ use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Gate;
 use Livewire\Attributes\Layout;
 use Livewire\Component;
+use Livewire\WithPagination;
 
 #[Layout('layouts.app')]
 class ChatRouting extends Component
 {
+    use WithPagination;
+
     /**
      * The team instance.
      *
@@ -70,7 +73,13 @@ class ChatRouting extends Component
      */
     public $simulationPhone = '';
 
-    public $simulationSource = '';
+    public $simulationSource = 'whatsapp';
+
+    /** Reset to the first page when the member search changes (WithPagination). */
+    public function updatedMemberSearch()
+    {
+        $this->resetPage();
+    }
 
     public $simulationTags = '';
 
@@ -110,11 +119,12 @@ class ChatRouting extends Component
 
     public function runSimulation(\App\Services\AssignmentService $engine)
     {
-        $mockContact = new \App\Models\Contact([
-            'team_id' => $this->team->id,
-            'phone' => $this->simulationPhone,
-            'source' => $this->simulationSource,
-        ]);
+        // Set attributes directly (phone/source are not fillable, and the real columns are
+        // phone_number / opt_in_source — mass-assigning 'phone'/'source' silently dropped them).
+        $mockContact = new \App\Models\Contact;
+        $mockContact->team_id = $this->team->id;
+        $mockContact->phone_number = $this->simulationPhone;
+        $mockContact->opt_in_source = $this->simulationSource;
 
         // Mock Tags
         if (! empty($this->simulationTags)) {
@@ -266,9 +276,26 @@ class ChatRouting extends Component
             'stickyEnabled' => ['boolean'],
             'customRules' => ['array'],
             'customRules.*.priority' => ['required', 'integer'],
-            'customRules.*.conditions' => ['array'],
+            'customRules.*.conditions' => ['array', 'min:1'],
+            'customRules.*.conditions.*.type' => ['required', 'in:tag,source,phone_country'],
+            'customRules.*.conditions.*.value' => ['required', 'string'],
             'customRules.*.assign_to.type' => ['required', 'in:user,role'],
+            // Target must be present for the chosen type, or the rule silently assigns nobody.
+            'customRules.*.assign_to.id' => ['exclude_unless:customRules.*.assign_to.type,user', 'required', 'integer'],
+            'customRules.*.assign_to.role' => ['exclude_unless:customRules.*.assign_to.type,role', 'required', 'string'],
+        ], [], [
+            'customRules.*.conditions.*.value' => 'condition value',
+            'customRules.*.assign_to.id' => 'assigned user',
+            'customRules.*.assign_to.role' => 'assigned role',
         ]);
+
+        // Normalize priorities to the current order so removals can't leave duplicates/gaps.
+        $rules = array_values($this->customRules);
+        foreach ($rules as $i => &$rule) {
+            $rule['priority'] = $i + 1;
+        }
+        unset($rule);
+        $this->customRules = $rules;
 
         $this->team->forceFill([
             'chat_assignment_config' => [
@@ -288,6 +315,15 @@ class ChatRouting extends Component
     public function saveStatusRules()
     {
         $this->validate();
+
+        // A rule whose target status equals its source status is a no-op (or churns).
+        foreach ($this->statusRules as $i => $rule) {
+            if (($rule['status_in'] ?? null) === ($rule['status_to'] ?? null)) {
+                $this->addError("statusRules.$i.status_to", 'The target status must differ from the current status.');
+
+                return;
+            }
+        }
 
         $this->team->forceFill([
             'chat_status_rules' => $this->statusRules,

@@ -203,9 +203,13 @@
                                         @php
                                             $role = $user->membership->role;
                                             $isEligible = $this->getRecommendedStatus($role);
+                                            $isRuleTarget = collect($customRules)->contains(
+                                                fn ($r) => ($r['assign_to']['type'] ?? '') === 'user'
+                                                    && (int) ($r['assign_to']['id'] ?? 0) === $user->id
+                                            );
                                         @endphp
                                         <div class="flex flex-col">
-                                            <span class="text-sm font-medium text-slate-500">Round Robin</span>
+                                            <span class="text-sm font-medium text-slate-500">{{ $isRuleTarget ? 'Custom Rule' : 'Round Robin' }}</span>
                                             @if($isEligible)
                                                 <span
                                                     class="text-[10px] font-bold text-wa-teal uppercase tracking-wide">Recommended</span>
@@ -333,7 +337,7 @@
             <p class="text-sm text-slate-500 font-medium mt-1">Test your routing rules with a simulated contact.</p>
         </div>
 
-        <div class="grid grid-cols-1 md:grid-cols-3 gap-6 items-end">
+        <div class="grid grid-cols-1 md:grid-cols-4 gap-6 items-end">
             <!-- Simulated Phone -->
             <div class="space-y-2">
                 <label class="text-[10px] font-black uppercase tracking-widest text-slate-400">Phone Number</label>
@@ -352,6 +356,14 @@
                     <option value="api">API</option>
                     <option value="import">Import</option>
                 </select>
+            </div>
+
+            <!-- Simulated Tags -->
+            <div class="space-y-2">
+                <label class="text-[10px] font-black uppercase tracking-widest text-slate-400">Tags</label>
+                <input type="text" wire:model="simulationTags"
+                    class="w-full px-5 py-3 bg-slate-50 dark:bg-slate-800 border-none rounded-xl text-sm font-bold text-slate-900 dark:text-white focus:ring-2 focus:ring-wa-teal/20"
+                    placeholder="vip, priority (comma separated)">
             </div>
 
             <!-- Action -->
