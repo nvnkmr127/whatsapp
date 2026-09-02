@@ -45,6 +45,7 @@ class CreateUserAndAddToTeam
             $user = User::create([
                 'name' => $input['name'],
                 'phone' => $input['phone'],
+                'email_verified_at' => now(),
             ]);
 
             // Register the phone as an OTP identity so login resolves it directly.

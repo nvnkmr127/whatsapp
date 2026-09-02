@@ -89,7 +89,14 @@ class GoogleAuthController extends Controller
                 // 3. No identity, check if User exists by email (Account Linking)
                 $user = User::where('email', $googleUser->getEmail())->first();
 
-                if (! $user) {
+                if ($user) {
+                    if (empty($user->email) || empty($user->email_verified_at)) {
+                        $user->forceFill([
+                            'email' => $googleUser->getEmail(),
+                            'email_verified_at' => now(),
+                        ])->save();
+                    }
+                } else {
                     $ip = $request->ip() ?? '0.0.0.0';
                     $identityResult = $this->identity->check(
                         email: $googleUser->getEmail(),
@@ -149,6 +156,10 @@ class GoogleAuthController extends Controller
                     'provider_id' => $googleUser->getId(),
                     'last_login_at' => now(),
                 ]);
+            }
+
+            if (empty($user->email_verified_at)) {
+                $user->forceFill(['email_verified_at' => now()])->save();
             }
 
             Auth::login($user, true);

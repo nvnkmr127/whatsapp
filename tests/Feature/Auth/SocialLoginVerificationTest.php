@@ -42,4 +42,41 @@ class SocialLoginVerificationTest extends TestCase
 
         $this->actingAs($user)->get('/dashboard')->assertRedirect(route('verification.notice'));
     }
+
+    public function test_phone_otp_login_verifies_user(): void
+    {
+        $user = User::factory()->withPersonalTeam()->create([
+            'phone' => '+15551234567',
+            'email_verified_at' => null,
+        ]);
+
+        $otpService = $this->mock(\App\Services\OTPService::class);
+        $otpService->shouldReceive('verify')->with('+15551234567', '123456')->andReturn(true);
+
+        $response = $this->post(route('auth.otp.verify'), [
+            'identifier' => '+15551234567',
+            'type' => 'phone',
+            'code' => '123456',
+        ]);
+
+        $this->assertNotNull($user->fresh()->email_verified_at);
+        $this->actingAs($user->fresh())->get('/dashboard')->assertOk();
+    }
+
+    public function test_team_member_created_with_phone_is_verified(): void
+    {
+        $owner = User::factory()->withPersonalTeam()->create();
+        $action = new \App\Actions\Custom\CreateUserAndAddToTeam();
+        
+        $action->create($owner, $owner->personalTeam(), [
+            'name' => 'Agent Smith',
+            'phone' => '+15559876543',
+            'role' => 'agent',
+        ]);
+
+        $created = User::where('phone', '+15559876543')->first();
+        $this->assertNotNull($created);
+        $this->assertNotNull($created->email_verified_at);
+        $this->actingAs($created)->get('/dashboard')->assertOk();
+    }
 }

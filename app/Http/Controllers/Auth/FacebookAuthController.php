@@ -93,7 +93,11 @@ class FacebookAuthController extends Controller
                 $email = $facebookUser->getEmail();
                 $user = $email ? User::where('email', $email)->first() : null;
 
-                if (! $user) {
+                if ($user) {
+                    if (empty($user->email_verified_at)) {
+                        $user->forceFill(['email_verified_at' => now()])->save();
+                    }
+                } else {
                     $ip = $request->ip() ?? '0.0.0.0';
                     $identityResult = $this->identity->check(
                         email: $email ?? 'unknown@unknown.local',
@@ -153,6 +157,10 @@ class FacebookAuthController extends Controller
                     'provider_id' => $facebookUser->getId(),
                     'last_login_at' => now(),
                 ]);
+            }
+
+            if (empty($user->email_verified_at)) {
+                $user->forceFill(['email_verified_at' => now()])->save();
             }
 
             Auth::login($user, true);

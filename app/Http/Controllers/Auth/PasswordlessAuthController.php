@@ -85,14 +85,17 @@ class PasswordlessAuthController extends Controller
                     ['user_id' => $user->id, 'last_login_at' => now()]
                 );
 
-                // Update primary field if missing
+                // Update primary field if missing and ensure verified
                 if ($type === 'email') {
                     $user->forceFill([
                         'email' => $user->email ?: $identifier,
-                        'email_verified_at' => now(),
+                        'email_verified_at' => $user->email_verified_at ?: now(),
                     ])->save();
-                } elseif ($type === 'phone' && empty($user->phone)) {
-                    $user->forceFill(['phone' => $identifier])->save();
+                } else {
+                    $user->forceFill([
+                        'phone' => $user->phone ?: $identifier,
+                        'email_verified_at' => $user->email_verified_at ?: now(),
+                    ])->save();
                 }
 
                 return $user; // Return user for login/audit below
@@ -107,14 +110,17 @@ class PasswordlessAuthController extends Controller
                 $user = $identity->user;
                 $identity->update(['last_login_at' => now()]);
 
-                // Update primary field if missing
+                // Update primary field if missing and ensure verified
                 if ($type === 'email') {
                     $user->forceFill([
                         'email' => $user->email ?: $identifier,
-                        'email_verified_at' => now(),
+                        'email_verified_at' => $user->email_verified_at ?: now(),
                     ])->save();
-                } elseif ($type === 'phone' && empty($user->phone)) {
-                    $user->forceFill(['phone' => $identifier])->save();
+                } else {
+                    $user->forceFill([
+                        'phone' => $user->phone ?: $identifier,
+                        'email_verified_at' => $user->email_verified_at ?: now(),
+                    ])->save();
                 }
             } else {
                 // 3. No identity, check if User exists by direct field (Account Linking)
@@ -147,6 +153,10 @@ class PasswordlessAuthController extends Controller
                         ['provider' => $provider, 'provider_id' => $identifier],
                         ['user_id' => $user->id, 'last_login_at' => now()]
                     );
+
+                    if (empty($user->email_verified_at)) {
+                        $user->forceFill(['email_verified_at' => now()])->save();
+                    }
 
                     // Login and return
                     Auth::login($user, true);
@@ -244,10 +254,12 @@ class PasswordlessAuthController extends Controller
                 }
 
                 // 4. Link identity for future login
-                UserIdentity::updateOrCreate(
-                    ['provider' => $provider, 'provider_id' => $identifier],
-                    ['user_id' => $user->id, 'last_login_at' => now()]
-                );
+                UserIdentity::create([
+                    'user_id' => $user->id,
+                    'provider' => $provider,
+                    'provider_id' => $identifier,
+                    'last_login_at' => now(),
+                ]);
             }
 
             // Update last login
