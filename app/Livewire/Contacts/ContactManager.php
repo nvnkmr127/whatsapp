@@ -535,16 +535,21 @@ class ContactManager extends Component
             'importFile' => 'required|mimes:csv,txt,xlsx,xls,ods|max:10240',
         ]);
 
-        $service = new \App\Services\ContactImportService(Auth::user()->currentTeam);
-        $this->csvHeaders = $service->getHeaders($this->importFile->getRealPath());
+        try {
+            $service = new \App\Services\ContactImportService(Auth::user()->currentTeam);
+            $this->csvHeaders = $service->getHeaders($this->importFile);
 
-        // Auto-map common fields
-        foreach ($this->csvHeaders as $header) {
-            $lowerHeader = strtolower($header);
-            if (in_array($lowerHeader, ['name', 'phone', 'phone_number', 'email', 'tags'])) {
-                $target = $lowerHeader === 'phone' ? 'phone_number' : $lowerHeader;
-                $this->columnMapping[$header] = $target;
+            // Auto-map common fields
+            foreach ($this->csvHeaders as $header) {
+                $lowerHeader = strtolower($header);
+                if (in_array($lowerHeader, ['name', 'phone', 'phone_number', 'email', 'tags'])) {
+                    $target = $lowerHeader === 'phone' ? 'phone_number' : $lowerHeader;
+                    $this->columnMapping[$header] = $target;
+                }
             }
+        } catch (\Throwable $e) {
+            \Illuminate\Support\Facades\Log::error('Import header parsing error: '.$e->getMessage());
+            $this->addError('importFile', 'Failed to read headers from uploaded file: '.$e->getMessage());
         }
 
         $this->importPreview = null;
@@ -563,7 +568,7 @@ class ContactManager extends Component
 
         try {
             if (! $this->importPreview) {
-                $preview = $importService->previewImport($this->importFile->getRealPath(), $this->columnMapping);
+                $preview = $importService->previewImport($this->importFile, $this->columnMapping);
 
                 // Limit preview duplicates to prevent hitting post_max_size on next request
                 if (count($preview['duplicates_existing'] ?? []) > 100) {
@@ -587,10 +592,17 @@ class ContactManager extends Component
                 return;
             }
 
-            $result = $importService->import($this->importFile->getRealPath(), $this->columnMapping, [
+            $result = $importService->import($this->importFile, $this->columnMapping, [
                 'on_duplicate' => $this->importDuplicateStrategy,
                 'on_duplicate_tag' => $this->importDuplicateTagStrategy,
             ]);
+        } catch (\Throwable $e) {
+            \Illuminate\Support\Facades\Log::error('Contact import failed: '.$e->getMessage());
+            $result = [
+                'success_count' => 0,
+                'skipped_count' => 0,
+                'errors' => ['Import failed: '.$e->getMessage()],
+            ];
         } finally {
             $this->isImporting = false;
         }

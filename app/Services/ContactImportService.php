@@ -22,19 +22,90 @@ class ContactImportService
     }
 
     /**
-     * Get headers from file (CSV or Excel).
+     * Resolve absolute local path and extension for file or path string.
      */
-    public function getHeaders(string $filePath): array
+    protected function resolveLocalPath($fileOrPath, ?string $originalName = null): array
     {
-        $extension = strtolower(pathinfo($filePath, PATHINFO_EXTENSION));
+        $realPath = null;
+        $extension = '';
 
-        if ($extension === '') {
-            $header = @file_get_contents($filePath, false, null, 0, 4);
+        if ($fileOrPath instanceof \Illuminate\Http\UploadedFile) {
+            $originalName = $originalName ?: $fileOrPath->getClientOriginalName();
+            $extension = strtolower(pathinfo($originalName, PATHINFO_EXTENSION));
+
+            try {
+                $realPath = $fileOrPath->getRealPath();
+            } catch (\Throwable $e) {
+                $realPath = null;
+            }
+
+            if (! $realPath || ! file_exists($realPath)) {
+                $disk = config('livewire.temporary_file_upload.disk') ?: config('filesystems.default');
+                try {
+                    $realPath = \Illuminate\Support\Facades\Storage::disk($disk)->path($fileOrPath->path());
+                } catch (\Throwable $e) {
+                    $realPath = null;
+                }
+            }
+
+            if (! $realPath || ! file_exists($realPath)) {
+                $fallback = storage_path('app/' . $fileOrPath->path());
+                if (file_exists($fallback)) {
+                    $realPath = $fallback;
+                }
+            }
+        } elseif (is_string($fileOrPath)) {
+            $extension = strtolower(pathinfo($fileOrPath, PATHINFO_EXTENSION));
+
+            if (file_exists($fileOrPath)) {
+                $realPath = $fileOrPath;
+            } else {
+                $disk = config('livewire.temporary_file_upload.disk') ?: config('filesystems.default');
+                try {
+                    $diskPath = \Illuminate\Support\Facades\Storage::disk($disk)->path($fileOrPath);
+                    if (file_exists($diskPath)) {
+                        $realPath = $diskPath;
+                    }
+                } catch (\Throwable $e) {
+                }
+
+                if (! $realPath) {
+                    $fallback = storage_path('app/' . ltrim($fileOrPath, '/'));
+                    if (file_exists($fallback)) {
+                        $realPath = $fallback;
+                    }
+                }
+            }
+        }
+
+        if ($extension === '' || $extension === 'tmp') {
+            if ($originalName) {
+                $extension = strtolower(pathinfo($originalName, PATHINFO_EXTENSION));
+            }
+        }
+
+        if (($extension === '' || $extension === 'tmp') && $realPath && file_exists($realPath)) {
+            $header = @file_get_contents($realPath, false, null, 0, 4);
             if ($header !== false && str_starts_with($header, 'PK')) {
                 $extension = 'xlsx';
             } else {
                 $extension = 'csv';
             }
+        }
+
+        return [$realPath ?: (is_string($fileOrPath) ? $fileOrPath : ''), $extension];
+    }
+
+    /**
+     * Get headers from file (CSV or Excel).
+     */
+    public function getHeaders($fileOrPath, ?string $originalName = null): array
+    {
+        [$filePath, $extension] = $this->resolveLocalPath($fileOrPath, $originalName);
+
+        if (! file_exists($filePath)) {
+            Log::error("Import getHeaders failed: File does not exist at {$filePath}");
+            return [];
         }
 
         if (in_array($extension, ['csv', 'txt'])) {
@@ -67,20 +138,15 @@ class ContactImportService
      * @param  array  $options  Import options including consent information
      * @return array Results with success count and errors
      */
-    public function import(string $filePath, array $columnMapping, array $options = [])
+    public function import($fileOrPath, array $columnMapping, array $options = [])
     {
-        $extension = strtolower(pathinfo($filePath, PATHINFO_EXTENSION));
+        [$filePath, $extension] = $this->resolveLocalPath($fileOrPath, $options['original_name'] ?? null);
         $records = [];
         $onDuplicate = $options['on_duplicate'] ?? 'update';
         $onDuplicateTag = $options['on_duplicate_tag'] ?? 'add';
 
-        if ($extension === '') {
-            $header = @file_get_contents($filePath, false, null, 0, 4);
-            if ($header !== false && str_starts_with($header, 'PK')) {
-                $extension = 'xlsx';
-            } else {
-                $extension = 'csv';
-            }
+        if (! file_exists($filePath)) {
+            return ['success_count' => 0, 'errors' => ["Import file not found: {$filePath}"]];
         }
 
         if (in_array($extension, ['csv', 'txt'])) {
@@ -284,18 +350,19 @@ class ContactImportService
         ];
     }
 
-    public function previewImport(string $filePath, array $columnMapping): array
+    public function previewImport($fileOrPath, array $columnMapping, ?string $originalName = null): array
     {
-        $extension = strtolower(pathinfo($filePath, PATHINFO_EXTENSION));
+        [$filePath, $extension] = $this->resolveLocalPath($fileOrPath, $originalName);
         $records = [];
 
-        if ($extension === '') {
-            $header = @file_get_contents($filePath, false, null, 0, 4);
-            if ($header !== false && str_starts_with($header, 'PK')) {
-                $extension = 'xlsx';
-            } else {
-                $extension = 'csv';
-            }
+        if (! file_exists($filePath)) {
+            return [
+                'total_rows' => 0,
+                'valid_rows' => 0,
+                'errors' => ["Import file not found: {$filePath}"],
+                'duplicates_existing' => [],
+                'duplicates_in_file' => [],
+            ];
         }
 
         if (in_array($extension, ['csv', 'txt'])) {

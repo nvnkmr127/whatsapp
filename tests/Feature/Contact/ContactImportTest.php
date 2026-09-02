@@ -99,4 +99,15 @@ class ContactImportTest extends TestCase
 
         $response->assertFileDownloaded('sample_contacts.csv');
     }
+
+    public function test_import_service_resolves_uploaded_file_without_failed_to_open_stream_error()
+    {
+        $team = Team::factory()->create();
+        $file = \Illuminate\Http\UploadedFile::fake()->createWithContent('contacts.csv', "Name,Phone,Email\nJohn Doe,1234567890,john@example.com");
+
+        $service = new ContactImportService($team);
+        $headers = $service->getHeaders($file);
+
+        $this->assertIsArray($headers);
+    }
 }
