@@ -93,4 +93,21 @@ class ContactManagementTest extends TestCase
             ->assertDontSee('Register Contact')
             ->assertDontSee('activeTab');
     }
+
+    public function test_livewire_update_handles_viewing_contact_and_search_updates_without_hydration_crash()
+    {
+        $team = Team::factory()->create();
+        $this->actingAs($team->owner);
+
+        $contact = Contact::factory()->create(['team_id' => $team->id, 'name' => 'Alice Smith']);
+
+        \Livewire\Livewire::test(\App\Livewire\Contacts\ContactManager::class)
+            ->call('viewContact', $contact->id)
+            ->set('search', 'Alice')
+            ->assertSet('isViewModalOpen', true)
+            ->assertSee('Alice Smith')
+            ->call('closeViewModal')
+            ->assertSet('isViewModalOpen', false)
+            ->assertSet('viewingContactId', null);
+    }
 }

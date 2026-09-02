@@ -5,6 +5,7 @@ namespace App\Livewire\Contacts;
 use App\Models\Contact;
 use App\Models\ContactTag;
 use Illuminate\Support\Facades\Auth;
+use Livewire\Attributes\Computed;
 use Livewire\Attributes\Layout;
 use Livewire\Attributes\Locked;
 use Livewire\Component;
@@ -108,12 +109,6 @@ class ContactManager extends Component
 
     public $targetContactId;
 
-    #[Locked]
-    public $sourceContact;
-
-    #[Locked]
-    public $targetContact;
-
     public $isMerging = false;
 
     protected $queryString = [
@@ -179,7 +174,11 @@ class ContactManager extends Component
                 ->get();
         });
 
-        return view('livewire.contacts.contact-manager', compact('contacts', 'tags', 'customFields', 'categories'))->layout('layouts.app');
+        $viewingContact = $this->viewingContact;
+        $sourceContact = $this->sourceContact;
+        $targetContact = $this->targetContact;
+
+        return view('livewire.contacts.contact-manager', compact('contacts', 'tags', 'customFields', 'categories', 'viewingContact', 'sourceContact', 'targetContact'))->layout('layouts.app');
     }
 
     public function create()
@@ -194,34 +193,67 @@ class ContactManager extends Component
     // View Modal State
     public $isViewModalOpen = false;
 
-    #[Locked]
-    public $viewingContact = null;
+    public $viewingContactId = null;
+
+    #[Computed]
+    public function viewingContact()
+    {
+        if (! $this->viewingContactId) {
+            return null;
+        }
+
+        return Contact::where('team_id', Auth::user()->currentTeam->id)
+            ->with(['tags', 'category'])
+            ->withCount(['messages', 'conversations', 'tags'])
+            ->find($this->viewingContactId);
+    }
+
+    #[Computed]
+    public function sourceContact()
+    {
+        if (! $this->sourceContactId) {
+            return null;
+        }
+
+        return Contact::where('team_id', Auth::user()->currentTeam->id)->find($this->sourceContactId);
+    }
+
+    #[Computed]
+    public function targetContact()
+    {
+        if (! $this->targetContactId) {
+            return null;
+        }
+
+        return Contact::where('team_id', Auth::user()->currentTeam->id)->find($this->targetContactId);
+    }
 
     public function viewContact($id)
     {
-        $this->viewingContact = Contact::with(['tags', 'category'])
-            ->withCount(['messages', 'conversations', 'tags'])
-            ->findOrFail($id);
+        $this->viewingContactId = $id;
+        $contact = $this->viewingContact;
 
-        $this->loadRichData($this->viewingContact);
-        $this->isViewModalOpen = true;
+        if ($contact) {
+            $this->loadRichData($contact);
+            $this->isViewModalOpen = true;
+        }
     }
 
     protected function loadRichData(Contact $contact)
     {
         $service = app(\App\Services\ContactTimelineService::class);
-        
-        $this->timeline = $service->getTimeline($contact);
-        $this->mediaVault = $service->getMediaVault($contact);
+
+        $this->timeline = $service->getTimeline($contact)->toArray();
+        $this->mediaVault = $service->getMediaVault($contact)->toArray();
         $this->heatmap = $service->getInteractionHeatmap($contact);
     }
 
     public function closeViewModal()
     {
         $this->isViewModalOpen = false;
-        $this->viewingContact = null;
+        $this->viewingContactId = null;
         $this->activeTab = 'profile';
-        
+
         // Clear rich data to reduce Livewire payload
         $this->timeline = [];
         $this->mediaVault = [];
@@ -232,9 +264,9 @@ class ContactManager extends Component
     {
         // Close view modal if open
         $this->isViewModalOpen = false;
-        $this->viewingContact = null;
+        $this->viewingContactId = null;
 
-        $contact = Contact::findOrFail($id);
+        $contact = Contact::where('team_id', Auth::user()->currentTeam->id)->findOrFail($id);
         $this->contactId = $id;
         $this->name = $contact->name;
 
@@ -426,19 +458,8 @@ class ContactManager extends Component
     public function openMergeModal($sourceId)
     {
         $this->sourceContactId = $sourceId;
-        $this->sourceContact = Contact::findOrFail($sourceId);
         $this->targetContactId = null;
-        $this->targetContact = null;
         $this->isMergeModalOpen = true;
-    }
-
-    public function updatedTargetContactId($value)
-    {
-        if ($value) {
-            $this->targetContact = Contact::find($value);
-        } else {
-            $this->targetContact = null;
-        }
     }
 
     public function merge()
@@ -452,9 +473,10 @@ class ContactManager extends Component
         $this->isMerging = true;
 
         try {
+            $teamId = Auth::user()->currentTeam->id;
             $service = new \App\Services\ContactMergeService;
-            $source = Contact::findOrFail($this->sourceContactId);
-            $target = Contact::findOrFail($this->targetContactId);
+            $source = Contact::where('team_id', $teamId)->findOrFail($this->sourceContactId);
+            $target = Contact::where('team_id', $teamId)->findOrFail($this->targetContactId);
 
             $service->merge($target, $source, Auth::id());
 
@@ -476,8 +498,6 @@ class ContactManager extends Component
     {
         $this->sourceContactId = null;
         $this->targetContactId = null;
-        $this->sourceContact = null;
-        $this->targetContact = null;
     }
 
     private function resetFieldInput()
@@ -611,9 +631,8 @@ class ContactManager extends Component
     // Alias for the old method name if any other component called it
     public function export()
     {
-        \Illuminate\Support\Facades\Gate::authorize('manage-contacts');
-
-        $query = Contact::query();
+        $teamId = Auth::user()->currentTeam->id;
+        $query = Contact::query()->where('team_id', $teamId);
 
         if ($this->search) {
             $query->where(function ($q) {
