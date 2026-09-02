@@ -40,18 +40,9 @@ class ContactImportService
             }
 
             if (! $realPath || ! file_exists($realPath)) {
-                $disk = config('livewire.temporary_file_upload.disk') ?: config('filesystems.default');
-                try {
-                    $realPath = \Illuminate\Support\Facades\Storage::disk($disk)->path($fileOrPath->path());
-                } catch (\Throwable $e) {
-                    $realPath = null;
-                }
-            }
-
-            if (! $realPath || ! file_exists($realPath)) {
-                $fallback = storage_path('app/' . $fileOrPath->path());
-                if (file_exists($fallback)) {
-                    $realPath = $fallback;
+                $relativePath = method_exists($fileOrPath, 'path') ? $fileOrPath->path() : null;
+                if ($relativePath) {
+                    $realPath = $this->findOrFetchStoragePath($relativePath);
                 }
             }
         } elseif (is_string($fileOrPath)) {
@@ -60,21 +51,7 @@ class ContactImportService
             if (file_exists($fileOrPath)) {
                 $realPath = $fileOrPath;
             } else {
-                $disk = config('livewire.temporary_file_upload.disk') ?: config('filesystems.default');
-                try {
-                    $diskPath = \Illuminate\Support\Facades\Storage::disk($disk)->path($fileOrPath);
-                    if (file_exists($diskPath)) {
-                        $realPath = $diskPath;
-                    }
-                } catch (\Throwable $e) {
-                }
-
-                if (! $realPath) {
-                    $fallback = storage_path('app/' . ltrim($fileOrPath, '/'));
-                    if (file_exists($fallback)) {
-                        $realPath = $fallback;
-                    }
-                }
+                $realPath = $this->findOrFetchStoragePath($fileOrPath);
             }
         }
 
@@ -94,6 +71,70 @@ class ContactImportService
         }
 
         return [$realPath ?: (is_string($fileOrPath) ? $fileOrPath : ''), $extension];
+    }
+
+    protected function findOrFetchStoragePath(string $relativePath): ?string
+    {
+        $relativePath = ltrim($relativePath, '/');
+        $disksToTry = array_values(array_unique(array_filter([
+            config('livewire.temporary_file_upload.disk'),
+            config('filesystems.default'),
+            'public',
+            'local',
+        ])));
+
+        // 1. Try local disk paths
+        foreach ($disksToTry as $diskName) {
+            try {
+                $disk = \Illuminate\Support\Facades\Storage::disk($diskName);
+                $path = $disk->path($relativePath);
+                if (file_exists($path)) {
+                    return $path;
+                }
+            } catch (\Throwable $e) {
+            }
+        }
+
+        // 2. Try common storage root locations
+        $candidates = [
+            storage_path('app/' . $relativePath),
+            storage_path('app/public/' . $relativePath),
+            storage_path('app/private/' . $relativePath),
+            storage_path('app/livewire-tmp/' . basename($relativePath)),
+            storage_path('app/public/livewire-tmp/' . basename($relativePath)),
+            storage_path('app/private/livewire-tmp/' . basename($relativePath)),
+        ];
+
+        foreach ($candidates as $candidate) {
+            if (file_exists($candidate)) {
+                return $candidate;
+            }
+        }
+
+        // 3. Fallback: fetch content from Storage disk (e.g. S3 / R2 / remote) and save to temp file
+        foreach ($disksToTry as $diskName) {
+            try {
+                $disk = \Illuminate\Support\Facades\Storage::disk($diskName);
+                if ($disk->exists($relativePath)) {
+                    $stream = $disk->readStream($relativePath);
+                    if ($stream) {
+                        $tempFile = sys_get_temp_dir() . '/lw_import_' . md5($relativePath) . '.' . (pathinfo($relativePath, PATHINFO_EXTENSION) ?: 'tmp');
+                        $targetStream = fopen($tempFile, 'w+b');
+                        stream_copy_to_stream($stream, $targetStream);
+                        fclose($targetStream);
+                        if (is_resource($stream)) {
+                            fclose($stream);
+                        }
+                        if (file_exists($tempFile)) {
+                            return $tempFile;
+                        }
+                    }
+                }
+            } catch (\Throwable $e) {
+            }
+        }
+
+        return null;
     }
 
     /**
