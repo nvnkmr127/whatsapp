@@ -38,10 +38,9 @@ class BasicDetailsPopup extends Component
 
         $team = $user->currentTeam;
 
-        // Open if company name is missing OR if team looks like default
-        // We no longer force open on phone=null because it's optional
-        // SUPER ADMINS are excluded from this onboarding flow.
-        if (! $user->isSuperAdmin() && (empty($user->company_name) || ($team && str_ends_with($team->name, "'s Team")))) {
+        // Open if company name is missing OR if team looks like default.
+        // SUPER ADMINS and NON-OWNER team members are excluded from this onboarding flow.
+        if (! $user->isSuperAdmin() && $team && $user->ownsTeam($team) && (empty($user->company_name) || str_ends_with($team->name, "'s Team"))) {
             $this->isOpen = true;
             \Illuminate\Support\Facades\Log::debug('BasicDetailsPopup opening: company missing or default team name', [
                 'user_id' => $user->id,

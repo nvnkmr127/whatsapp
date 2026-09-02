@@ -37,4 +37,18 @@ class BasicDetailsPopupTest extends TestCase
         $this->assertEquals('+15551234567', $user->fresh()->phone);
         $this->assertEquals('Acme Corp', $team->fresh()->name);
     }
+
+    public function test_non_owner_team_member_does_not_see_popup(): void
+    {
+        $owner = User::factory()->withPersonalTeam()->create();
+        $team = $owner->personalTeam();
+
+        $member = User::factory()->create(['company_name' => null]);
+        $team->users()->attach($member, ['role' => 'agent']);
+        $member->forceFill(['current_team_id' => $team->id])->save();
+
+        Livewire::actingAs($member)
+            ->test(\App\Livewire\Onboarding\BasicDetailsPopup::class)
+            ->assertSet('isOpen', false);
+    }
 }
