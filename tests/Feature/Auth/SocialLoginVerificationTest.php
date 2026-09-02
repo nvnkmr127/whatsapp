@@ -79,4 +79,33 @@ class SocialLoginVerificationTest extends TestCase
         $this->assertNotNull($created->email_verified_at);
         $this->actingAs($created)->get('/dashboard')->assertOk();
     }
+
+    public function test_readding_removed_phone_team_member_succeeds(): void
+    {
+        $owner = User::factory()->withPersonalTeam()->create();
+        $team = $owner->personalTeam();
+        $action = new \App\Actions\Custom\CreateUserAndAddToTeam();
+        
+        $action->create($owner, $team, [
+            'name' => 'Agent Smith',
+            'phone' => '+15559876543',
+            'role' => 'agent',
+        ]);
+
+        $agent = User::where('phone', '+15559876543')->first();
+        $this->assertTrue($team->fresh()->hasUser($agent));
+
+        // Remove member from team
+        $team->users()->detach($agent->id);
+        $this->assertFalse($team->fresh()->hasUser($agent));
+
+        // Re-add same phone number
+        $action->create($owner, $team, [
+            'name' => 'Agent Smith',
+            'phone' => '+15559876543',
+            'role' => 'agent',
+        ]);
+
+        $this->assertTrue($team->fresh()->hasUser($agent));
+    }
 }
