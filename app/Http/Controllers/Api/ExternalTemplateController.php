@@ -28,20 +28,75 @@ class ExternalTemplateController extends Controller
         }
 
         try {
+            // First check local synced templates
+            $localTemplates = \App\Models\WhatsappTemplate::where('team_id', $team->id)->get();
+
+            if ($localTemplates->isNotEmpty() && ! $request->boolean('force_refresh')) {
+                return $this->success(
+                    $localTemplates->map(fn($t) => [
+                        'id' => $t->id,
+                        'template_id' => $t->whatsapp_template_id,
+                        'name' => $t->name,
+                        'language' => $t->language,
+                        'category' => $t->category,
+                        'status' => $t->status,
+                        'components' => $t->components,
+                    ]),
+                    'Templates retrieved successfully.'
+                );
+            }
+
+            // Live fallback from Meta API
             $this->whatsappService->setTeam($team);
             $result = $this->whatsappService->getTemplates();
 
             if ($result['success'] ?? false) {
+                $templates = isset($result['data']['data']) ? $result['data']['data'] : ($result['data'] ?? []);
                 return $this->success(
-                    $result['data']['data'] ?? [],
+                    $templates,
                     'Templates retrieved successfully.'
                 );
+            }
+
+            if ($localTemplates->isNotEmpty()) {
+                return $this->success($localTemplates, 'Templates retrieved successfully.');
             }
 
             return $this->error($result['message'] ?? 'Failed to fetch templates', 500);
 
         } catch (\Exception $e) {
+            $localTemplates = \App\Models\WhatsappTemplate::where('team_id', $team->id)->get();
+            if ($localTemplates->isNotEmpty()) {
+                return $this->success($localTemplates, 'Templates retrieved successfully.');
+            }
             return $this->error($e->getMessage(), 500);
         }
+    }
+
+    /**
+     * Get a specific template by ID or name.
+     * GET /api/v1/templates/{id}
+     */
+    public function show(Request $request, string $id)
+    {
+        $team = $request->user()->currentTeam;
+
+        if (! $team) {
+            return $this->error('No team context selected.', 400);
+        }
+
+        $template = \App\Models\WhatsappTemplate::where('team_id', $team->id)
+            ->where(function ($q) use ($id) {
+                $q->where('id', $id)
+                    ->orWhere('template_id', $id)
+                    ->orWhere('name', $id);
+            })
+            ->first();
+
+        if (! $template) {
+            return $this->error('Template not found.', 404);
+        }
+
+        return $this->success($template, 'Template retrieved successfully.');
     }
 }

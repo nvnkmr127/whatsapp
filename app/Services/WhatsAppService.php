@@ -1144,15 +1144,33 @@ class WhatsAppService
             ->where('language', $language)
             ->first();
 
-        // Language Fallback
+        // Language Fallback: Try common variants (en, en_US) then any language for this template
         if (! $tpl) {
-            $fallback = WhatsappTemplate::where('team_id', $this->team->id)
-                ->where('name', $templateName)
-                ->where('language', 'en_US')
-                ->first();
-            if ($fallback) {
-                $tpl = $fallback;
-                $language = 'en_US';
+            $fallbackLanguages = ($language === 'en' || str_starts_with($language, 'en_'))
+                ? ['en', 'en_US']
+                : ['en_US', 'en'];
+
+            foreach ($fallbackLanguages as $fbLang) {
+                $fallback = WhatsappTemplate::where('team_id', $this->team->id)
+                    ->where('name', $templateName)
+                    ->where('language', $fbLang)
+                    ->first();
+                if ($fallback) {
+                    $tpl = $fallback;
+                    $language = $fbLang;
+                    break;
+                }
+            }
+
+            if (! $tpl) {
+                // Fallback to any language available for this template
+                $fallback = WhatsappTemplate::where('team_id', $this->team->id)
+                    ->where('name', $templateName)
+                    ->first();
+                if ($fallback) {
+                    $tpl = $fallback;
+                    $language = $fallback->language ?: $language;
+                }
             }
         }
 

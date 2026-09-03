@@ -19,6 +19,13 @@ class OTPVerificationController extends Controller
      */
     public function verify(Request $request)
     {
+        if ($request->has('phone_number') && ! $request->has('phone')) {
+            $request->merge(['phone' => $request->input('phone_number')]);
+        }
+        if ($request->has('otp') && ! $request->has('code')) {
+            $request->merge(['code' => $request->input('otp')]);
+        }
+
         $request->validate([
             'phone' => 'required|string',
             'code' => 'required|string',

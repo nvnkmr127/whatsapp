@@ -15,6 +15,19 @@ class StoreContactRequest extends FormRequest
     }
 
     /**
+     * Prepare the data for validation.
+     */
+    protected function prepareForValidation(): void
+    {
+        $rawPhone = $this->input('phone_number') ?? $this->input('phone') ?? $this->input('to');
+        if ($rawPhone) {
+            // Remove common phone formatting (spaces, hyphens, parentheses)
+            $cleaned = preg_replace('/[\s\-\(\)]+/', '', (string) $rawPhone);
+            $this->merge(['phone_number' => $cleaned]);
+        }
+    }
+
+    /**
      * Get the validation rules that apply to the request.
      */
     public function rules(): array

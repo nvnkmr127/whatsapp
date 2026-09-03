@@ -19,7 +19,17 @@ class ExternalConversationController extends Controller
             return response()->json(['error' => 'No team context'], 400);
         }
 
-        $contact = Contact::where('team_id', $team->id)->where('phone_number', $phone)->first();
+        $cleanPhone = trim($phone);
+        $noPlus = ltrim($cleanPhone, '+');
+        $withPlus = '+' . $noPlus;
+
+        $contact = Contact::where('team_id', $team->id)
+            ->where(function ($q) use ($cleanPhone, $noPlus, $withPlus) {
+                $q->where('phone_number', $cleanPhone)
+                    ->orWhere('phone_number', $withPlus)
+                    ->orWhere('phone_number', $noPlus);
+            })
+            ->first();
 
         if (! $contact) {
             return response()->json(['data' => []]);
@@ -46,12 +56,45 @@ class ExternalConversationController extends Controller
      */
     public function send(Request $request)
     {
+        // Support Meta-style 'to' or 'phone' alias and clean formatting (spaces, hyphens)
+        $rawPhone = $request->input('phone_number') ?? $request->input('to') ?? $request->input('phone');
+        if ($rawPhone) {
+            $cleaned = preg_replace('/[\s\-\(\)]+/', '', (string) $rawPhone);
+            $request->merge(['phone_number' => $cleaned]);
+        }
+        
+        if ($request->input('type') === 'text' && $request->has('text.body') && !$request->has('message')) {
+            $request->merge(['message' => $request->input('text.body')]);
+        }
+
+        if ($request->input('type') === 'template' && $request->has('template')) {
+            $templateData = $request->input('template');
+            
+            $mergedData = [
+                'template_name' => $templateData['name'] ?? $request->input('template_name'),
+                'language' => $templateData['language']['code'] ?? $request->input('language'),
+            ];
+
+            if (isset($templateData['components']) && is_array($templateData['components'])) {
+                foreach ($templateData['components'] as $component) {
+                    if ($component['type'] === 'body' && isset($component['parameters'])) {
+                        $mergedData['variables'] = array_map(fn($p) => $p['text'] ?? '', $component['parameters']);
+                    }
+                    if ($component['type'] === 'header' && isset($component['parameters'])) {
+                        $mergedData['header_variables'] = array_map(fn($p) => $p['text'] ?? '', $component['parameters']);
+                    }
+                }
+            }
+            
+            $request->merge($mergedData);
+        }
+
         $request->validate([
             'phone_number' => ['required', 'string', 'regex:/^\+?[1-9]\d{1,14}$/'],
             'type' => 'required|in:text,template',
             'message' => 'required_if:type,text|string',
             'template_name' => 'required_if:type,template|string',
-            'language' => 'required_if:type,template|string|size:5',
+            'language' => 'required_if:type,template|string|min:2|max:10',
             'variables' => 'array',
             'header_variables' => 'array',
             'footer_variables' => 'array',
