@@ -31,4 +31,19 @@ class UserTest extends TestCase
 
         Model::preventLazyLoading(false);
     }
+
+    public function test_current_team_auto_recovers_when_current_team_id_is_null_or_invalid(): void
+    {
+        $owner = User::factory()->create();
+        $team = Team::factory()->create(['user_id' => $owner->id]);
+        $owner->forceFill(['current_team_id' => 999999])->save(); // Stale team ID
+
+        $freshUser = User::find($owner->id);
+
+        $currentTeam = $freshUser->currentTeam;
+
+        $this->assertNotNull($currentTeam);
+        $this->assertEquals($team->id, $currentTeam->id);
+        $this->assertEquals($team->id, $freshUser->fresh()->current_team_id);
+    }
 }

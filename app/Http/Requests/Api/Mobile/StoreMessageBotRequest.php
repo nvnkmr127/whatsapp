@@ -8,7 +8,18 @@ class StoreMessageBotRequest extends FormRequest
 {
     public function authorize()
     {
-        return $this->user()->hasTeamPermission($this->user()->currentTeam, 'manage-workflows');
+        $team = $this->user()->currentTeam;
+        if (! $team) {
+            return false;
+        }
+
+        // If user is explicitly assigned the 'agent' role on the team, deny creation permission
+        $member = $team->users->where('id', $this->user()->id)->first();
+        if ($member?->membership?->role === 'agent') {
+            return false;
+        }
+
+        return $this->user()->hasTeamPermission($team, 'manage-workflows');
     }
 
     public function rules()

@@ -280,6 +280,34 @@ class User extends Authenticatable implements MustVerifyEmail
     }
 
     /**
+     * Get the current team of the user's context cleanly, falling back to any available team.
+     *
+     * @return \App\Models\Team|null
+     */
+    public function getCurrentTeamAttribute()
+    {
+        if ($this->relationLoaded('currentTeam') && $this->relations['currentTeam'] !== null) {
+            return $this->relations['currentTeam'];
+        }
+
+        $team = null;
+        if ($this->current_team_id) {
+            $team = Team::find($this->current_team_id);
+        }
+
+        if (! $team) {
+            $team = $this->personalTeam() ?? $this->allTeams()->first();
+            if ($team) {
+                $this->forceFill(['current_team_id' => $team->id])->save();
+            }
+        }
+
+        $this->setRelation('currentTeam', $team);
+
+        return $team;
+    }
+
+    /**
      * Get a relationship value, auto-loading missing relations cleanly without lazy loading violation exceptions.
      *
      * @param  string  $key
