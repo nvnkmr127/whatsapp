@@ -40,14 +40,14 @@ Schedule::job(new \App\Jobs\CheckIntegrationHealth)->everySixHours();
 Schedule::job(new \App\Jobs\CheckTrialExpiry)->daily();
 
 // Queue Worker for Background Jobs (runs every minute, keeps running for 55s)
-// Changed from --stop-when-empty to --max-time=55 to prevent exit when queue is empty, reducing latency.
-Schedule::command('queue:work --queue=broadcasts,messages,webhooks,default --max-time=55 --tries=3 --timeout=90 --sleep=2')
+// Priority: webhooks (inbound events), messages (chat responses), broadcasts (bulk send), default
+Schedule::command('queue:work --queue=webhooks,messages,broadcasts,default --max-time=55 --tries=3 --timeout=90 --sleep=2')
     ->everyMinute()
     ->withoutOverlapping();
 
 // Broadcast Event Consumer (Polling loop that runs for 55s then exits, restarted by Cron)
 // This replaces the need for a separate Supervisor process
-Schedule::command('broadcast:consume --seconds=55')
+Schedule::command('broadcast:consume --count=500 --seconds=55')
     ->everyMinute()
     ->withoutOverlapping();
 
@@ -57,5 +57,16 @@ Schedule::command('whatsapp:audit-compliance')->weekly()->sundays()->at('04:00')
 // CRM Automation (Advanced Triggers T5 & T6)
 Schedule::command('automations:check-inactivity')->everyFiveMinutes();
 Schedule::command('automations:check-birthdays')->dailyAt('09:00');
+
+// Prune old processed broadcast events older than 3 days
+Schedule::call(function () {
+    \Illuminate\Support\Facades\DB::table('broadcast_events')
+        ->where('status', 'processed')
+        ->where('updated_at', '<', now()->subDays(3))
+        ->delete();
+})->dailyAt('03:15');
+
+// Prune failed jobs older than 30 days
+Schedule::command('queue:prune-failed --hours=720')->dailyAt('03:30');
 
 Schedule::job(new \App\Jobs\CheckOnboardingInactivityJob)->everyTenMinutes();

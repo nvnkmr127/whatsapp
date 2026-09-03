@@ -16,7 +16,7 @@ class ConsumeBroadcastEvents extends Command
      *
      * @var string
      */
-    protected $signature = 'broadcast:consume {--group=dispatchers} {--consumer=worker1} {--count=50} {--seconds=0}';
+    protected $signature = 'broadcast:consume {--group=dispatchers} {--consumer=worker1} {--count=500} {--seconds=0}';
 
     /**
      * The console command description.
@@ -285,5 +285,7 @@ class ConsumeBroadcastEvents extends Command
         \Illuminate\Support\Facades\DB::table('broadcast_events')
             ->where('id', $id)
             ->update(['status' => 'pending', 'updated_at' => now()]);
+
+        usleep(50000); // 50ms backoff to prevent tight CPU spinlock during rate limits
     }
 }
