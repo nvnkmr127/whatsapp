@@ -90,7 +90,10 @@ class AiController extends Controller
             abort(403, 'Unauthorized access to this conversation.');
         }
 
-        $team = $user->currentTeam;
+        $team = $user->currentTeam ?? $conversation->team;
+        if (! $team) {
+            return response()->json(['error' => 'No team associated with this conversation.'], 422);
+        }
         $teamId = $team->id;
 
         // Build conversation context from the last 10 messages

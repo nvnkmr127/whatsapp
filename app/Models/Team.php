@@ -34,6 +34,40 @@ class Team extends JetstreamTeam
     }
 
     /**
+     * Get all of the users that belong to the team including the owner.
+     * Explicitly loads missing relations to comply with strict lazy loading rules.
+     *
+     * @return \Illuminate\Support\Collection
+     */
+    public function allUsers()
+    {
+        $this->loadMissing(['users', 'owner']);
+
+        return $this->users->merge([$this->owner]);
+    }
+
+    /**
+     * Get a relationship value, auto-loading missing relations cleanly without lazy loading violation exceptions.
+     *
+     * @param  string  $key
+     * @return mixed
+     */
+    public function getRelationValue($key)
+    {
+        if ($this->relationLoaded($key)) {
+            return $this->relations[$key];
+        }
+
+        if (! $this->isRelation($key)) {
+            return null;
+        }
+
+        $this->loadMissing($key);
+
+        return $this->relations[$key] ?? null;
+    }
+
+    /**
      * The relations to eager load on every query.
      *
      * @var array

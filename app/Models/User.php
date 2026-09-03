@@ -278,4 +278,25 @@ class User extends Authenticatable implements MustVerifyEmail
     {
         return \Illuminate\Support\Facades\Cache::has("user_presence:{$this->id}:conv:{$conversationId}");
     }
+
+    /**
+     * Get a relationship value, auto-loading missing relations cleanly without lazy loading violation exceptions.
+     *
+     * @param  string  $key
+     * @return mixed
+     */
+    public function getRelationValue($key)
+    {
+        if ($this->relationLoaded($key)) {
+            return $this->relations[$key];
+        }
+
+        if (! $this->isRelation($key)) {
+            return null;
+        }
+
+        $this->loadMissing($key);
+
+        return $this->relations[$key] ?? null;
+    }
 }

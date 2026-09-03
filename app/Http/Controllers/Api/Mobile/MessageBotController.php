@@ -18,7 +18,17 @@ class MessageBotController extends Controller
     {
         Gate::authorize('viewAny', MessageBot::class);
 
-        $bots = $request->user()->currentTeam->message_bots()
+        $team = $request->user()?->currentTeam;
+        if (! $team) {
+            return response()->json([
+                'current_page' => 1,
+                'data' => [],
+                'last_page' => 1,
+                'total' => 0,
+            ]);
+        }
+
+        $bots = $team->message_bots()
             ->latest()
             ->paginate(min((int) $request->input('per_page', 20), 100));
 
@@ -32,7 +42,12 @@ class MessageBotController extends Controller
     {
         Gate::authorize('create', MessageBot::class);
 
-        $bot = $request->user()->currentTeam->message_bots()->create(array_merge($request->validated(), [
+        $team = $request->user()?->currentTeam;
+        if (! $team) {
+            return response()->json(['message' => 'No active team selected'], 422);
+        }
+
+        $bot = $team->message_bots()->create(array_merge($request->validated(), [
             'last_modified_by' => $request->user()->id,
         ]));
         

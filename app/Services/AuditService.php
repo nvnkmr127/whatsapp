@@ -19,7 +19,7 @@ class AuditService
 
         // Try to resolve Team ID and User ID from objects if provided
         if ($userId instanceof Model) {
-            $teamId = $userId->current_team_id ?? null;
+            $teamId = $userId->currentTeam?->id ?? (method_exists($userId, 'team') ? $userId->team?->id : null);
             $userId = $userId->id;
         } elseif (is_string($userId) && ! is_numeric($userId)) {
             $metadata['description'] = $userId;
@@ -27,25 +27,40 @@ class AuditService
         }
 
         if ($identifier instanceof Model) {
-            $teamId = $teamId ?? $identifier->team_id ?? null;
+            $teamId = $teamId ?? $identifier->currentTeam?->id ?? (method_exists($identifier, 'team') ? $identifier->team?->id : null);
+            if (! $userId && $identifier instanceof \App\Models\User) {
+                $userId = $identifier->id;
+            }
             $identifier = $identifier->email ?? $identifier->phone_number ?? $identifier->phone ?? $identifier->name ?? (string) $identifier;
         }
 
         // Final fallback for team_id from session
         if (! $teamId && auth()->check()) {
-            $teamId = auth()->user()->current_team_id;
+            $teamId = auth()->user()->currentTeam?->id;
         }
 
-        AuditLog::create([
-            'user_id' => $userId,
-            'team_id' => $teamId,
-            'event_type' => $event,
-            'identifier' => is_string($identifier) ? self::sanitizeUtf8($identifier) : self::jsonEncodeSafe($identifier),
-            'provider' => $provider,
-            'ip_address' => Request::ip(),
-            'user_agent' => Request::userAgent(),
-            'metadata' => self::sanitizeMetadata($metadata),
-        ]);
+        if ($teamId && ! \App\Models\Team::where('id', $teamId)->exists()) {
+            $teamId = null;
+        }
+
+        try {
+            AuditLog::create([
+                'user_id' => $userId,
+                'team_id' => $teamId,
+                'event_type' => $event,
+                'identifier' => is_string($identifier) ? self::sanitizeUtf8($identifier) : self::jsonEncodeSafe($identifier),
+                'provider' => $provider,
+                'ip_address' => Request::ip(),
+                'user_agent' => Request::userAgent(),
+                'metadata' => self::sanitizeMetadata($metadata),
+            ]);
+        } catch (\Throwable $e) {
+            \Illuminate\Support\Facades\Log::warning('Failed to write audit log: '.$e->getMessage(), [
+                'event' => $event,
+                'user_id' => $userId,
+                'team_id' => $teamId,
+            ]);
+        }
     }
 
     /**

@@ -13,7 +13,12 @@ class AutomationController extends Controller
     {
         Gate::authorize('viewAny', Automation::class);
 
-        $automations = $request->user()->currentTeam->automations()
+        $team = $request->user()?->currentTeam;
+        if (! $team) {
+            return response()->json([]);
+        }
+
+        $automations = $team->automations()
             ->withCount(['runs', 'steps'])
             ->get();
 
@@ -23,6 +28,11 @@ class AutomationController extends Controller
     public function store(Request $request)
     {
         Gate::authorize('create', Automation::class);
+
+        $team = $request->user()?->currentTeam;
+        if (! $team) {
+            return response()->json(['message' => 'No active team selected'], 422);
+        }
 
         $validated = $request->validate([
             'name' => 'required|string|max:255',
@@ -50,8 +60,8 @@ class AutomationController extends Controller
             ],
         ];
 
-        $automation = \Illuminate\Support\Facades\DB::transaction(function () use ($validated, $defaultText, $flowData, $request) {
-            $automation = $request->user()->currentTeam->automations()->create([
+        $automation = \Illuminate\Support\Facades\DB::transaction(function () use ($validated, $defaultText, $flowData, $team) {
+            $automation = $team->automations()->create([
                 'name' => $validated['name'],
                 'trigger_type' => $validated['trigger_type'],
                 'trigger_config' => [],

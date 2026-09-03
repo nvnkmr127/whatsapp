@@ -188,15 +188,15 @@ class AuthController extends Controller
 
     public function numbers(Request $request)
     {
-        $team = $request->user()->currentTeam;
+        $team = $request->user()?->currentTeam;
         
         // For now, returning the primary number. 
         // This can be expanded to return multiple if the schema evolves.
-        return response()->json([[
+        return response()->json($team ? [[
             'id' => $team->whatsapp_phone_number_id,
             'display_number' => $team->whatsapp_phone_display ?? 'Primary Number',
             'verified_name' => $team->whatsapp_verified_name ?? $team->name,
-        ]]);
+        ]] : []);
     }
 
     public function switchTeam(Request $request)
