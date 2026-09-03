@@ -133,7 +133,8 @@ class ContactManager extends Component
     public function render()
     {
         \Illuminate\Support\Facades\Gate::authorize('manage-contacts');
-        $teamId = Auth::user()->currentTeam->id;
+        $user = Auth::user();
+        $teamId = $user?->current_team_id ?? $user?->currentTeam?->id ?? $user?->personalTeam()?->id ?? $user?->allTeams()->first()?->id;
         $query = Contact::query()->where('team_id', $teamId);
 
         $search = is_string($this->search) ? trim($this->search) : '';
@@ -202,7 +203,10 @@ class ContactManager extends Component
             return null;
         }
 
-        return Contact::where('team_id', Auth::user()->currentTeam->id)
+        $user = Auth::user();
+        $teamId = $user?->current_team_id ?? $user?->currentTeam?->id ?? $user?->personalTeam()?->id ?? $user?->allTeams()->first()?->id;
+
+        return Contact::where('team_id', $teamId)
             ->with(['tags', 'category'])
             ->withCount(['messages', 'conversations', 'tags'])
             ->find($this->viewingContactId);
@@ -215,7 +219,10 @@ class ContactManager extends Component
             return null;
         }
 
-        return Contact::where('team_id', Auth::user()->currentTeam->id)->find($this->sourceContactId);
+        $user = Auth::user();
+        $teamId = $user?->current_team_id ?? $user?->currentTeam?->id ?? $user?->personalTeam()?->id ?? $user?->allTeams()->first()?->id;
+
+        return Contact::where('team_id', $teamId)->find($this->sourceContactId);
     }
 
     #[Computed]
@@ -225,7 +232,10 @@ class ContactManager extends Component
             return null;
         }
 
-        return Contact::where('team_id', Auth::user()->currentTeam->id)->find($this->targetContactId);
+        $user = Auth::user();
+        $teamId = $user?->current_team_id ?? $user?->currentTeam?->id ?? $user?->personalTeam()?->id ?? $user?->allTeams()->first()?->id;
+
+        return Contact::where('team_id', $teamId)->find($this->targetContactId);
     }
 
     public function viewContact($id)
@@ -709,7 +719,9 @@ class ContactManager extends Component
         $defaultCountryCode = get_setting('default_country_code', '+91');
 
         $headers = ['Name', 'Phone', 'Email', 'Tags'];
-        $customFields = \App\Models\ContactField::where('team_id', Auth::user()->currentTeam->id)->get();
+        $user = Auth::user();
+        $teamId = $user?->current_team_id ?? $user?->currentTeam?->id ?? $user?->personalTeam()?->id ?? $user?->allTeams()->first()?->id;
+        $customFields = \App\Models\ContactField::where('team_id', $teamId)->get();
 
         foreach ($customFields as $field) {
             $headers[] = $field->key;
