@@ -1891,8 +1891,6 @@ export default function ChatScreen({ navigation, route }: any) {
                   return;
                 }
 
-                console.log('[Voice Debug] Recording stopped. Local URI:', uri);
-
                 // Prepend locally
                 setMessages((m) => [...m, { kind: 'out', text: `🎙️ Voice message (${timeStr})`, time: 'now', status: 'queued', media_url: uri, media_type: 'audio' }]);
 
@@ -1905,9 +1903,7 @@ export default function ChatScreen({ navigation, route }: any) {
                   } as any);
                   formData.append('is_voice_note', 'true');
 
-                  console.log('[Voice Debug] Uploading file to /v1/mobile/media/upload...');
                   const uploadRes = await api.post('/v1/mobile/media/upload', formData, undefined, 120000);
-                  console.log('[Voice Debug] Upload response received:', uploadRes);
 
                   const sendPayload = {
                     type: 'audio',
@@ -1915,10 +1911,7 @@ export default function ChatScreen({ navigation, route }: any) {
                     content: `Voice message (${timeStr})`,
                     is_voice_note: true,
                   };
-                  console.log('[Voice Debug] Posting message to conversation messages endpoint:', sendPayload);
-                  
                   const sendRes = await api.post(`/v1/mobile/conversations/${conversationId}/messages`, sendPayload, undefined, 120000);
-                  console.log('[Voice Debug] Send message response received:', sendRes);
 
                   // SendMessageJob runs inline, so the response carries the real
                   // outcome. The endpoint returns 200 even when WhatsApp rejected the

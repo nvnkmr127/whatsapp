@@ -51,7 +51,7 @@ export async function setupAndroidChannel() {
   await Notifications.deleteNotificationChannelAsync('default').catch(() => {});
   await Notifications.deleteNotificationChannelAsync('calls').catch(() => {});
 
-  const defaultChannel = await Notifications.setNotificationChannelAsync('default', {
+  await Notifications.setNotificationChannelAsync('default', {
     name: 'Watxio Messages',
     importance: Notifications.AndroidImportance.MAX,
     vibrationPattern: [0, 250, 250, 250],
@@ -60,9 +60,8 @@ export async function setupAndroidChannel() {
     enableVibrate: true,
     showBadge: true,
   });
-  console.log('[FCM DEBUG] default channel:', JSON.stringify(defaultChannel));
 
-  const callsChannel = await Notifications.setNotificationChannelAsync('calls', {
+  await Notifications.setNotificationChannelAsync('calls', {
     name: 'Incoming Calls',
     importance: Notifications.AndroidImportance.MAX,
     vibrationPattern: [0, 500, 500, 500],
@@ -72,56 +71,34 @@ export async function setupAndroidChannel() {
     showBadge: false,
     bypassDnd: true,
   });
-  console.log('[FCM DEBUG] calls channel:', JSON.stringify(callsChannel));
-
-  // Log all existing channels for verification
-  const allChannels = await Notifications.getNotificationChannelsAsync();
-  console.log('[FCM DEBUG] All notification channels on device:', JSON.stringify(allChannels?.map((c: any) => ({ id: c.id, importance: c.importance, sound: c.sound }))));
 }
 
 // ── Permission + token registration ─────────────────────────────────────────
 export async function registerForPushNotifications(): Promise<string | null> {
-  console.log('[FCM DEBUG] registerForPushNotifications() called');
-  console.log('[FCM DEBUG] Platform:', Platform.OS);
-  console.log('[FCM DEBUG] Is physical device:', Device.isDevice);
-  console.log('[FCM DEBUG] Device model:', Device.modelName);
-  console.log('[FCM DEBUG] OS version:', Device.osVersion);
-
   // Must be a physical device for iOS (simulators < iOS 16.4 don't get push tokens reliably). Android emulators work fine.
   if (!Device.isDevice && Platform.OS === 'ios') {
-    console.log('[FCM DEBUG] Skipping — not a real device (iOS Simulator)');
     return null;
   }
 
   // Setup Android channels first
-  console.log('[FCM DEBUG] Setting up Android notification channels...');
   await setupAndroidChannel();
-  console.log('[FCM DEBUG] Android channels setup done');
 
   // Ask for permission
   const { status: existingStatus } = await Notifications.getPermissionsAsync();
-  console.log('[FCM DEBUG] Existing notification permission status:', existingStatus);
   let finalStatus = existingStatus;
 
   if (existingStatus !== 'granted') {
-    console.log('[FCM DEBUG] Requesting notification permission...');
     const { status } = await Notifications.requestPermissionsAsync();
     finalStatus = status;
-    console.log('[FCM DEBUG] Permission request result:', status);
   }
 
   if (finalStatus !== 'granted') {
-    console.warn('[FCM DEBUG] ❌ Permission DENIED — notifications will not work.');
+    console.warn('[FCM] Permission denied — notifications will not work.');
     return null;
   }
 
-  console.log('[FCM DEBUG] ✅ Permission granted');
-
   try {
-    console.log('[FCM DEBUG] Calling getDevicePushTokenAsync()...');
     const tokenData = await Notifications.getDevicePushTokenAsync();
-    console.log('[FCM DEBUG] Token type:', tokenData.type);
-    console.log('[FCM DEBUG] Raw token data:', JSON.stringify(tokenData.data));
 
     // On Android tokenData.data is a string (FCM token).
     // On iOS tokenData.data is an object { deviceToken: string }.
@@ -130,11 +107,9 @@ export async function registerForPushNotifications(): Promise<string | null> {
       : (tokenData.data as any)?.deviceToken ?? '';
 
     if (!fcmToken) {
-      console.error('[FCM DEBUG] ❌ Could not extract token string from tokenData:', JSON.stringify(tokenData));
+      console.error('[FCM] Could not extract token string from tokenData:', JSON.stringify(tokenData));
       return null;
     }
-
-    console.log('[FCM DEBUG] ✅ Token obtained (first 30 chars):', fcmToken.substring(0, 30) + '...');
 
     // Save to global state so we know the token during session / logout
     store.set({ fcmToken });
@@ -143,21 +118,18 @@ export async function registerForPushNotifications(): Promise<string | null> {
     if (api.getToken()) {
       const backendOk = await sendTokenToBackend(fcmToken);
       if (!backendOk) {
-        console.warn('[FCM DEBUG] ⚠️ Device token was generated but could not be saved to the server.');
+        console.warn('[FCM] Device token was generated but could not be saved to the server.');
       }
-    } else {
-      console.log('[FCM DEBUG] User not authenticated yet — backend token registration deferred until login.');
     }
 
     return fcmToken;
   } catch (e: any) {
-    console.error('[FCM DEBUG] ❌ Failed to get device push token:', e?.message ?? e);
     const errorMessage = e?.message || JSON.stringify(e);
-    
-    // Ignore transient SERVICE_NOT_AVAILABLE errors as push notifications 
+
+    // Ignore transient SERVICE_NOT_AVAILABLE errors as push notifications
     // often still work due to previous successful token registrations.
     if (!errorMessage.includes('SERVICE_NOT_AVAILABLE')) {
-      console.warn('[FCM DEBUG] ⚠️ Push notification token generation error:', errorMessage);
+      console.warn('[FCM] Push notification token generation error:', errorMessage);
     }
     return null;
   }
@@ -168,7 +140,6 @@ export async function registerForPushNotifications(): Promise<string | null> {
 async function sendTokenToBackend(token: string): Promise<boolean> {
   const authToken = api.getToken();
   if (!authToken) {
-    console.log('[FCM DEBUG] Skipping sendTokenToBackend — no auth token available.');
     return false;
   }
 
@@ -177,19 +148,11 @@ async function sendTokenToBackend(token: string): Promise<boolean> {
     platform: Platform.OS,
     device_id: Device.modelName ?? undefined,
   };
-  const endpoint = '/v1/mobile/auth/fcm-token';
-  console.log('[FCM DEBUG] Sending token to backend:', api.getBaseUrl() + endpoint);
-  console.log('[FCM DEBUG] Payload:', JSON.stringify({ ...payload, token: token.substring(0, 20) + '...' }));
   try {
-    const response = await api.post(endpoint, payload);
-    console.log('[FCM DEBUG] ✅ Token registered with backend. Response:', JSON.stringify(response));
+    await api.post('/v1/mobile/auth/fcm-token', payload);
     return true;
   } catch (e: any) {
-    console.error('[FCM DEBUG] ❌ Failed to register token with backend');
-    console.error('[FCM DEBUG] Error:', e?.message ?? e);
-    console.error('[FCM DEBUG] Status:', e?.status);
-    console.error('[FCM DEBUG] Base URL was:', api.getBaseUrl());
-    console.error('[FCM DEBUG] Full error:', JSON.stringify(e));
+    console.error('[FCM] Failed to register token with backend:', e?.message ?? e);
     return false;
   }
 }
@@ -224,11 +187,9 @@ export function useNotificationNavigation(navRef: any) {
   const responseListener = useRef<Notifications.EventSubscription | null>(null);
 
   useEffect(() => {
-    // Foreground notification received (just logging — handler above shows it)
+    // Foreground notification received — handler above shows it.
     notificationListener.current = Notifications.addNotificationReceivedListener(
-      (notification: any) => {
-        console.log('[FCM] Foreground notification:', notification.request.content.data);
-      }
+      () => {}
     );
 
     // User tapped a notification (works from background or killed state)

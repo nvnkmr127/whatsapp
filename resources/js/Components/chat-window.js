@@ -362,7 +362,6 @@ export default (wire, conversationId, teamId, userId, showTransferModal, showInt
     },
 
     async startRecording() {
-        console.log('[VN:1] startRecording() called');
         if (!navigator.mediaDevices?.getUserMedia) {
             console.error('[VN:1] FAIL — mediaDevices.getUserMedia not available');
             window.dispatchEvent(new CustomEvent('notify', { detail: { message: 'Microphone not supported in this browser.', type: 'error' } }));
@@ -372,7 +371,6 @@ export default (wire, conversationId, teamId, userId, showTransferModal, showInt
         let stream;
         try {
             stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-            console.log('[VN:2] Got mic stream:', stream);
         } catch (err) {
             console.error('[VN:2] FAIL — getUserMedia error:', err.name, err.message);
             const msg = err.name === 'NotAllowedError'
@@ -395,23 +393,12 @@ export default (wire, conversationId, teamId, userId, showTransferModal, showInt
         const ext      = baseMime.includes('ogg') ? 'ogg' : 'webm';
         const fileName = `voice-note.${ext}`;
 
-        console.log('[VN:3] MIME detection:', {
-            supportedMime,
-            baseMime,
-            ext,
-            fileName,
-            allSupported: preferredTypes.map(t => ({ type: t, supported: MediaRecorder.isTypeSupported(t) }))
-        });
-
         this.mediaRecorder = new MediaRecorder(stream, mimeOptions);
         this.audioChunks = [];
-
-        console.log('[VN:4] MediaRecorder created. State:', this.mediaRecorder.state, '| mimeType:', this.mediaRecorder.mimeType);
 
         this.mediaRecorder.ondataavailable = (e) => {
             if (e.data && e.data.size > 0) {
                 this.audioChunks.push(e.data);
-                console.log('[VN:5] chunk received — size:', e.data.size, '| total chunks:', this.audioChunks.length);
             }
         };
 
@@ -420,11 +407,9 @@ export default (wire, conversationId, teamId, userId, showTransferModal, showInt
         };
 
         this.mediaRecorder.onstop = async () => {
-            console.log('[VN:6] onstop fired. shouldSend:', this.shouldSendRecording, '| chunks:', this.audioChunks.length);
             stream.getTracks().forEach(track => track.stop());
 
             if (!this.shouldSendRecording) {
-                console.log('[VN:6] shouldSendRecording=false — discarding');
                 return;
             }
 
@@ -437,33 +422,19 @@ export default (wire, conversationId, teamId, userId, showTransferModal, showInt
             const audioBlob = new Blob(this.audioChunks, { type: baseMime });
             const audioFile = new File([audioBlob], fileName, { type: baseMime });
 
-            console.log('[VN:7] File built:', {
-                name: audioFile.name,
-                size: audioFile.size,
-                type: audioFile.type,
-                blobSize: audioBlob.size,
-            });
-
             if (audioFile.size < 100) {
                 console.error('[VN:7] FAIL — file is suspiciously tiny (<100 bytes). Recording may have failed.');
             }
 
             window.dispatchEvent(new CustomEvent('notify', { detail: { message: 'Uploading voice note…', type: 'info' } }));
-            console.log('[VN:8] Starting wire.upload("voiceNote", ...)');
 
             wire.upload('voiceNote', audioFile,
                 (uploadedFilename) => {
-                    console.log('[VN:9] Upload complete! uploadedFilename:', uploadedFilename);
-                    console.log('[VN:10] Calling wire.sendVoiceNote(uploadedFilename)...');
                     wire.sendVoiceNote(uploadedFilename);
-                    console.log('[VN:11] wire.sendVoiceNote() called (Livewire roundtrip in flight)');
                 },
                 (error) => {
                     console.error('[VN:9] FAIL — wire.upload error:', error);
                     window.dispatchEvent(new CustomEvent('notify', { detail: { message: 'Failed to upload voice note. Please try again.', type: 'error' } }));
-                },
-                (progress) => {
-                    console.log('[VN:upload-progress]', progress + '%');
                 }
             );
         };
@@ -471,7 +442,6 @@ export default (wire, conversationId, teamId, userId, showTransferModal, showInt
         this.mediaRecorder.start(1000);
         this.isRecording = true;
         this.shouldSendRecording = false;
-        console.log('[VN:4] Recording started. State:', this.mediaRecorder.state);
 
         let sec = 0;
         this.recInterval = setInterval(() => {
@@ -483,7 +453,6 @@ export default (wire, conversationId, teamId, userId, showTransferModal, showInt
     },
 
     stopRecording(send = true) {
-        console.log('[VN:stop] stopRecording() called. send:', send, '| recorder state:', this.mediaRecorder?.state);
         this.isRecording = false;
         this.shouldSendRecording = send;
         if (this.mediaRecorder && this.mediaRecorder.state !== 'inactive') {

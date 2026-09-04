@@ -15,8 +15,6 @@ export function initializeFCM() {
         // Request permission and get token
         Notification.requestPermission().then((permission) => {
             if (permission === 'granted') {
-                console.log('Notification permission granted.');
-                
                 // Register service worker (config is now injected dynamically via Laravel route)
                 navigator.serviceWorker.register('/firebase-messaging-sw.js')
                 .then((registration) => {
@@ -51,8 +49,6 @@ export function initializeFCM() {
         }
 
         onMessage(messaging, (payload) => {
-            console.log('Message received in foreground. ', payload);
-            
             // Play custom notification sound
             try {
                 const audio = new Audio('/sounds/notification.mp3');
@@ -91,7 +87,6 @@ function sendTokenToServer(token) {
         platform: 'web',
         device_id: navigator.userAgent // use userAgent as a basic device id for web
     }).then(response => {
-        console.log('FCM token registered successfully');
         localStorage.setItem('fcm_token', token);
     }).catch(error => {
         console.error('Error registering FCM token:', error);

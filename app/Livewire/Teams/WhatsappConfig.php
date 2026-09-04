@@ -1294,8 +1294,6 @@ class WhatsappConfig extends Component
         $team = \Illuminate\Support\Facades\Auth::user()->currentTeam->fresh();
         $state = $team->whatsapp_setup_state;
 
-        \Illuminate\Support\Facades\Log::debug("SetupProgress Debug: Team ID {$team->id}, State Type: " . gettype($state) . (is_object($state) ? " (Class: " . get_class($state) . ")" : "") . ", Value: " . json_encode($state));
-
         $steps = [
             [
                 'id' => 'connect_account',

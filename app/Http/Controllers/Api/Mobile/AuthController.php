@@ -6,16 +6,11 @@ use App\Http\Controllers\Controller;
 use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
-use Illuminate\Support\Facades\Log;
 
 class AuthController extends Controller
 {
     public function login(Request $request)
     {
-        if (app()->environment('local')) {
-            Log::debug('[DEBUG] [MOBILE_AUTH] Login attempt', ['email' => $request->email]);
-        }
-
         $request->validate([
             'email' => 'required|email',
             'password' => 'required|string',
@@ -29,10 +24,6 @@ class AuthController extends Controller
         }
 
         $token = $user->createToken('mobile')->plainTextToken;
-
-        if (app()->environment('local')) {
-            Log::debug('[DEBUG] [MOBILE_AUTH] Login successful', ['user_id' => $user->id]);
-        }
 
         $teams = $user->allTeams()
             ->map(fn ($t) => ['id' => $t->id, 'name' => $t->name])
@@ -64,15 +55,6 @@ class AuthController extends Controller
     {
         /** @var User $user */
         $user = $request->user();
-
-        if (app()->environment('local')) {
-            Log::debug('[DEBUG] [MOBILE_AUTH] /me endpoint reached', [
-                'user_id' => $user->id,
-                'auth_via_token' => $request->user()->currentAccessToken() !== null,
-                'token_abilities' => $request->user()->currentAccessToken()?->abilities,
-                'is_stateful' => $request->attributes->has('sanctum'),
-            ]);
-        }
 
         $teams = $user->allTeams()
             ->map(fn ($t) => ['id' => $t->id, 'name' => $t->name])
@@ -141,13 +123,6 @@ class AuthController extends Controller
     {
         /** @var User $user */
         $user = $request->user();
-
-        if (app()->environment('local')) {
-            Log::debug('[DEBUG] [MOBILE_AUTH] Finalize pairing reached', [
-                'user_id' => $user->id,
-                'device' => $request->header('User-Agent'),
-            ]);
-        }
 
         // Potential for state update here (e.g. marking device as 'paired')
         // For now, we return the same structure as 'me' to allow immediate login.

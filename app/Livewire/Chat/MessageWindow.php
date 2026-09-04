@@ -489,39 +489,17 @@ class MessageWindow extends Component
 
     public function sendVoiceNote($audioFile)
     {
-        Log::debug('[VN:B1] sendVoiceNote() called', [
-            'audioFile_raw' => $audioFile,
-            'audioFile_type' => gettype($audioFile),
-            'voiceNote_property_set' => ! is_null($this->voiceNote),
-            'conversationId' => $this->conversationId,
-        ]);
-
         // Support array wrap in case Livewire passes it as an array
         if (is_array($audioFile)) {
             $audioFile = head($audioFile);
-            Log::debug('[VN:B1] audioFile was array, unwrapped to: '.$audioFile);
         }
 
         // Try resolving from local property first, fallback to manual creation from temporary file path
         $file = $this->voiceNote;
-        Log::debug('[VN:B2] $this->voiceNote resolved', [
-            'is_null' => is_null($file),
-            'class' => $file ? get_class($file) : 'null',
-        ]);
 
         if (! $file && $audioFile) {
-            Log::debug('[VN:B3] voiceNote property null, trying createFromLivewire fallback with: '.$audioFile);
             try {
                 $file = TemporaryUploadedFile::createFromLivewire($audioFile);
-                Log::debug('[VN:B3] createFromLivewire success', [
-                    'class' => get_class($file),
-                    'originalName' => $file->getClientOriginalName(),
-                    'size' => $file->getSize(),
-                    'mimeType' => $file->getMimeType(),
-                    'clientMimeType' => $file->getClientMimeType(),
-                    'realPath' => $file->getRealPath(),
-                    'tmpPath' => $file->getPathname(),
-                ]);
             } catch (\Exception $e) {
                 Log::error('[VN:B3] FAIL — createFromLivewire threw exception: '.$e->getMessage(), [
                     'audioFile' => $audioFile,
@@ -545,11 +523,6 @@ class MessageWindow extends Component
             return;
         }
 
-        Log::debug('[VN:B4] File and conversation OK', [
-            'conversationId' => $this->conversation->id,
-            'contact_id' => $this->conversation->contact_id,
-        ]);
-
         // Resolve target disk
         $configuredDisk = config('filesystems.default');
         $disk = ($configuredDisk === 'local') ? 'public' : $configuredDisk;
@@ -557,13 +530,6 @@ class MessageWindow extends Component
         // Resolve actual uploaded extension
         $uploadedExt = strtolower(pathinfo($file->getClientOriginalName(), PATHINFO_EXTENSION));
         $srcExt = in_array($uploadedExt, ['ogg', 'webm', 'mp3', 'mp4', 'm4a', 'opus']) ? $uploadedExt : 'ogg';
-
-        Log::debug('[VN:B5] Extension resolved', [
-            'uploadedExt' => $uploadedExt,
-            'srcExt' => $srcExt,
-            'file_size' => $file->getSize(),
-            'realPath' => $file->getRealPath(),
-        ]);
 
         // ── FFmpeg transcoding ───────────────────────────────────────────────
         // Chrome records audio/webm. WhatsApp only accepts audio/ogg (opus),
@@ -600,12 +566,6 @@ class MessageWindow extends Component
             $srcTmp = sys_get_temp_dir().'/'.Str::random(20).'.webm';
             file_put_contents($srcTmp, $file->get());
 
-            Log::debug('[VN:B5a] webm detected — attempting FFmpeg transcoding via Process', [
-                'ffmpeg' => $ffmpegBin,
-                'src' => $srcTmp,
-                'target' => $tmpOgg,
-            ]);
-
             try {
                 $process = new Process([
                     $ffmpegBin,
@@ -626,9 +586,6 @@ class MessageWindow extends Component
                 @unlink($srcTmp); // ffmpeg has finished reading the source
 
                 if ($process->isSuccessful() && file_exists($tmpOgg) && filesize($tmpOgg) > 100) {
-                    Log::debug('[VN:B5a] FFmpeg transcoding SUCCESS', [
-                        'ogg_size' => filesize($tmpOgg),
-                    ]);
                     $srcPath = $tmpOgg;
                     $ext = 'ogg';
                     $mimeType = 'audio/ogg; codecs=opus';
@@ -664,12 +621,6 @@ class MessageWindow extends Component
         }
 
         $fileName = Str::random(40).'.'.$ext;
-        Log::debug('[VN:B6] Calling storeAs()', [
-            'directory' => 'voice-notes',
-            'fileName' => $fileName,
-            'disk' => $disk,
-            'mimeType' => $mimeType,
-        ]);
 
         if ($convertedTmp) {
             // Store from the converted temp file using Laravel's File wrapper
@@ -688,13 +639,6 @@ class MessageWindow extends Component
 
             return;
         }
-
-        Log::debug('[VN:B7] File stored on disk', [
-            'path' => $path,
-            'ext' => $ext,
-            'mimeType' => $mimeType,
-            'disk' => $disk,
-        ]);
 
         $message = Message::create([
             'team_id' => Auth::user()->currentTeam->id,

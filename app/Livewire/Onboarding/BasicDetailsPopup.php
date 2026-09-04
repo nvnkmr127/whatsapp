@@ -19,7 +19,6 @@ class BasicDetailsPopup extends Component
 
     public function mount()
     {
-        \Illuminate\Support\Facades\Log::debug('BasicDetailsPopup::mount started');
         $user = Auth::user();
         if (! $user) {
             return;
@@ -42,9 +41,6 @@ class BasicDetailsPopup extends Component
         // SUPER ADMINS and NON-OWNER team members are excluded from this onboarding flow.
         if (! $user->isSuperAdmin() && $team && $user->ownsTeam($team) && (empty($user->company_name) || str_ends_with($team->name, "'s Team"))) {
             $this->isOpen = true;
-            \Illuminate\Support\Facades\Log::debug('BasicDetailsPopup opening: company missing or default team name', [
-                'user_id' => $user->id,
-            ]);
         }
 
         $this->phone = $user->phone;
