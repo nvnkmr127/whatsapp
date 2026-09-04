@@ -275,7 +275,8 @@ class ConversationController extends Controller
 
         // Ensure assignee is in the team
         $assignee = \App\Models\User::findOrFail($assigneeId);
-        if ($assignee->currentTeam?->id !== $conversation->team_id) {
+        $team = $request->user()->currentTeam ?? $conversation->team;
+        if (! $team || ! $assignee->belongsToTeam($team)) {
             return response()->json(['error' => 'Assignee must be a member of the same team.'], 422);
         }
 

@@ -186,7 +186,7 @@ class CallPermissionController extends Controller
             $whatsappService = new WhatsAppService($team);
 
             $response = $whatsappService->initiateCallWithPermission(
-                $contact->phone,
+                $contact->phone_number,
                 $request->permission_id,
                 $request->only(['metadata'])
             );

@@ -38,11 +38,14 @@ class ExternalConversationController extends Controller
             return $this->success([], 'No conversation found.');
         }
 
-        $conversation = Conversation::where('contact_id', $contact->id)->with([
-            'messages' => function ($q) {
-                $q->latest()->take(50);
-            },
-        ])->first();
+        $conversation = Conversation::where('contact_id', $contact->id)
+            ->latest('last_message_at')
+            ->latest('id')
+            ->with([
+                'messages' => function ($q) {
+                    $q->latest()->take(50);
+                },
+            ])->first();
 
         if (! $conversation) {
             return $this->success([], 'No conversation found.');
@@ -148,21 +151,30 @@ class ExternalConversationController extends Controller
         ]);
 
         // Dispatch Job
-        \App\Jobs\SendMessageJob::dispatch(
-            $team->id,
-            $request->phone_number,
-            $request->type,
-            $request->type === 'text' ? $request->message : ($request->variables ?? []),
-            $request->template_name ?? null,
-            $request->language ?? 'en_US',
-            $message->id,
-            null,
-            $request->header_variables ?? [],
-            $request->footer_variables ?? []
-        );
+        try {
+            \App\Jobs\SendMessageJob::dispatch(
+                $team->id,
+                $request->phone_number,
+                $request->type,
+                $request->type === 'text' ? $request->message : ($request->variables ?? []),
+                $request->template_name ?? null,
+                $request->language ?? 'en_US',
+                $message->id,
+                null,
+                $request->header_variables ?? [],
+                $request->footer_variables ?? []
+            );
+        } catch (\Throwable $e) {
+            $message->update(['status' => 'failed', 'error_message' => $e->getMessage()]);
+            return $this->error('Failed to dispatch message: ' . $e->getMessage(), 500);
+        }
 
         return $this->success(
-            ['status' => 'queued'],
+            [
+                'status' => 'queued',
+                'message_id' => $message->id,
+                'conversation_id' => $conversation->id,
+            ],
             'Message queued for sending.',
             202
         );

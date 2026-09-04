@@ -1134,6 +1134,11 @@ class WhatsAppService
         }
     }
 
+    public function sendTemplateMessage($whatsappNumberId, $to, $templateName, $language = 'en_US', $bodyParams = [])
+    {
+        return $this->sendTemplate($to, $templateName, $language, $bodyParams);
+    }
+
     public function sendTemplate($to, $templateName, $language = 'en_US', $bodyParams = [], $headerParams = [], $footerParams = [], $campaignId = null, $existingMessage = null)
     {
         $this->verifyReadyToSend();

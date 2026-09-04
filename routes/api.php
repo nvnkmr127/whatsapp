@@ -21,6 +21,7 @@ Route::prefix('v1/mobile/auth')->middleware('mobile_logger')->group(function () 
         Route::get('/teams', [\App\Http\Controllers\Api\Mobile\AuthController::class, 'teams']);
         Route::get('/numbers', [\App\Http\Controllers\Api\Mobile\AuthController::class, 'numbers']);
         Route::post('/finalize', [\App\Http\Controllers\Api\Mobile\AuthController::class, 'finalize']);
+        Route::post('/switch-team', [\App\Http\Controllers\Api\Mobile\AuthController::class, 'switchTeam']);
         Route::post('/logout', [\App\Http\Controllers\Api\Mobile\AuthController::class, 'logout']);
         Route::post('/profile', [\App\Http\Controllers\Api\Mobile\AuthController::class, 'updateProfile']);
         Route::post('/fcm-token', [\App\Http\Controllers\Api\Mobile\FCMTokenController::class, 'store']);
@@ -93,7 +94,7 @@ Route::group(['middleware' => ['auth:sanctum', 'tenant', 'throttle:api', \App\Ht
 
         // Dashboard
         // Moved /auth/me, teams, numbers etc. to the non-tenant group above
-        Route::post('/auth/switch-team', [\App\Http\Controllers\Api\Mobile\AuthController::class, 'switchTeam']);
+        Route::post('/auth/switch-team', [\App\Http\Controllers\Api\Mobile\AuthController::class, 'switchTeam'])->withoutMiddleware(['tenant']);
 
         // Presence (Active Chat State)
         Route::post('/presence/heartbeat', [\App\Http\Controllers\Api\Mobile\PresenceController::class, 'heartbeat']);

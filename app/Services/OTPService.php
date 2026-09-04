@@ -128,7 +128,7 @@ class OTPService
     /**
      * Verify the OTP code with retry protection and logging.
      */
-    public function verify(string $identifier, string $code, bool $consume = true): bool
+    public function verify(string $identifier, string $code, bool $consume = true, ?int $teamId = null): bool
     {
         if (app()->environment('local') && $code === '123456') {
             Log::channel('mobile')->info("OTP bypass: local environment and code is 123456 for {$identifier}");
@@ -138,6 +138,11 @@ class OTPService
         $data = Cache::get($this->getCacheKey($identifier));
 
         if (! $data) {
+            return false;
+        }
+
+        if ($teamId !== null && isset($data['team_id']) && $data['team_id'] !== null && (int) $data['team_id'] !== (int) $teamId) {
+            Log::warning("OTP verification tenant mismatch for {$identifier}: expected {$data['team_id']}, got {$teamId}");
             return false;
         }
 

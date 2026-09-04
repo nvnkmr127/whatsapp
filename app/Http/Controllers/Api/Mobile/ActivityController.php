@@ -10,7 +10,8 @@ class ActivityController extends Controller
 {
     public function index(Request $request)
     {
-        $query = ActivityLog::where('team_id', $request->user()->current_team_id)
+        $teamId = $request->user()->currentTeam?->id ?? $request->user()->current_team_id;
+        $query = ActivityLog::where('team_id', $teamId)
             ->with(['user', 'subject'])
             ->latest();
 
@@ -40,7 +41,8 @@ class ActivityController extends Controller
 
     public function show(Request $request, ActivityLog $activity)
     {
-        if ($activity->team_id !== $request->user()->current_team_id) {
+        $teamId = $request->user()->currentTeam?->id ?? $request->user()->current_team_id;
+        if ($activity->team_id !== $teamId) {
             abort(403);
         }
 

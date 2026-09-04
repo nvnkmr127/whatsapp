@@ -33,8 +33,9 @@ class OTPVerificationController extends Controller
 
         $phone = $request->phone;
         $code = $request->code;
+        $teamId = $request->user()?->currentTeam?->id;
 
-        if ($this->otpService->verify($phone, $code)) {
+        if ($this->otpService->verify($phone, $code, true, $teamId)) {
             return $this->success([], 'OTP verified successfully');
         }
 

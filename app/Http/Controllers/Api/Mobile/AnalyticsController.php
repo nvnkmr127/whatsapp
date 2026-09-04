@@ -97,6 +97,7 @@ class AnalyticsController extends Controller
             ],
             'summary' => [
                 'sent_today' => $sentToday,
+                'total_period' => $outboundCount,
                 'total_30d' => $outboundCount,
             ],
             'messages_30d' => [

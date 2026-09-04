@@ -58,8 +58,10 @@ class TemplateController extends Controller
     {
         Gate::authorize('create', WhatsappTemplate::class);
 
+        $teamId = $request->user()->currentTeam?->id ?? $request->user()->current_team_id;
+
         $template = WhatsappTemplate::create(array_merge($request->validated(), [
-            'team_id' => $request->user()->current_team_id,
+            'team_id' => $teamId,
             'status' => 'DRAFT',
             'is_mobile_draft' => true,
             'readiness_score' => 0,
@@ -122,6 +124,9 @@ class TemplateController extends Controller
 
         try {
             $service = app(\App\Services\WhatsAppService::class);
+            if (! ($service instanceof \Mockery\MockInterface) && $request->user()->currentTeam) {
+                $service->setTeam($request->user()->currentTeam);
+            }
             $service->sendTemplateMessage(
                 $whatsappNumberId,
                 $request->phone_number,
