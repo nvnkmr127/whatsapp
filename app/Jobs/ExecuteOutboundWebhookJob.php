@@ -11,6 +11,7 @@ use Illuminate\Queue\InteractsWithQueue;
 use Illuminate\Queue\SerializesModels;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Str;
 
 class ExecuteOutboundWebhookJob implements ShouldQueue
 {
@@ -26,11 +27,16 @@ class ExecuteOutboundWebhookJob implements ShouldQueue
 
     public $backoff = [10, 60, 300];
 
+    // Stable across retries (set once at dispatch) so the customer can dedup a
+    // delivery that was re-POSTed after a crash between send and record-save.
+    public $deliveryId;
+
     public function __construct(int $subscriptionId, string $eventType, array $data)
     {
         $this->subscriptionId = $subscriptionId;
         $this->eventType = $eventType;
         $this->data = $data;
+        $this->deliveryId = (string) Str::uuid();
         $this->onQueue('webhooks');
     }
 
@@ -48,16 +54,16 @@ class ExecuteOutboundWebhookJob implements ShouldQueue
             'data' => $this->data,
         ];
 
-        $signature = null;
+        $headers = ['X-Webhook-ID' => $this->deliveryId];
         if ($subscription->secret) {
-            $signature = 'sha256='.hash_hmac('sha256', json_encode($payload), $subscription->secret);
+            $headers['X-Webhook-Signature'] = 'sha256='.hash_hmac('sha256', json_encode($payload), $subscription->secret);
         }
 
         $attemptedAt = now();
 
         try {
             $response = Http::timeout(10)
-                ->withHeaders($signature ? ['X-Webhook-Signature' => $signature] : [])
+                ->withHeaders($headers)
                 ->post($subscription->url, $payload);
 
             WebhookDelivery::create([

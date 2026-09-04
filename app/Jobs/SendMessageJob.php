@@ -223,9 +223,11 @@ class SendMessageJob
             if (! empty($response['error'])) {
                 $errorCode = $response['error']['error']['code'] ?? $response['error']['code'] ?? null;
 
-                // Permanent failures (Policy)
+                // Permanent failures (Policy) — mark failed so the message doesn't
+                // sit in 'sent'/'queued' forever with no error surfaced to the user.
                 if (in_array($errorCode, [131047, 131051])) {
                     Log::warning("SendMessageJob: Policy failure for {$this->phone}. Code: {$errorCode}");
+                    $this->markMessageFailed("Policy failure (code {$errorCode}). Re-engagement/24-hour window or messaging limit — check WhatsApp quality rating.");
 
                     return;
                 }
@@ -252,6 +254,8 @@ class SendMessageJob
             Log::error("Failed to send message to {$this->phone}: ".$e->getMessage());
 
             if (str_contains($e->getMessage(), 'Policy UC-03') || str_contains($e->getMessage(), '24-hour window')) {
+                $this->markMessageFailed('Outside the 24-hour customer service window. Use an approved template to re-engage this contact.');
+
                 return;
             }
 

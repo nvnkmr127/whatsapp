@@ -84,12 +84,13 @@ class ProcessWebhookJob implements ShouldQueue
             $eventId = $change['messages'][0]['id'] ?? $change['statuses'][0]['id'] ?? null;
             if ($eventId) {
                 $cacheKey = "whatsapp_processed_event:{$eventId}";
-                if (\Illuminate\Support\Facades\Cache::has($cacheKey)) {
+                // Atomic check-and-set: Cache::add only succeeds if the key is
+                // absent, so two concurrent workers can't both pass the guard.
+                if (! \Illuminate\Support\Facades\Cache::add($cacheKey, true, 86400)) {
                     Log::info("WhatsApp Webhook: Skipping duplicate event {$eventId} for Payload {$this->payloadId}");
                     $payloadRecord->update(['status' => 'processed', 'error_message' => 'SKIPPED_DUPLICATE']);
                     return;
                 }
-                \Illuminate\Support\Facades\Cache::put($cacheKey, true, 86400); // 24 hour TTL
             }
 
             $metadata = $change['metadata'] ?? [];

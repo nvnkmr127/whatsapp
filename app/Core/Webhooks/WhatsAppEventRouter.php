@@ -124,7 +124,7 @@ class WhatsAppEventRouter
 
                 $this->eventBus->publish('whatsapp_events', 'message.inbound', $payload, $this->teamId);
             } finally {
-                // Lock released by timeout or GC
+                $lock->release();
             }
         }
     }

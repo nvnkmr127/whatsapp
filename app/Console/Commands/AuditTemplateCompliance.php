@@ -13,7 +13,7 @@ class AuditTemplateCompliance extends Command
      *
      * @var string
      */
-    protected $signature = 'whatsapp:audit-compliance {--fix : Auto-fix manageable issues (not implemented yet)}';
+    protected $signature = 'whatsapp:audit-compliance';
 
     /**
      * The console command description.

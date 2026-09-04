@@ -110,6 +110,50 @@ class WhatsAppPermissionErrorTest extends TestCase
     }
 
     /** @test */
+    public function it_marks_message_failed_on_policy_error_code_instead_of_leaving_it_stuck()
+    {
+        Http::fake([
+            '*' => Http::response([
+                'error' => [
+                    'message' => 'Re-engagement message policy violation',
+                    'code' => 131047,
+                ],
+            ], 400),
+        ]);
+
+        $this->mock(\App\Services\PolicyService::class, function ($mock) {
+            $mock->shouldReceive('canSendFreeMessage')->andReturn(true);
+        });
+
+        $phone = '+911234567890';
+        $contact = \App\Models\Contact::factory()->create([
+            'team_id' => $this->team->id,
+            'phone_number' => $phone,
+            'last_interaction_at' => now(),
+            'opt_in_status' => 'opted_in',
+        ]);
+        $conversation = \App\Models\Conversation::factory()->create(['team_id' => $this->team->id, 'contact_id' => $contact->id]);
+
+        $message = Message::create([
+            'team_id' => $this->team->id,
+            'contact_id' => $contact->id,
+            'conversation_id' => $conversation->id,
+            'type' => 'text',
+            'direction' => 'outbound',
+            'status' => 'queued',
+            'content' => 'Test message',
+        ]);
+
+        $job = new \App\Jobs\SendMessageJob($this->team->id, '123456789', 'text', 'Test message', null, 'en_US', $message->id);
+        $job->handle(app(\App\Services\WhatsAppService::class));
+
+        $message->refresh();
+        // Previously this returned silently and the message stayed 'queued' forever.
+        $this->assertEquals('failed', $message->status);
+        $this->assertStringContainsString('131047', $message->error_message);
+    }
+
+    /** @test */
     public function it_marks_message_failed_without_throwing_when_already_suspended()
     {
         $this->team->update(['whatsapp_setup_state' => IntegrationState::SUSPENDED]);

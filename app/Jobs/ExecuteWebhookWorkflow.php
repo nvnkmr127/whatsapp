@@ -15,6 +15,10 @@ class ExecuteWebhookWorkflow implements ShouldQueue
 
     public $parameters;
 
+    // Stable across retries (set once at dispatch) so a retry triggered by a
+    // post-send DB failure does not re-send the template or re-count metrics.
+    public $idempotencyKey;
+
     /**
      * Create a new job instance.
      */
@@ -23,6 +27,7 @@ class ExecuteWebhookWorkflow implements ShouldQueue
         $this->workflow = $workflow;
         $this->recipient = $recipient;
         $this->parameters = $parameters;
+        $this->idempotencyKey = (string) \Illuminate\Support\Str::uuid();
     }
 
     /**
@@ -34,6 +39,15 @@ class ExecuteWebhookWorkflow implements ShouldQueue
 
         if (! $template) {
             \Illuminate\Support\Facades\Log::error("Workflow {$this->workflow->id} has no template.");
+
+            return;
+        }
+
+        // ponytail: 24h cache guard — closes the common retry-after-DB-failure
+        // dupe; not the rarer crash between send and marker set below.
+        $sentKey = "wf_sent:{$this->idempotencyKey}";
+        if (\Illuminate\Support\Facades\Cache::has($sentKey)) {
+            \Illuminate\Support\Facades\Log::info("Workflow {$this->workflow->id}: send already completed for this dispatch, skipping re-send on retry.");
 
             return;
         }
@@ -51,7 +65,8 @@ class ExecuteWebhookWorkflow implements ShouldQueue
             );
 
             if ($result['success']) {
-                $this->workflow->increment('total_delivered'); // TODO: Rename to total_processed or similar since this is just 'sent'
+                \Illuminate\Support\Facades\Cache::put($sentKey, true, now()->addDay());
+                $this->workflow->increment('total_delivered'); // 'sent' count (metric name kept for compatibility)
 
                 // Create Message Record
                 $wamid = $result['data']['messages'][0]['id'] ?? null;

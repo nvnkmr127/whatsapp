@@ -27,7 +27,7 @@
                 ],
                 'Collect Input' => [
                     ['type' => 'user_input',       'label' => 'Ask Question',       'icon' => 'M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z',                                                             'color' => 'text-cyan-500',    'bg' => 'bg-cyan-50 dark:bg-cyan-900/20'],
-                    ['type' => 'wait_for_event',   'label' => 'Wait for Event',     'icon' => 'M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9', 'color' => 'text-cyan-600', 'bg' => 'bg-cyan-100 dark:bg-cyan-900/30'],
+                    // Hidden: 'wait_for_event' is not implemented in the engine (AutomationService::executeNode falls through to default → skipped at runtime). Re-add when built.
                     ['type' => 'send_flow',        'label' => 'WA Form (Flow)',     'icon' => 'M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z',                                               'color' => 'text-teal-500',    'bg' => 'bg-teal-50 dark:bg-teal-900/20'],
                 ],
                 'CRM & Sales' => [
@@ -43,7 +43,7 @@
                     ['type' => 'set_variable',     'label' => 'Set Variable',       'icon' => 'M7 20l4-16m2 16l4-16M6 9h14M4 15h14',                                                                                                                                      'color' => 'text-cyan-500',    'bg' => 'bg-cyan-50 dark:bg-cyan-900/20'],
                     ['type' => 'loop_over_items',  'label' => 'Loop / Iterate',     'icon' => 'M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15',                                                            'color' => 'text-indigo-500',  'bg' => 'bg-indigo-50 dark:bg-indigo-900/10'],
                     ['type' => 'ab_split',         'label' => 'A/B Test Split',     'icon' => 'M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4-4m-4 4l4 4',                                                                                                                       'color' => 'text-wa-teal',     'bg' => 'bg-wa-teal/10'],
-                    ['type' => 'retry',            'label' => 'Retry on Fail',      'icon' => 'M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15',                                                            'color' => 'text-orange-500',  'bg' => 'bg-orange-50 dark:bg-orange-900/20'],
+                    // Hidden: 'retry' node is not implemented in the engine (skipped at runtime). Per-node retry config lives on other nodes; re-add this palette item when the standalone retry node is built.
                 ],
                 'Timing' => [
                     ['type' => 'delay',            'label' => 'Delay / Wait',       'icon' => 'M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z',                                                                                                                              'color' => 'text-slate-500',   'bg' => 'bg-slate-100 dark:bg-slate-800'],
@@ -54,7 +54,7 @@
                     ['type' => 'openai',           'label' => 'AI Agent / GPT',     'icon' => 'M13 10V3L4 14h7v7l9-11h-7z',                                                                                                                                               'color' => 'text-emerald-500', 'bg' => 'bg-emerald-50 dark:bg-emerald-900/20'],
                     ['type' => 'google_sheets',    'label' => 'Google Sheets',      'icon' => 'M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z',                                       'color' => 'text-green-600',   'bg' => 'bg-green-100 dark:bg-green-900/30'],
                     ['type' => 'webhook',          'label' => 'HTTP Webhook / API', 'icon' => 'M21 12a9 9 0 01-9 9m9-9a9 9 0 00-9-9m9 9H3m9 9a9 9 0 01-9-9m9 9c1.657 0 3-4.03 3-9s-1.343-9-3-9m0 18c-1.657 0-3-4.03-3-9s1.343-9 3-9',                             'color' => 'text-pink-500',    'bg' => 'bg-pink-50 dark:bg-pink-900/20'],
-                    ['type' => 'payment',          'label' => 'Collect Payment',    'icon' => 'M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z',                                                                                'color' => 'text-violet-500',  'bg' => 'bg-violet-50 dark:bg-violet-900/20'],
+                    // Hidden: 'payment' (Collect Payment) is not implemented in the engine (skipped at runtime) — needs a payment-gateway integration. Re-add when built.
                     ['type' => 'sub_flow',         'label' => 'Run Sub-Flow',       'icon' => 'M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14',                                                                                           'color' => 'text-slate-400',   'bg' => 'bg-slate-100'],
                 ],
                 'System' => [

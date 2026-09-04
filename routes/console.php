@@ -39,9 +39,14 @@ Schedule::job(new \App\Jobs\CheckIntegrationHealth)->everySixHours();
 // Subscription Trial Expiry Checks
 Schedule::job(new \App\Jobs\CheckTrialExpiry)->daily();
 
-// Queue Worker for Background Jobs (runs every minute, keeps running for 55s)
-// Priority: webhooks (inbound events), messages (chat responses), broadcasts (bulk send), default
-Schedule::command('queue:work --queue=webhooks,messages,broadcasts,default --max-time=55 --tries=3 --timeout=90 --sleep=2')
+// Fallback queue worker for hosts WITHOUT Supervisor (e.g. shared/cPanel).
+// Runs every minute, works for ~55s, then exits and is restarted by cron.
+// Covers EVERY queue jobs are dispatched onto so nothing is silently orphaned
+// (priority order: inbound webhooks first, then chat, then everything else).
+// NOTE: if you run Supervisor (supervisor-whatsapp-workers.conf), disable this
+// line — those workers already cover all queues with per-queue tuning, and
+// running both just adds a redundant worker.
+Schedule::command('queue:work --queue=high,webhooks,messages,push_notifications,notifications,broadcasts,campaigns,automations,workflows,ai_processing,default --max-time=55 --tries=3 --timeout=600 --sleep=2')
     ->everyMinute()
     ->withoutOverlapping();
 

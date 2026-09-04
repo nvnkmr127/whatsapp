@@ -62,7 +62,6 @@ class FcmService
      */
     public function sendToUser(User $user, string $title, string $body, array $data = [])
     {
-        Log::info("[DEBUG-PUSH] STEP 3: FcmService->sendToUser called for user {$user->id}");
         $tokens = $user->fcmTokens()->pluck('token')->toArray();
 
         if (empty($tokens)) {
@@ -89,7 +88,6 @@ class FcmService
 
         $url = "https://fcm.googleapis.com/v1/projects/{$projectId}/messages:send";
         $channelId = (isset($data['type']) && $data['type'] === 'call_incoming') ? 'calls' : 'default';
-        Log::info("[DEBUG-PUSH] STEP 4: Sending push to " . count($tokens) . " tokens using url {$url}");
 
         $successCount = 0;
         $failures = [];
@@ -139,14 +137,11 @@ class FcmService
 
                 if ($response->successful()) {
                     $successCount++;
-                    Log::info("[DEBUG-PUSH] STEP 5-SUCCESS: FCM: delivered successfully to token ending ...".substr($token, -10));
                 } else {
                     $statusCode = $response->status();
                     $errorData = $response->json();
                     $errorMessage = $errorData['error']['message'] ?? 'Unknown error';
-                    Log::error("[DEBUG-PUSH] STEP 5-ERROR: FCM delivery failed for token ending ...".substr($token, -10).". Status: {$statusCode}. Error: {$errorMessage}", ['response' => $errorData]);
-
-                    Log::warning("FCM delivery failed for token: {$token}. HTTP Status: {$statusCode}. Error: {$errorMessage}");
+                    Log::warning("FCM delivery failed for token ending ...".substr($token, -10).". HTTP Status: {$statusCode}. Error: {$errorMessage}", ['response' => $errorData]);
 
                     // Cleanup invalid/mismatched tokens
                     $errorStatus = $errorData['error']['status'] ?? '';
