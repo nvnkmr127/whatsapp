@@ -433,31 +433,173 @@ curl -X GET "https://your-domain.com/api/v1/contacts?page=1" \
 
 ## 7. Model Context Protocol (MCP) for AI Agents
 
-- **Method:** `POST /api/v1/mcp`
-- **Protocol:** JSON-RPC 2.0
-- **Purpose:** Connect AI clients (Cursor, Claude Desktop, OpenAI Assistants) directly to the workspace tools with full multi-tenant isolation.
+- **Endpoint:** `POST /api/v1/mcp`
+- **Specification:** [MCP Protocol 2024-11-05](https://modelcontextprotocol.io/specification/2024-11-05)
+- **Transport:** Streamable HTTP (JSON-RPC 2.0)
+- **Authentication:** `Authorization: Bearer <API_TOKEN>` and optional `X-Tenant-ID: <TEAM_ID>`.
+- **Purpose:** Connect AI coding assistants and autonomous agents (Claude Desktop, Cursor, ChatGPT, custom LLMs) directly to WhatsApp messaging, contacts, calling, and automations within strict tenant security boundaries.
 
-### Supported Tools
-1. `send_whatsapp_message`: Send text or template to a contact.
-2. `search_contacts`: Find contact records by name, tag, or phone.
-3. `get_conversation_history`: Retrieve recent messages for context.
-4. `get_templates`: Inspect available message templates.
+### 7.1 Supported JSON-RPC 2.0 Methods
 
-#### Sample Request (`tools/call`):
+| Method | Description | Response Pattern |
+|---|---|---|
+| `initialize` | Negotiates protocol version, server name, and capabilities | `result: { protocolVersion: "2024-11-05", serverInfo: { name: "WatxIO MCP Server", version: "1.0.0" }, capabilities: { tools: { listChanged: false } } }` |
+| `ping` | Liveness check | `result: {}` |
+| `notifications/initialized` | Client readiness signal | HTTP `202 Accepted` (no response body) |
+| `tools/list` | Tool discovery manifest | `result: { tools: [...] }` (38 tool schemas) |
+| `tools/call` | Invoke a specific tool | `result: { content: [{ type: "text", text: "..." }], isError: boolean }` |
+
+### 7.2 Tool Directory (38 Tools by Category)
+
+#### A. Conversational Messaging & Interactive Content (10 Tools)
+- `send_message`: Send plain text WhatsApp messages (`to`, `message`).
+- `send_template`: Send registered templates (`to`, `template_name`, `language`, `body_params`).
+- `send_media`: Send media attachments (`to`, `type`: `image|video|audio|document`, `url`, `caption`).
+- `send_interactive_buttons`: Send messages with up to 3 quick-reply buttons (`to`, `text`, `buttons`).
+- `send_interactive_list`: Send interactive sectioned list pickers with up to 10 rows (`to`, `text`, `button_text`, `sections`).
+- `send_carousel`: Send horizontal card carousels up to 10 cards (`phone`, `cards`).
+- `send_flow`: Trigger interactive native WhatsApp Flows (`to`, `flow_id`, `headline`, `body`, `cta`, `mode`, `data`).
+- `send_contact_card`: Share contact cards/vCards (`to`, `contact`).
+- `send_location_request`: Request user live location (`to`, `text`).
+- `mark_message_read`: Send read receipts for incoming messages (`message_id`).
+
+#### B. Contact & Audience Management (7 Tools)
+- `get_contact`: Fetch contact details, tags, and email by phone (`phone`).
+- `get_contact_messages`: Fetch timeline of messages with direction and delivery timestamps (`phone`, `from`, `to`, `direction`, `limit`).
+- `get_contact_activity`: Fetch audit events, lifecycle milestones, and tag changes (`phone`, `limit`).
+- `search_contacts`: Search across name, phone, or email (`query`, `limit`).
+- `upsert_contact`: Create or update contacts; auto-links Company model (`phone`, `name`, `email`, `company`).
+- `get_contact_tags`: Discover all available tag definitions for the workspace.
+- `tag_contact`: Attach or remove tags from a contact (`phone`, `tag_id`, `action`: `add|remove`).
+
+#### C. Live Inbox & Conversation Concurrency (7 Tools)
+- `list_conversations`: List active threads (`status`: `open|resolved|pending`, `limit`).
+- `get_conversation_messages`: Retrieve chat transcript for a thread (`conversation_id`, `limit`).
+- `close_conversation`: Resolve and archive conversation (`conversation_id`).
+- `reopen_conversation`: Re-activate a closed conversation (`conversation_id`).
+- `assign_conversation`: Assign conversation to any team member or team owner (`conversation_id`, `user_id`).
+- `add_internal_note`: Add private agent note to thread (`conversation_id`, `content`).
+- `toggle_ai`: Pause or resume bot auto-replies for human takeover (`conversation_id`, `enabled`: `boolean`).
+
+#### D. Automations & Broadcast Campaigns (3 Tools)
+- `list_automations`: List automation workflows available in tenant account (`active_only`).
+- `start_automation`: Trigger an automation flow for a contact (`automation_id`, `phone`, `variables`).
+- `list_campaigns`: Monitor broadcast campaigns and delivery stats (`status`, `limit`).
+
+#### E. Templates & Canned Quick Replies (2 Tools)
+- `get_templates`: Retrieve approved WhatsApp templates and parameter signatures (`search`).
+- `get_canned_messages`: Fetch pre-written saved responses (`search`).
+
+#### F. AI Assistance (1 Tool)
+- `get_ai_suggest_reply`: Generate contextual AI suggestions based on recent conversation transcript without auto-sending (`conversation_id`).
+
+#### G. WhatsApp Voice Calling (3 Tools)
+- `initiate_call`: Start outbound VoIP call to contact (`to`).
+- `end_call`: Terminate active call (`call_id`).
+- `get_call_history`: Retrieve call logs, duration, and billing costs (`phone`, `limit`).
+
+#### H. Workspace, Team & Analytics (4 Tools)
+- `get_team_members`: Discover team members and user IDs for routing and assignments.
+- `get_business_profile`: Retrieve WhatsApp Business profile settings (description, email, website).
+- `get_dashboard_analytics`: Instant local database stats (sent, delivered, read rates, 7-day trend, wallet credits) (`range`: `7d|30d|90d`).
+- `get_analytics`: Query Meta API conversation metrics across date ranges (`start`, `end`, `granularity`).
+
+#### I. Webhooks (1 Tool)
+- `trigger_webhook`: Dispatch active outbound webhook subscriptions (`webhook_id`, `event`, `payload`).
+
+### 7.3 Sample MCP Invocations
+
+#### A. Initialize Protocol
 ```json
 {
   "jsonrpc": "2.0",
   "id": 1,
-  "method": "tools/call",
-  "params": {
-    "name": "send_whatsapp_message",
-    "arguments": {
-      "phone_number": "+1234567890",
-      "message": "Your table reservation is confirmed."
+  "method": "initialize"
+}
+```
+**Response:**
+```json
+{
+  "jsonrpc": "2.0",
+  "id": 1,
+  "result": {
+    "protocolVersion": "2024-11-05",
+    "serverInfo": {
+      "name": "WatxIO MCP Server",
+      "version": "1.0.0"
+    },
+    "capabilities": {
+      "tools": { "listChanged": false }
     }
   }
 }
 ```
+
+#### B. Tool Discovery (`tools/list`)
+```json
+{
+  "jsonrpc": "2.0",
+  "id": 2,
+  "method": "tools/list"
+}
+```
+
+#### C. Send Message Tool (`tools/call`)
+```json
+{
+  "jsonrpc": "2.0",
+  "id": 3,
+  "method": "tools/call",
+  "params": {
+    "name": "send_message",
+    "arguments": {
+      "to": "+1234567890",
+      "message": "Your table reservation is confirmed for 7:30 PM."
+    }
+  }
+}
+```
+**Response:**
+```json
+{
+  "jsonrpc": "2.0",
+  "id": 3,
+  "result": {
+    "content": [
+      {
+        "type": "text",
+        "text": "Message sent successfully. WhatsApp ID: wamid.HBgL..."
+      }
+    ],
+    "isError": false
+  }
+}
+```
+
+### 7.4 Client Configuration (Claude Desktop & Remote Agents)
+
+#### Claude Desktop Configuration (`claude_desktop_config.json`)
+```json
+{
+  "mcpServers": {
+    "watxio": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "mcp-remote",
+        "https://your-domain.com/api/v1/mcp",
+        "--header",
+        "Authorization: Bearer YOUR_API_TOKEN",
+        "--header",
+        "X-Tenant-ID: 1"
+      ]
+    }
+  }
+}
+```
+*Config file locations:*
+- **macOS:** `~/Library/Application Support/Claude/claude_desktop_config.json`
+- **Windows:** `%APPDATA%\Claude\claude_desktop_config.json`
 
 ---
 

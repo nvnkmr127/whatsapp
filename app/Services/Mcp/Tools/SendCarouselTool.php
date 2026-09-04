@@ -69,11 +69,7 @@ class SendCarouselTool implements McpTool
         );
 
         // 2. Preflight (Blocklist, limits, billing)
-        $preflight = app(OutboundPreflightService::class);
-        $check = $preflight->check($team, $contact, 'carousel');
-        if (! $check['allowed']) {
-            return [['type' => 'text', 'text' => "Preflight failed: {$check['reason']}"]];
-        }
+        app(OutboundPreflightService::class)->authorizeOrFail($team, 'send_message', 'message_limit');
 
         // 3. Ensure active conversation
         $conversation = app(\App\Services\ConversationService::class)->ensureActiveConversation($contact);
@@ -107,7 +103,7 @@ class SendCarouselTool implements McpTool
         }
 
         try {
-            $message = app(WhatsAppService::class)->sendCarousel($phone, $formattedCards);
+            $message = app(WhatsAppService::class)->setTeam($team)->sendCarousel($phone, $formattedCards);
             $message->update(['conversation_id' => $conversation->id, 'team_id' => $team->id]);
 
             return [['type' => 'text', 'text' => "Carousel sent successfully. Message ID: {$message->id}"]];

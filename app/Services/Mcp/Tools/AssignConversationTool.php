@@ -30,8 +30,8 @@ class AssignConversationTool implements McpTool
             ->where('team_id', $team->id)
             ->firstOrFail();
 
-        // Validate user belongs to this team
-        $member = $team->users()->where('users.id', $input['user_id'])->first();
+        // Validate user belongs to this team (includes team owner)
+        $member = $team->allUsers()->firstWhere('id', (int) $input['user_id']);
         if (! $member) {
             throw new \Exception("User #{$input['user_id']} is not a member of this team.");
         }

@@ -38,9 +38,9 @@ class McpController extends Controller
         $method = $request->input('method');
         $id     = $request->input('id');
         $params = $request->input('params', []);
-        $team   = $request->user()->currentTeam;
+        $team   = $request->user()?->currentTeam ?? $request->user()?->allTeams()->first();
 
-        Log::debug('MCP request', ['method' => $method, 'team_id' => $team->id]);
+        Log::debug('MCP request', ['method' => $method, 'team_id' => $team?->id]);
 
         // Notifications (no id, e.g. notifications/initialized) MUST NOT get a response body
         if (str_starts_with((string) $method, 'notifications/')) {
@@ -97,11 +97,24 @@ class McpController extends Controller
             throw new \InvalidArgumentException('tools/call requires params.name');
         }
 
-        // resolve() throws InvalidArgumentException for unknown tool names
-        $tool    = $this->registry->resolve($name);
-        $content = $tool->handle($input, $team);
+        // resolve() throws InvalidArgumentException for unknown tool names (-32601)
+        $tool = $this->registry->resolve($name);
 
-        return ['content' => $content, 'isError' => false];
+        try {
+            $content = $tool->handle($input, $team);
+            return ['content' => $content, 'isError' => false];
+        } catch (\Throwable $e) {
+            Log::warning('MCP tool execution failure', [
+                'tool'    => $name,
+                'error'   => $e->getMessage(),
+                'team_id' => $team?->id,
+            ]);
+
+            return [
+                'content' => [['type' => 'text', 'text' => 'Error: '.$e->getMessage()]],
+                'isError' => true,
+            ];
+        }
     }
 
     // ── Helpers ──────────────────────────────────────────────────────────────

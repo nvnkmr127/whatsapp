@@ -230,9 +230,9 @@ class DocumentationService
                                     'id' => 2,
                                     'method' => 'tools/call',
                                     'params' => [
-                                        'name' => 'send_whatsapp_message',
+                                        'name' => 'send_message',
                                         'arguments' => [
-                                            'phone_number' => '+1234567890',
+                                            'to' => '+1234567890',
                                             'message' => 'Your reservation is confirmed!',
                                         ],
                                     ],

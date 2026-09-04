@@ -16,10 +16,11 @@ class UpsertContactTool implements McpTool
             'inputSchema' => [
                 'type'       => 'object',
                 'properties' => [
-                    'phone'   => ['type' => 'string', 'description' => 'Phone number in E.164 format (required)'],
-                    'name'    => ['type' => 'string', 'description' => 'Full name'],
-                    'email'   => ['type' => 'string', 'description' => 'Email address'],
-                    'company' => ['type' => 'string', 'description' => 'Company name'],
+                    'phone'             => ['type' => 'string', 'description' => 'Phone number in E.164 format (required)'],
+                    'name'              => ['type' => 'string', 'description' => 'Full name'],
+                    'email'             => ['type' => 'string', 'description' => 'Email address'],
+                    'company'           => ['type' => 'string', 'description' => 'Company name'],
+                    'custom_attributes' => ['type' => 'object', 'description' => 'Optional key-value pairs of custom attributes'],
                 ],
                 'required' => ['phone'],
             ],
@@ -35,10 +36,20 @@ class UpsertContactTool implements McpTool
             ->first();
 
         $data = array_filter([
-            'name'    => $input['name'] ?? null,
-            'email'   => $input['email'] ?? null,
-            'company' => $input['company'] ?? null,
+            'name'  => $input['name'] ?? null,
+            'email' => $input['email'] ?? null,
         ], fn($v) => $v !== null);
+
+        $customAttributes = is_array($contact?->custom_attributes) ? $contact->custom_attributes : [];
+        if (! empty($input['custom_attributes']) && is_array($input['custom_attributes'])) {
+            $customAttributes = array_merge($customAttributes, $input['custom_attributes']);
+        }
+        if (! empty($input['company'])) {
+            $customAttributes['company'] = trim($input['company']);
+        }
+        if (! empty($customAttributes)) {
+            $data['custom_attributes'] = $customAttributes;
+        }
 
         if ($contact) {
             $contact->update($data);
