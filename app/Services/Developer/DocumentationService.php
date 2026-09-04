@@ -27,7 +27,7 @@ class DocumentationService
                     [
                         'verb' => 'GET',
                         'path' => '/contacts',
-                        'description' => 'Fetch all contacts with active opt-in status and custom attributes.',
+                        'description' => 'Fetch all contacts with active opt-in status and custom attributes. Results are paginated (50 per page); use ?page=N to page through them.',
                         'curl' => 'curl -X GET "{base_url}/contacts" \
   -H "Authorization: Bearer YOUR_API_TOKEN" \
   -H "Accept: application/json"',
@@ -57,7 +57,7 @@ class DocumentationService
                     [
                         'verb' => 'POST',
                         'path' => '/messages',
-                        'description' => 'Send high-impact text or template messages.',
+                        'description' => 'Send text or template messages. Accepts Meta-style fields ("to", "text.body", "template") or flat fields ("phone_number", "message", "template_name"). Send an "X-Idempotency-Key" header to safely retry a request without sending twice. Returns 202 Accepted; the message is queued and delivered asynchronously.',
                         'examples' => [
                             [
                                 'label' => 'Standard Text',
@@ -89,6 +89,21 @@ class DocumentationService
                 ],
             ],
             [
+                'id' => 'conversations',
+                'title' => 'Conversation History',
+                'endpoint' => 'v1/conversations',
+                'methods' => [
+                    [
+                        'verb' => 'GET',
+                        'path' => '/conversations/{phone}',
+                        'description' => 'Retrieve the 50 most recent messages exchanged with a contact. The phone number may include a leading "+" or not. Returns an empty data array if the contact or conversation does not exist.',
+                        'curl' => 'curl -X GET "{base_url}/conversations/+1234567890" \
+  -H "Authorization: Bearer YOUR_API_TOKEN" \
+  -H "Accept: application/json"',
+                    ],
+                ],
+            ],
+            [
                 'id' => 'templates',
                 'title' => 'Message Templates',
                 'endpoint' => 'v1/templates',
@@ -100,6 +115,30 @@ class DocumentationService
                         'curl' => 'curl -X GET "{base_url}/templates" \
   -H "Authorization: Bearer YOUR_API_TOKEN" \
   -H "Accept: application/json"',
+                    ],
+                    [
+                        'verb' => 'GET',
+                        'path' => '/templates/{id}',
+                        'description' => 'Retrieve a single template. The {id} may be the internal id, the Meta template id, or the template name.',
+                        'curl' => 'curl -X GET "{base_url}/templates/order_confirmation" \
+  -H "Authorization: Bearer YOUR_API_TOKEN" \
+  -H "Accept: application/json"',
+                    ],
+                ],
+            ],
+            [
+                'id' => 'otp',
+                'title' => 'OTP Verification',
+                'endpoint' => 'v1/otp',
+                'methods' => [
+                    [
+                        'verb' => 'POST',
+                        'path' => '/otp/verify',
+                        'description' => 'Verify a one-time passcode previously delivered to a contact. Accepts "phone"/"code" or the aliases "phone_number"/"otp". Returns 422 if the code is invalid or expired.',
+                        'body' => [
+                            'phone' => '+1234567890',
+                            'code' => '123456',
+                        ],
                     ],
                 ],
             ],

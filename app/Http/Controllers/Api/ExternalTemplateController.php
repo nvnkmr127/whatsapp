@@ -88,7 +88,7 @@ class ExternalTemplateController extends Controller
         $template = \App\Models\WhatsappTemplate::where('team_id', $team->id)
             ->where(function ($q) use ($id) {
                 $q->where('id', $id)
-                    ->orWhere('template_id', $id)
+                    ->orWhere('whatsapp_template_id', $id)
                     ->orWhere('name', $id);
             })
             ->first();

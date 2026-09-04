@@ -1,4 +1,4 @@
-<x-app-layout>
+<x-guest-layout>
     <div class="space-y-8 animate-in fade-in duration-700 max-w-7xl mx-auto py-12 px-4 sm:px-6 lg:px-8">
         {{-- Page Header --}}
         <div class="flex flex-col md:flex-row md:items-center justify-between gap-6">
@@ -18,6 +18,7 @@
                 </div>
             </div>
             <div class="flex items-center gap-4">
+                @auth
                 <a href="{{ route('developer.api-tokens') }}"
                     class="px-6 py-3 bg-white dark:bg-slate-800 text-slate-500 font-black uppercase tracking-widest text-xs rounded-2xl hover:bg-slate-50 dark:hover:bg-slate-700 transition-all border border-slate-100 dark:border-slate-800 flex items-center gap-2">
                     <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -31,6 +32,7 @@
                     class="px-6 py-3 bg-slate-900 dark:bg-white text-white dark:text-slate-900 font-black uppercase tracking-widest text-xs rounded-2xl shadow-xl shadow-slate-900/10 dark:shadow-white/10 hover:scale-[1.02] active:scale-95 transition-all">
                     Back to Portal
                 </a>
+                @endauth
             </div>
         </div>
 
@@ -174,10 +176,12 @@
                                     <h3 class="text-xl font-black text-slate-900 dark:text-white uppercase tracking-tight">{{ $section['title'] }}</h3>
                                     <p class="text-xs font-black text-slate-400 uppercase tracking-[0.2em] mt-2">Dynamic Integrations</p>
                                 </div>
+                                @auth
                                 <a href="{{ route('webhook-sources.index') }}"
                                     class="px-5 py-2 bg-gradient-to-br from-rose-500 to-orange-500 text-white text-[10px] font-black uppercase tracking-widest rounded-xl hover:scale-105 transition-transform shadow-lg shadow-rose-500/20">
                                     Manager
                                 </a>
+                                @endauth
                             </div>
 
                             <p class="text-sm font-medium text-slate-500 leading-relaxed mb-8">{{ $section['description'] }}</p>
@@ -284,4 +288,4 @@
             });
         }
     </script>
-</x-app-layout>
+</x-guest-layout>

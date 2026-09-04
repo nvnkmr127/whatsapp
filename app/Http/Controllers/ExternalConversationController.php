@@ -4,10 +4,13 @@ namespace App\Http\Controllers;
 
 use App\Models\Contact;
 use App\Models\Conversation;
+use App\Traits\StandardApiResponses;
 use Illuminate\Http\Request;
 
 class ExternalConversationController extends Controller
 {
+    use StandardApiResponses;
+
     /**
      * Get messages for a contact.
      * GET /api/v1/conversations/{phone}
@@ -16,7 +19,7 @@ class ExternalConversationController extends Controller
     {
         $team = $request->user()->currentTeam;
         if (! $team) {
-            return response()->json(['error' => 'No team context'], 400);
+            return $this->error('No team context selected.', 400, null, 'ERR_NO_TEAM_CONTEXT');
         }
 
         $cleanPhone = trim($phone);
@@ -32,7 +35,7 @@ class ExternalConversationController extends Controller
             ->first();
 
         if (! $contact) {
-            return response()->json(['data' => []]);
+            return $this->success([], 'No conversation found.');
         }
 
         $conversation = Conversation::where('contact_id', $contact->id)->with([
@@ -42,12 +45,13 @@ class ExternalConversationController extends Controller
         ])->first();
 
         if (! $conversation) {
-            return response()->json(['data' => []]);
+            return $this->success([], 'No conversation found.');
         }
 
-        return response()->json([
-            'data' => $conversation->messages->reverse()->values(),
-        ]);
+        return $this->success(
+            $conversation->messages->reverse()->values(),
+            'Conversation retrieved successfully.'
+        );
     }
 
     /**
@@ -102,22 +106,21 @@ class ExternalConversationController extends Controller
 
         $team = $request->user()->currentTeam;
         if (! $team) {
-            return response()->json(['error' => 'No Team Context'], 400);
+            return $this->error('No team context selected.', 400, null, 'ERR_NO_TEAM_CONTEXT');
         }
 
-        // Idempotency Check
+        // Idempotency Check — Cache::add is atomic (set-if-absent), so concurrent
+        // requests with the same key can't both slip through a check-then-put race.
         $idempotencyKey = $request->header('X-Idempotency-Key');
         if ($idempotencyKey) {
             $cacheKey = "idempotency_send_{$team->id}_{$idempotencyKey}";
-            if (\Illuminate\Support\Facades\Cache::has($cacheKey)) {
-                return response()->json([
-                    'success' => true,
-                    'message' => 'Request already processed (Idempotent)',
-                    'status' => 'queued_previously',
-                ], 200);
+            if (! \Illuminate\Support\Facades\Cache::add($cacheKey, true, 60 * 60 * 24)) {
+                return $this->success(
+                    ['status' => 'queued_previously'],
+                    'Request already processed (Idempotent)',
+                    200
+                );
             }
-            // Lock Key for 24 hours
-            \Illuminate\Support\Facades\Cache::put($cacheKey, true, 60 * 60 * 24);
         }
 
         // 1. Resolve Contact & Conversation
@@ -158,10 +161,10 @@ class ExternalConversationController extends Controller
             $request->footer_variables ?? []
         );
 
-        return response()->json([
-            'success' => true,
-            'message' => 'Message queued for sending.',
-            'status' => 'queued',
-        ], 202);
+        return $this->success(
+            ['status' => 'queued'],
+            'Message queued for sending.',
+            202
+        );
     }
 }

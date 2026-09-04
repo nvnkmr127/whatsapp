@@ -17,6 +17,10 @@ Route::get('/.well-known/oauth-authorization-server', [\App\Http\Controllers\Aut
 Route::get('/.well-known/oauth-protected-resource', [\App\Http\Controllers\Auth\OAuthServerController::class, 'protectedResourceMetadata']);
 Route::post('/oauth/register', [\App\Http\Controllers\Auth\OAuthServerController::class, 'register'])->middleware('throttle:10,1');
 Route::post('/oauth/token', [\App\Http\Controllers\Auth\OAuthServerController::class, 'token'])->middleware('throttle:20,1');
+
+// Public developer API reference (no auth / no plan gate).
+Route::get('/developer/docs', [\App\Http\Controllers\Developer\ApiDocumentationController::class, 'index'])->name('developer.docs');
+
 Route::middleware(['auth'])->group(function () {
     Route::get('/oauth/authorize', [\App\Http\Controllers\Auth\OAuthServerController::class, 'showConsent'])->name('oauth.authorize');
     Route::post('/oauth/approve', [\App\Http\Controllers\Auth\OAuthServerController::class, 'approve'])->name('oauth.approve');
@@ -281,7 +285,7 @@ Route::middleware([
     Route::get('/developer/webhook-sources', \App\Livewire\Developer\WebhookSourceManager::class)->name('webhook-sources.index')->middleware(['can:manage-settings', 'plan_feature:webhooks']);
     Route::get('/developer/api-tokens', \App\Livewire\Developer\ApiTokenManager::class)->name('developer.api-tokens')->middleware(['can:manage-settings', 'plan_feature:api_access']);
     Route::get('/developer/teams', \App\Livewire\Developer\TeamExplorer::class)->name('developer.teams')->middleware([\App\Http\Middleware\EnsureUserIsSuperAdmin::class]);
-    Route::get('/developer/docs', [\App\Http\Controllers\Developer\ApiDocumentationController::class, 'index'])->name('developer.docs')->middleware('plan_feature:api_access');
+    // Note: /developer/docs is registered as a public route below (no auth/plan gate).
     // Commerce
     // Commerce - Requires 'commerce' feature
     Route::get('/commerce', \App\Livewire\Commerce\Dashboard::class)->name('commerce.dashboard')->middleware(['can:manage-campaigns', 'plan_feature:commerce']);
