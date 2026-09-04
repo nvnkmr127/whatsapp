@@ -18,23 +18,47 @@ Developers need clear references, code snippets, and exact path URLs to build so
 
 ## 4. What can users do here?
 - **Navigate API Sections:**
-  - Quickly jump to subsections using the Navigation Sidebar: Intro, Secure Authentication, Identity & Audience (Contacts), Conversational Messaging (Messages), Message Templates, Advanced Inbound Webhooks, and Meta Webhooks.
+  - Quickly jump to subsections using the Navigation Sidebar: Intro, Secure Authentication & Headers, Identity & Audience (Contacts), Conversational Messaging (Messages), Conversation History, Message Templates, OTP Verification, WhatsApp Calling API, MCP (Model Context Protocol), Embedded Chat Widget Tokens, Conversation Locks, Inbox Contact Resolution, E-Commerce Integrations, Advanced Inbound Webhooks, and Meta Webhooks.
 - **Copy Base URL & Headers:**
   - Retrieve the API Base URL endpoint (e.g. `https://yourdomain.com/api/v1`).
-  - Copy authorization headers: `Authorization: Bearer YOUR_API_TOKEN`.
+  - Copy authorization headers: `Authorization: Bearer YOUR_API_TOKEN` and workspace selector: `X-Tenant-ID: <team_id>`.
 - **Review Contacts API Specs (`v1/contacts`):**
-  - GET `/contacts`: Retrieve contact lists. Copy sample cURL commands.
-  - POST `/contacts`: Sync profiles with custom fields. Review JSON payload structures (phone numbers, custom tags, opt-in statuses).
+  - GET `/contacts`: Retrieve paginated contact lists (50/page).
+  - POST `/contacts`: Sync profiles with custom fields. Safely merges existing attributes and preserves emails.
 - **Review Messages API Specs (`v1/messages`):**
-  - POST `/messages`: Send text or template messages.
-  - Review side-by-side examples:
-    - *Standard Text:* JSON structures for plain messages.
-    - *Marketing Template:* JSON structures for WhatsApp templates (parameters, OTP codes, locales).
+  - POST `/messages`: Send text or template messages with idempotency support (`X-Idempotency-Key`). Returns HTTP 202 with `message_id` and `conversation_id`.
+- **Review Conversation History (`v1/conversations`):**
+  - GET `/conversations/{phone}`: Retrieve the 50 most recent messages from the active thread with a contact.
 - **Review Templates API Specs (`v1/templates`):**
-  - GET `/templates`: Retrieve approved templates. Copy sample cURL commands.
+  - GET `/templates`: Retrieve approved templates (live Meta API sync + local cache fallback).
+  - GET `/templates/{id}`: Inspect a single template by internal ID or Meta template name.
+- **Review OTP Verification API (`v1/otp`):**
+  - POST `/otp/verify`: Verify 6-digit one-time passcodes with tenant isolation and brute-force protection.
+- **Review WhatsApp Calling API (`v1/calls`):**
+  - POST `/calls/initiate`: Initiate WebRTC VoIP calls with SDP offer negotiation.
+  - POST `/calls/check-eligibility`: Preflight check for 24-hour customer consent window.
+  - GET `/calls`: Paginated call logs with duration, status, and cost.
+  - GET `/calls/{callId}`: Detailed call metadata and failure diagnostics.
+  - GET `/calls/statistics`: Monthly call minutes allowance and usage tracking.
+  - POST `/calls/{callId}/end`: Terminate active calls.
+- **Review MCP (Model Context Protocol) API (`v1/mcp`):**
+  - POST `/mcp`: Streamable JSON-RPC 2.0 endpoint for AI assistants (Cursor, Claude, OpenAI) to execute platform tools within tenant boundaries.
+- **Review Embedded Chat Widget Tokens (`v1/embed-token`):**
+  - POST `/embed-token`: Generate signed, short-lived tokens to embed live WhatsApp chat inside external web portals or CRMs.
+- **Review Conversation Locks (`v1/conversations/{id}`):**
+  - POST `/conversations/{id}/lock`: Multi-agent 30-second concurrency lock.
+  - POST `/conversations/{id}/heartbeat`: Heartbeat to maintain exclusive lock.
+  - POST `/conversations/{id}/unlock`: Release lock on conversation close.
+- **Review Inbox Contact Resolution (`v1/inbox/contacts`):**
+  - GET `/inbox/contacts/resolve`: Resolve contact records by phone number.
+  - POST `/inbox/contacts/resolve-batch`: Batch identity resolution.
+  - PUT / PATCH `/inbox/contacts/{contact}`: Concurrency-safe contact updates with version counter.
+- **Review E-Commerce Integrations (`v1/ecommerce/integrations`):**
+  - GET `/ecommerce/integrations/{integration}/health`: Status check for Shopify/WooCommerce.
+  - POST `/ecommerce/integrations/{integration}/sync`: Immediate catalog re-sync trigger.
 - **Review Inbound Webhook Specs:**
   - View endpoint structures: `/api/v1/webhooks/inbound/{slug}`.
-  - Copy sample cURL commands for mapping WooCommerce checkout parameters.
+  - Copy sample cURL commands for mapping WooCommerce/Shopify checkout parameters.
 - **Copy Meta Callback URL:**
   - Copy the system callback URL (`https://yourdomain.com/api/webhook/whatsapp`) to paste into the Meta App configuration dashboard.
 
@@ -127,6 +151,7 @@ Admins use this page to set up connections between WhatsApp and your website for
 If customer message updates stop syncing, ask your developer to verify their API calls against the examples on this page.
 
 ## 21. Related Features
+- [Comprehensive API Reference Specification](../../API_DOCUMENTATION.md)
 - [Developer Portal](./developer-portal.md)
 - [API Tokens Manager](./api-tokens.md)
 
@@ -138,8 +163,10 @@ Current
 - **Implementation:** `App\Http\Controllers\Developer\ApiDocumentationController`
 - **Relevant files:** 
   - `routes/web.php`
+  - `routes/api.php`
+  - `docs/API_DOCUMENTATION.md`
   - `app/Http/Controllers/Developer/ApiDocumentationController.php`
   - `resources/views/developer/api-documentation.blade.php`
   - `app/Services/Developer/DocumentationService.php`
-- **Related documentation:** None currently linked.
-- **Last reviewed:** 2026-08-17
+- **Related documentation:** [Complete API Documentation Reference](../../API_DOCUMENTATION.md)
+- **Last reviewed:** 2026-09-04
