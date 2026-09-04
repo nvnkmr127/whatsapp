@@ -62,7 +62,7 @@ class McpController extends Controller
             $code = $e->getCode() ?: -32601;
             return $this->error($id, $code, $e->getMessage());
         } catch (\Exception $e) {
-            Log::warning('MCP tool error', ['method' => $method, 'error' => $e->getMessage(), 'team' => $team->id]);
+            Log::warning('MCP tool error', ['method' => $method, 'error' => $e->getMessage(), 'team' => $team?->id]);
             return $this->error($id, -32000, $e->getMessage());
         }
     }

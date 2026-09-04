@@ -67,7 +67,12 @@ class ExternalTemplateController extends Controller
 
     private function mapTemplates($templates)
     {
-        return $templates->map(fn($t) => [
+        return $templates->map(fn($t) => $this->mapTemplate($t));
+    }
+
+    private function mapTemplate($t): array
+    {
+        return [
             'id' => $t->id,
             'template_id' => $t->whatsapp_template_id,
             'name' => $t->name,
@@ -75,7 +80,7 @@ class ExternalTemplateController extends Controller
             'category' => $t->category,
             'status' => $t->status,
             'components' => $t->components,
-        ]);
+        ];
     }
 
     /**
@@ -102,6 +107,6 @@ class ExternalTemplateController extends Controller
             return $this->error('Template not found.', 404);
         }
 
-        return $this->success($template, 'Template retrieved successfully.');
+        return $this->success($this->mapTemplate($template), 'Template retrieved successfully.');
     }
 }

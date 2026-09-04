@@ -182,6 +182,10 @@ class ExternalConversationController extends Controller
             );
         } catch (\Throwable $e) {
             $message->update(['status' => 'failed', 'error_message' => $e->getMessage()]);
+            // Release the idempotency lock so the caller can retry a failed dispatch.
+            if ($idempotencyKey) {
+                \Illuminate\Support\Facades\Cache::forget($cacheKey);
+            }
             return $this->error('Failed to dispatch message: ' . $e->getMessage(), 500);
         }
 
