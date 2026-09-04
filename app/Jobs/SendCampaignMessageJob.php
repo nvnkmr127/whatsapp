@@ -54,8 +54,9 @@ class SendCampaignMessageJob implements ShouldQueue
     public function middleware(): array
     {
         return [
-            // Throttle: 20 messages per second per team to avoid hitting WhatsApp rate limits
-            // and to stay within API tier boundaries.
+            // Backs off this job when it keeps throwing (e.g. API error storms).
+            // NOTE: this does NOT rate-limit successful sends — that is enforced
+            // per-team/per-second inside handle() via RateLimitService.
             new \Illuminate\Queue\Middleware\ThrottlesExceptions(10, 5),
         ];
     }
@@ -94,6 +95,28 @@ class SendCampaignMessageJob implements ShouldQueue
 
         // --- CANCELLED / FAILED: drop permanently ---
         if (in_array($campaign->status, ['cancelled', 'failed'], true)) {
+            return;
+        }
+
+        // --- RATE LIMIT GATE (per-team/per-second; protects account quality) ---
+        // Runs BEFORE the idempotency lock below so a throttled release() does not
+        // leave that 60s lock held and silently drop the message on retry.
+        // ponytail: release() shares the $tries=5 budget — fine because the RPS
+        // window is 1s and the usleep re-check clears the common transient case.
+        $rateLimiter = new RateLimitService;
+        if (! $rateLimiter->canSend((int) $campaign->team_id, $contact->phone_number)) {
+            usleep(200000); // 200ms
+            if (! $rateLimiter->canSend((int) $campaign->team_id, $contact->phone_number)) {
+                Log::info("Campaign {$this->campaignId}: RPS limit reached, backing off contact {$this->contactId}");
+                $this->release(rand(2, 5));
+
+                return;
+            }
+        }
+        if (! $rateLimiter->canSendCampaign((int) $campaign->id, $campaign->send_rate)) {
+            Log::info("Campaign {$this->campaignId}: configured send_rate reached, backing off contact {$this->contactId}");
+            $this->release(rand(2, 5));
+
             return;
         }
 

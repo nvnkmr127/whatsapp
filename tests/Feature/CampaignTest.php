@@ -191,6 +191,46 @@ class CampaignTest extends TestCase
         $this->assertEquals(1, $campaign->del_count); // Verify incremented correctly
     }
 
+    public function test_campaign_send_backs_off_and_does_not_send_when_rate_limited()
+    {
+        \Illuminate\Support\Facades\Http::fake(); // any WA API call would be recorded
+
+        $team = \App\Models\Team::factory()->create([
+            'whatsapp_access_token' => 'test-token',
+            'whatsapp_phone_number_id' => '123',
+            'whatsapp_setup_state' => \App\Enums\IntegrationState::READY,
+        ]);
+        $contact = \App\Models\Contact::factory()->create([
+            'team_id' => $team->id,
+            'phone_number' => '+1234567890',
+            'opt_in_status' => 'opted_in',
+            'last_interaction_at' => now(),
+        ]);
+        $campaign = \App\Models\Campaign::create([
+            'team_id' => $team->id,
+            'campaign_name' => 'Rate Limit Test',
+            'status' => 'processing',
+            'total_contacts' => 1,
+            'audience_filters' => ['all' => true],
+            'template_name' => 'hello_world',
+            'template_language' => 'en_US',
+        ]);
+
+        // Pre-fill the per-number RPS counter above the tier limit so canSend() fails.
+        \Illuminate\Support\Facades\Cache::put("ratelimit:rps:{$contact->phone_number}", 50, 5);
+
+        $job = new \App\Jobs\SendCampaignMessageJob($campaign->id, $contact->id);
+        $job->handle();
+
+        // Gate ran before the API/idempotency lock: nothing sent, no message row.
+        \Illuminate\Support\Facades\Http::assertNothingSent();
+        $this->assertDatabaseMissing('messages', [
+            'campaign_id' => $campaign->id,
+            'contact_id' => $contact->id,
+            'status' => 'sent',
+        ]);
+    }
+
     public function test_replay_all_failed_messages_on_live_dashboard()
     {
         \Illuminate\Support\Facades\Queue::fake();

@@ -4,6 +4,7 @@ namespace App\Services;
 
 use App\Models\Contact;
 use App\Models\Conversation;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Redis;
 
@@ -90,29 +91,39 @@ class ConversationService
      */
     public function ensureActiveConversation(Contact $contact): Conversation
     {
-        $active = $contact->activeConversation;
+        // Serialize concurrent inbound events for the same contact. Two webhooks
+        // arrive under different per-message locks, so without this both could
+        // pass the "no active conversation" check and each create one.
+        $lock = Cache::lock("ensure_conversation:{$contact->id}", 10);
+        $lock->block(5); // waits up to 5s; throws if a concurrent create runs long (job retries)
 
-        if ($active) {
-            return $active;
-        }
-
-        // Create New
-        $assignedUser = null;
-        if (! $contact->assigned_to) {
-            try {
-                $assignedUser = app(\App\Services\AssignmentService::class)->assign($contact);
-            } catch (\Exception $e) {
-                Log::warning("Auto-assignment skipped for contact {$contact->id}: " . $e->getMessage());
+        try {
+            // Fresh query (not the cached relation) now that we hold the lock.
+            $active = $contact->activeConversation()->first();
+            if ($active) {
+                return $active;
             }
-        }
 
-        $conversation = Conversation::create([
-            'team_id' => $contact->team_id,
-            'contact_id' => $contact->id,
-            'assigned_to' => $assignedUser?->id ?? $contact->assigned_to,
-            'status' => 'new',
-            'last_message_at' => now(),
-        ]);
+            // Create New
+            $assignedUser = null;
+            if (! $contact->assigned_to) {
+                try {
+                    $assignedUser = app(\App\Services\AssignmentService::class)->assign($contact);
+                } catch (\Exception $e) {
+                    Log::warning("Auto-assignment skipped for contact {$contact->id}: " . $e->getMessage());
+                }
+            }
+
+            $conversation = Conversation::create([
+                'team_id' => $contact->team_id,
+                'contact_id' => $contact->id,
+                'assigned_to' => $assignedUser?->id ?? $contact->assigned_to,
+                'status' => 'new',
+                'last_message_at' => now(),
+            ]);
+        } finally {
+            $lock->release();
+        }
 
         try {
             \App\Events\ConversationOpened::dispatch($conversation);

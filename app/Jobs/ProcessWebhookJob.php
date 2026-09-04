@@ -131,7 +131,9 @@ class ProcessWebhookJob implements ShouldQueue
         $resolve = function ($col, $val) {
             $key = "team_id_by_{$col}:{$val}";
 
-            return \Illuminate\Support\Facades\Cache::remember($key, 3600, function () use ($col, $val) {
+            // Jittered TTL (1h ± up to 10m) so a burst of webhooks doesn't all
+            // miss the cache at the same instant and stampede the DB on expiry.
+            return \Illuminate\Support\Facades\Cache::remember($key, 3600 + random_int(0, 600), function () use ($col, $val) {
                 return Team::where($col, $val)->value('id');
             });
         };

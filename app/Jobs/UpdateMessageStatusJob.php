@@ -10,6 +10,7 @@ use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Bus\Dispatchable;
 use Illuminate\Queue\InteractsWithQueue;
 use Illuminate\Queue\SerializesModels;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 
 class UpdateMessageStatusJob implements ShouldQueue
@@ -144,7 +145,17 @@ class UpdateMessageStatusJob implements ShouldQueue
             ]);
         }
 
-        $message->update($updateData);
+        // Persist the message status and campaign counters atomically so the
+        // two can't diverge if the job dies mid-way (UC-SAFE-17).
+        DB::transaction(function () use ($message, $updateData, $oldStatus, $status) {
+            $message->update($updateData);
+
+            if ($message->campaign_id) {
+                $this->updateCampaignStats($message, $oldStatus, $status);
+            }
+        });
+
+        // --- Side effects AFTER commit (so listeners never read pre-commit state, UC-SAFE-18) ---
 
         // T11: Automation Trigger for campaign message read
         if ($status === 'read' && $message->campaign_id && $message->contact) {
@@ -164,9 +175,8 @@ class UpdateMessageStatusJob implements ShouldQueue
         // Broadcast the update for UI
         \App\Events\MessageStatusUpdated::dispatch($message);
 
-        // Update Campaign Stats if applicable
-        if ($message->campaign_id) {
-            $this->updateCampaignStats($message, $oldStatus, $status);
+        if ($message->campaign_id && ($campaign = Campaign::find($message->campaign_id))) {
+            \App\Events\CampaignProgressUpdated::dispatch($campaign);
         }
     }
 
@@ -202,7 +212,7 @@ class UpdateMessageStatusJob implements ShouldQueue
             }
         }
 
-        // Broadcast for live UI updates if listening
-        \App\Events\CampaignProgressUpdated::dispatch($campaign);
+        // NOTE: CampaignProgressUpdated is dispatched by the caller AFTER the
+        // enclosing DB transaction commits — never from inside this method.
     }
 }

@@ -115,11 +115,13 @@ class MetaCommerceWebhookController extends Controller
             return;
         }
 
-        // Resolve or Create Contact
-        $contact = Contact::firstOrCreate(
-            ['team_id' => $teamId, 'phone_number' => $phone],
-            ['name' => ($buyer['first_name'] ?? '').' '.($buyer['last_name'] ?? '')]
-        );
+        // Resolve or Create Contact via the locked service (prevents duplicate
+        // contacts when concurrent webhooks arrive for the same new buyer).
+        $contact = (new \App\Services\ContactService)->createOrUpdate([
+            'team_id' => $teamId,
+            'phone_number' => $phone,
+            'name' => trim(($buyer['first_name'] ?? '').' '.($buyer['last_name'] ?? '')),
+        ]);
 
         // Map Meta status to internal status
         $statusMap = [

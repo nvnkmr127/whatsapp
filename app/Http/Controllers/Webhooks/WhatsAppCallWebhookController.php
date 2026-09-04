@@ -610,16 +610,13 @@ class WhatsAppCallWebhookController extends Controller
         // Normalize phone number
         $normalizedPhone = PhoneNumberHelper::normalize($phoneNumber);
 
-        // Find or create contact
-        $contact = Contact::firstOrCreate(
-            [
-                'team_id' => $team->id,
-                'phone_number' => $normalizedPhone,
-            ],
-            [
-                'name' => $normalizedPhone,
-            ]
-        );
+        // Find or create contact via the locked service (prevents duplicate
+        // contacts when a call and a message webhook race for a new caller).
+        $contact = (new \App\Services\ContactService)->createOrUpdate([
+            'team_id' => $team->id,
+            'phone_number' => $normalizedPhone,
+            'name' => $normalizedPhone,
+        ]);
 
         // Create conversation if needed
         $conversationService = new ConversationService;

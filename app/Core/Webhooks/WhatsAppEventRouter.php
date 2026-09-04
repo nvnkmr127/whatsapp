@@ -19,7 +19,6 @@ use App\Services\CallPermissionService;
 use App\Services\CsatService;
 use App\Services\EventBusService;
 use App\Services\TraceContext;
-use App\Services\WhatsAppCallProcessor;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Log;
 
@@ -105,7 +104,17 @@ class WhatsAppEventRouter
                     continue;
                 }
 
-                $value = $fullPayload['entry'][0]['changes'][0]['value'];
+                $value = $fullPayload['entry'][0]['changes'][0]['value'] ?? null;
+
+                // Guard against partial payloads: without a sender phone id we
+                // can't resolve the team downstream, so skip instead of blowing
+                // up on an undefined array key.
+                if (! $value || empty($value['metadata']['phone_number_id']) || empty($messageData['from'])) {
+                    Log::warning("Router: Inbound message {$wamid} missing required fields (metadata/from), skipping.");
+
+                    continue;
+                }
+
                 $message = $messageData;
                 $payload = [
                     'provider_id' => $message['id'],
@@ -210,10 +219,9 @@ class WhatsAppEventRouter
             return;
         }
 
-        $team = Team::find($this->teamId);
-        if ($team) {
-            (new WhatsAppCallProcessor)->process($team, $calls);
-        }
+        // Process off the webhook request path so a slow batch can't time out
+        // the webhook (which would make Meta retry and re-deliver the events).
+        \App\Jobs\ProcessWhatsAppCallJob::dispatch($this->teamId, $calls, TraceContext::getTraceId());
     }
 
     protected function handleAccountLifecycle(array $change): void
