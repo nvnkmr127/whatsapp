@@ -71,7 +71,7 @@ Route::group(['middleware' => ['auth:sanctum', 'tenant', 'throttle:api', \App\Ht
     Route::prefix('inbox/contacts')->group(function () {
         Route::get('resolve', [\App\Http\Controllers\Api\InboxContactController::class, 'resolve']);
         Route::post('resolve-batch', [\App\Http\Controllers\Api\InboxContactController::class, 'resolveBatch']);
-        Route::put('{contact}', [\App\Http\Controllers\Api\InboxContactController::class, 'update']);
+        Route::match(['put', 'patch'], '{contact}', [\App\Http\Controllers\Api\InboxContactController::class, 'update']);
         Route::post('{contact}/assign', [\App\Http\Controllers\Api\InboxContactController::class, 'assign']);
     });
 
@@ -139,7 +139,7 @@ Route::group(['middleware' => ['auth:sanctum', 'tenant', 'throttle:api', \App\Ht
         Route::get('/bots/{bot}', [\App\Http\Controllers\Api\Mobile\MessageBotController::class, 'show']);
         Route::post('/bots/{bot}/duplicate', [\App\Http\Controllers\Api\Mobile\MessageBotController::class, 'duplicate']);
         Route::post('/bots/{bot}/toggle', [\App\Http\Controllers\Api\Mobile\MessageBotController::class, 'toggle']);
-        Route::patch('/bots/{bot}', [\App\Http\Controllers\Api\Mobile\MessageBotController::class, 'update']);
+        Route::match(['put', 'patch'], '/bots/{bot}', [\App\Http\Controllers\Api\Mobile\MessageBotController::class, 'update']);
         Route::delete('/bots/{bot}', [\App\Http\Controllers\Api\Mobile\MessageBotController::class, 'destroy']);
 
         // Activity Logs
@@ -159,13 +159,13 @@ Route::group(['middleware' => ['auth:sanctum', 'tenant', 'throttle:api', \App\Ht
         Route::get('/contacts/{contact}', [\App\Http\Controllers\Api\Mobile\ContactController::class, 'show']);
         Route::get('/contacts/{contact}/activity', [\App\Http\Controllers\Api\Mobile\ContactController::class, 'activity']);
         Route::post('/contacts/{contact}/tags/toggle', [\App\Http\Controllers\Api\Mobile\ContactController::class, 'toggleTag']);
-        Route::put('/contacts/{contact}', [\App\Http\Controllers\Api\Mobile\ContactController::class, 'update']);
+        Route::match(['put', 'patch'], '/contacts/{contact}', [\App\Http\Controllers\Api\Mobile\ContactController::class, 'update']);
 
         // Templates (single canonical set)
         Route::get('/templates', [\App\Http\Controllers\Api\Mobile\TemplateController::class, 'index']);
         Route::post('/templates', [\App\Http\Controllers\Api\Mobile\TemplateController::class, 'store']);
         Route::get('/templates/{template}', [\App\Http\Controllers\Api\Mobile\TemplateController::class, 'show']);
-        Route::patch('/templates/{template}', [\App\Http\Controllers\Api\Mobile\TemplateController::class, 'update']);
+        Route::match(['put', 'patch'], '/templates/{template}', [\App\Http\Controllers\Api\Mobile\TemplateController::class, 'update']);
         Route::post('/templates/{template}/toggle', [\App\Http\Controllers\Api\Mobile\TemplateController::class, 'toggle']);
         Route::post('/templates/{template}/send-test', [\App\Http\Controllers\Api\Mobile\TemplateController::class, 'sendTest']);
         Route::delete('/templates/{template}', [\App\Http\Controllers\Api\Mobile\TemplateController::class, 'destroy']);

@@ -33,15 +33,7 @@ class ExternalTemplateController extends Controller
 
             if ($localTemplates->isNotEmpty() && ! $request->boolean('force_refresh')) {
                 return $this->success(
-                    $localTemplates->map(fn($t) => [
-                        'id' => $t->id,
-                        'template_id' => $t->whatsapp_template_id,
-                        'name' => $t->name,
-                        'language' => $t->language,
-                        'category' => $t->category,
-                        'status' => $t->status,
-                        'components' => $t->components,
-                    ]),
+                    $this->mapTemplates($localTemplates),
                     'Templates retrieved successfully.'
                 );
             }
@@ -59,7 +51,7 @@ class ExternalTemplateController extends Controller
             }
 
             if ($localTemplates->isNotEmpty()) {
-                return $this->success($localTemplates, 'Templates retrieved successfully.');
+                return $this->success($this->mapTemplates($localTemplates), 'Templates retrieved successfully.');
             }
 
             return $this->error($result['message'] ?? 'Failed to fetch templates', 500);
@@ -67,10 +59,23 @@ class ExternalTemplateController extends Controller
         } catch (\Exception $e) {
             $localTemplates = \App\Models\WhatsappTemplate::where('team_id', $team->id)->get();
             if ($localTemplates->isNotEmpty()) {
-                return $this->success($localTemplates, 'Templates retrieved successfully.');
+                return $this->success($this->mapTemplates($localTemplates), 'Templates retrieved successfully.');
             }
             return $this->error($e->getMessage(), 500);
         }
+    }
+
+    private function mapTemplates($templates)
+    {
+        return $templates->map(fn($t) => [
+            'id' => $t->id,
+            'template_id' => $t->whatsapp_template_id,
+            'name' => $t->name,
+            'language' => $t->language,
+            'category' => $t->category,
+            'status' => $t->status,
+            'components' => $t->components,
+        ]);
     }
 
     /**

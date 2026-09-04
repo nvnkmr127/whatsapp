@@ -99,12 +99,12 @@ class ExternalConversationController extends Controller
         $request->validate([
             'phone_number' => ['required', 'string', 'regex:/^\+?[1-9]\d{1,14}$/'],
             'type' => 'required|in:text,template',
-            'message' => 'required_if:type,text|string',
-            'template_name' => 'required_if:type,template|string',
-            'language' => 'required_if:type,template|string|min:2|max:10',
-            'variables' => 'array',
-            'header_variables' => 'array',
-            'footer_variables' => 'array',
+            'message' => 'required_if:type,text|nullable|string',
+            'template_name' => 'required_if:type,template|nullable|string',
+            'language' => 'required_if:type,template|nullable|string|min:2|max:10',
+            'variables' => 'nullable|array',
+            'header_variables' => 'nullable|array',
+            'footer_variables' => 'nullable|array',
         ]);
 
         $team = $request->user()->currentTeam;
@@ -126,10 +126,26 @@ class ExternalConversationController extends Controller
             }
         }
 
-        // 1. Resolve Contact & Conversation
-        $contact = \App\Models\Contact::firstOrCreate(
-            ['team_id' => $team->id, 'phone_number' => $request->phone_number]
-        );
+        // 1. Resolve Contact & Conversation (supports + / non-+ without creating duplicates)
+        $cleanPhone = trim($request->phone_number);
+        $noPlus = ltrim($cleanPhone, '+');
+        $withPlus = '+' . $noPlus;
+
+        $contact = \App\Models\Contact::where('team_id', $team->id)
+            ->where(function ($q) use ($cleanPhone, $noPlus, $withPlus) {
+                $q->where('phone_number', $cleanPhone)
+                    ->orWhere('phone_number', $withPlus)
+                    ->orWhere('phone_number', $noPlus);
+            })
+            ->first();
+
+        if (! $contact) {
+            $contact = \App\Models\Contact::create([
+                'team_id' => $team->id,
+                'phone_number' => $request->phone_number,
+                'name' => $request->phone_number,
+            ]);
+        }
         $conversation = (new \App\Services\ConversationService)->ensureActiveConversation($contact);
 
         // 2. Pre-persist
