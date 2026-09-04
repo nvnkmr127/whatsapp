@@ -23,13 +23,13 @@ class AutomationTriggerListener implements ShouldQueue
      */
     public function handle(MessageReceived $event): void
     {
-        Log::info("AutomationTriggerListener: Handle started for message {$event->message->id}");
+        Log::debug("AutomationTriggerListener: Handle started for message {$event->message->id}");
         $message = $event->message;
 
         // Idempotency check: Ensure we don't process the same message twice
         $idempotencyKey = "automation_triggered_msg_{$message->id}";
         if (Cache::has($idempotencyKey)) {
-            Log::info("AutomationTriggerListener: Message {$message->id} already processed. Skipping.");
+            Log::debug("AutomationTriggerListener: Message {$message->id} already processed. Skipping.");
 
             return;
         }

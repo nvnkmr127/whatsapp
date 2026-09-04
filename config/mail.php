@@ -93,6 +93,10 @@ return [
 
         'resend' => [
             'transport' => 'resend',
+            // Laravel's resend transport reads this (or services.resend.key).
+            // services.php names it 'api_key', so map it here or the client is
+            // built with a null key -> "Resend::client() ... null given".
+            'key' => env('RESEND_API_KEY'),
         ],
 
         'sendmail' => [

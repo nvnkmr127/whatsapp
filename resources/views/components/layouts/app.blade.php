@@ -9,6 +9,15 @@
             document.documentElement.classList.remove('dark')
         }
     </script>
+    {{-- Inlined so x-cloak works BEFORE the Vite CSS bundle loads. Without this,
+         on a cold first load the mobile sidebar backdrop (fixed inset-0 z-50)
+         paints full-screen and blocks every click until Alpine/CSS finish
+         loading; a reload "fixes" it only because the assets are then cached. --}}
+    <style>
+        [x-cloak] { display: none !important; }
+        [x-cloak][style*="display: block"],
+        [x-cloak][style*="display: flex"] { display: block !important; }
+    </style>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <meta name="csrf-token" content="{{ csrf_token() }}">

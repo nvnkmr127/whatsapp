@@ -24,6 +24,11 @@ class Automation extends Model
         'last_published_at' => 'datetime',
     ];
 
+    // The trigger/execution paths always read the team (entitlement, health,
+    // business-hours, settings), and $run->automation->team is accessed all
+    // over. Eager-load it so strict mode doesn't flag a lazy-load violation.
+    protected $with = ['team'];
+
     public function steps()
     {
         return $this->hasMany(AutomationStep::class)->orderBy('order_index');

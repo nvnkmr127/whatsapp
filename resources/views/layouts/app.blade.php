@@ -2,6 +2,13 @@
 <html lang="{{ str_replace('_', '-', app()->getLocale()) }}">
 
 <head>
+    {{-- Inline x-cloak so it works before the Vite CSS bundle loads (prevents
+         uncloaked overlays flashing/blocking clicks on a cold first load). --}}
+    <style>
+        [x-cloak] { display: none !important; }
+        [x-cloak][style*="display: block"],
+        [x-cloak][style*="display: flex"] { display: block !important; }
+    </style>
     <script>
         if (localStorage.theme === 'dark' || (!('theme' in localStorage) && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
             document.documentElement.classList.add('dark');

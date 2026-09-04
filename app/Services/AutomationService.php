@@ -48,7 +48,7 @@ class AutomationService
     public function checkTriggers(Contact $contact, $messageContent)
     {
         if (! $this->handoff->shouldProcess($contact)) {
-            Log::info("Automation CheckTriggers: Processing skipped (Bot Handoff enabled for contact {$contact->id})");
+            Log::debug("Automation CheckTriggers: Processing skipped (Bot Handoff enabled for contact {$contact->id})");
 
             return false;
         }
