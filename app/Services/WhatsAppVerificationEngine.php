@@ -316,6 +316,10 @@ class WhatsAppVerificationEngine
             // 'whatsapp_setup_progress' => json_encode($results), // Optional: store details
         ]);
 
+        if ($state === IntegrationState::READY) {
+            \Illuminate\Support\Facades\Cache::forget("whatsapp_consecutive_errors:{$this->team->id}");
+        }
+
         return [
             'state' => $state,
             'results' => $results,

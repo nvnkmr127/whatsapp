@@ -100,6 +100,12 @@ class Dashboard extends Component
                 return;
             }
 
+            // Clear any lingering circuit breaker errors for this team
+            \Illuminate\Support\Facades\Cache::forget("whatsapp_consecutive_errors:{$campaign->team_id}");
+            if ($campaign->team && $campaign->team->whatsapp_setup_state === \App\Enums\IntegrationState::RESTRICTED) {
+                $campaign->team->update(['whatsapp_setup_state' => \App\Enums\IntegrationState::READY]);
+            }
+
             foreach ($failedMessages as $message) {
                 // Reset message status
                 $message->update([
