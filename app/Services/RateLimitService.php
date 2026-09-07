@@ -9,12 +9,13 @@ class RateLimitService
 {
     /**
      * WABA API Tiers and their estimated safe RPS limit.
+     * Cloud API supports up to 80-500 requests per second.
      */
     protected $tiers = [
-        '1K' => 0.04,  // ~1000 per day / 86400s
-        '10K' => 0.4,  // ~10000 per day
-        '100K' => 4,   // ~100000 per day
-        'UNLIMITED' => 50,
+        '1K' => 50,
+        '10K' => 80,
+        '100K' => 200,
+        'UNLIMITED' => 500,
     ];
 
     /**
@@ -211,6 +212,18 @@ class RateLimitService
     {
         Cache::put("tenant_paused:{$teamId}", true, $duration);
         Log::warning("RateLimit: Tenant {$teamId} paused for {$duration}s.");
+    }
+
+    /**
+     * Resume a specific tenant.
+     */
+    public function resumeTenant(int $teamId): void
+    {
+        Cache::forget("tenant_paused:{$teamId}");
+        Cache::forget("ratelimit:critical_failures:{$teamId}");
+        Cache::forget("whatsapp_consecutive_errors:{$teamId}");
+        Cache::forget("whatsapp_account_errors:{$teamId}");
+        Log::info("RateLimit: Tenant {$teamId} resumed.");
     }
 
     /**

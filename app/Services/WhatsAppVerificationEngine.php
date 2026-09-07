@@ -317,7 +317,7 @@ class WhatsAppVerificationEngine
         ]);
 
         if ($state === IntegrationState::READY) {
-            \Illuminate\Support\Facades\Cache::forget("whatsapp_consecutive_errors:{$this->team->id}");
+            (new \App\Services\RateLimitService)->resumeTenant($this->team->id);
         }
 
         return [

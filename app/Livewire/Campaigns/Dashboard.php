@@ -106,9 +106,10 @@ class Dashboard extends Component
                 return;
             }
 
-            // Clear any lingering circuit breaker errors for this team
-            \Illuminate\Support\Facades\Cache::forget("whatsapp_consecutive_errors:{$campaign->team_id}");
-            if ($campaign->team && $campaign->team->whatsapp_setup_state === \App\Enums\IntegrationState::RESTRICTED) {
+            // Clear any lingering circuit breaker errors and unpause tenant
+            \Illuminate\Support\Facades\Cache::forget("campaign_status:{$campaign->id}");
+            (new \App\Services\RateLimitService)->resumeTenant($campaign->team_id);
+            if ($campaign->team && in_array($campaign->team->whatsapp_setup_state, [\App\Enums\IntegrationState::RESTRICTED, \App\Enums\IntegrationState::READY_WARNING])) {
                 $campaign->team->update(['whatsapp_setup_state' => \App\Enums\IntegrationState::READY]);
             }
 
@@ -147,9 +148,11 @@ class Dashboard extends Component
             $campaign = Campaign::findOrFail($this->campaignId);
             $campaign->update(['status' => 'processing']);
 
-            // Clear any lingering circuit breaker errors for this team
-            \Illuminate\Support\Facades\Cache::forget("whatsapp_consecutive_errors:{$campaign->team_id}");
-            if ($campaign->team && $campaign->team->whatsapp_setup_state === \App\Enums\IntegrationState::RESTRICTED) {
+            // Bust cached status and unpause tenant
+            \Illuminate\Support\Facades\Cache::forget("campaign_status:{$campaign->id}");
+            (new \App\Services\RateLimitService)->resumeTenant($campaign->team_id);
+
+            if ($campaign->team && in_array($campaign->team->whatsapp_setup_state, [\App\Enums\IntegrationState::RESTRICTED, \App\Enums\IntegrationState::READY_WARNING])) {
                 $campaign->team->update(['whatsapp_setup_state' => \App\Enums\IntegrationState::READY]);
             }
 

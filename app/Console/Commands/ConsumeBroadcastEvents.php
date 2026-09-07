@@ -51,6 +51,12 @@ class ConsumeBroadcastEvents extends Command
 
         $this->info("Starting Broadcast Consumer: Group [{$group}], Consumer [{$consumer}]");
 
+        // Self-heal stale locked events from interrupted workers (older than 5 minutes)
+        \Illuminate\Support\Facades\DB::table('broadcast_events')
+            ->where('status', 'processing')
+            ->where('locked_at', '<', now()->subMinutes(5))
+            ->update(['status' => 'pending', 'locked_at' => null]);
+
         // Database Polling
         while (true) {
             // Self-termination check for Scheduler
@@ -220,6 +226,12 @@ class ConsumeBroadcastEvents extends Command
         if (! $campaignStatus || in_array($campaignStatus, ['cancelled', 'failed'], true)) {
             $this->info("Campaign {$campaignId} is {$campaignStatus}, discarding event {$id}.");
             $this->markDone($id);
+
+            return;
+        }
+
+        if ($campaignStatus === 'paused') {
+            $this->release($id);
 
             return;
         }
