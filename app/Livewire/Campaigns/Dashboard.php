@@ -33,18 +33,24 @@ class Dashboard extends Component
     {
         $campaign = $this->campaign;
 
-        // One aggregation instead of two COUNTs (this reruns on every poll tick).
+        // Count unique sent recipients from messages table to avoid inflation from retries
         $agg = $campaign->messages()
-            ->selectRaw("SUM(status IN ('sent','delivered','read')) AS sent,
-                SUM(status = 'failed') AS failed")
+            ->selectRaw("COUNT(DISTINCT CASE WHEN status IN ('sent','delivered','read') THEN contact_id END) AS unique_sent,
+                COUNT(DISTINCT CASE WHEN status = 'delivered' THEN contact_id END) AS unique_del,
+                COUNT(DISTINCT CASE WHEN status = 'read' THEN contact_id END) AS unique_read,
+                COUNT(DISTINCT CASE WHEN status = 'failed' THEN contact_id END) AS unique_failed")
             ->first();
 
+        $totalContacts = max(1, (int) $campaign->total_contacts);
+        $uniqueSent = (int) ($agg->unique_sent ?? 0);
+        $sentCount = $uniqueSent > 0 ? $uniqueSent : min($totalContacts, (int) $campaign->sent_count);
+
         return [
-            'sent' => max($campaign->sent_count, (int) ($agg->sent ?? 0)),
-            'delivered' => $campaign->del_count,
-            'read' => $campaign->read_count,
-            'failed' => (int) ($agg->failed ?? 0),
-            'total' => $campaign->total_contacts,
+            'sent' => min($totalContacts, $sentCount),
+            'delivered' => max((int) $campaign->del_count, (int) ($agg->unique_del ?? 0)),
+            'read' => max((int) $campaign->read_count, (int) ($agg->unique_read ?? 0)),
+            'failed' => (int) ($agg->unique_failed ?? 0),
+            'total' => $totalContacts,
         ];
     }
 
@@ -132,6 +138,37 @@ class Dashboard extends Component
         } catch (\Exception $e) {
             \Illuminate\Support\Facades\Log::error('Manual Campaign Replay All Error: ' . $e->getMessage());
             $this->dispatch('notify', message: 'Replay failed: ' . $e->getMessage(), type: 'error');
+        }
+    }
+
+    public function resumeCampaign()
+    {
+        try {
+            $campaign = Campaign::findOrFail($this->campaignId);
+            $campaign->update(['status' => 'processing']);
+
+            // Clear any lingering circuit breaker errors for this team
+            \Illuminate\Support\Facades\Cache::forget("whatsapp_consecutive_errors:{$campaign->team_id}");
+            if ($campaign->team && $campaign->team->whatsapp_setup_state === \App\Enums\IntegrationState::RESTRICTED) {
+                $campaign->team->update(['whatsapp_setup_state' => \App\Enums\IntegrationState::READY]);
+            }
+
+            $this->dispatch('notify', message: 'Campaign resumed! Message sending has continued.', type: 'success');
+            $this->dispatch('$refresh');
+        } catch (\Exception $e) {
+            $this->dispatch('notify', message: 'Could not resume campaign: ' . $e->getMessage(), type: 'error');
+        }
+    }
+
+    public function pauseCampaign()
+    {
+        try {
+            $campaign = Campaign::findOrFail($this->campaignId);
+            $campaign->update(['status' => 'paused']);
+            $this->dispatch('notify', message: 'Campaign paused.', type: 'info');
+            $this->dispatch('$refresh');
+        } catch (\Exception $e) {
+            $this->dispatch('notify', message: 'Could not pause campaign: ' . $e->getMessage(), type: 'error');
         }
     }
 

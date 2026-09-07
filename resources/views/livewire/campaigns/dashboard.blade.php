@@ -1,14 +1,16 @@
 @php
     $campaign = $this->campaign;
     $metrics = $this->metrics;
-    $percent = $metrics['total'] > 0 ? round(($metrics['sent'] / $metrics['total']) * 100) : 0;
+    $percent = $metrics['total'] > 0 ? min(100, round(($metrics['sent'] / $metrics['total']) * 100)) : 0;
 
     // Status Styles
     $statusConfig = [
         'completed' => ['color' => 'wa-teal', 'label' => 'Success'],
+        'completed_with_errors' => ['color' => 'amber-500', 'label' => 'Completed w/ Errors'],
         'failed' => ['color' => 'rose-500', 'label' => 'Failed'],
         'processing' => ['color' => 'wa-blue', 'label' => 'Ongoing'],
         'queued' => ['color' => 'wa-orange', 'label' => 'Pending'],
+        'paused' => ['color' => 'amber-500', 'label' => 'Paused'],
         'scheduled' => ['color' => 'slate-400', 'label' => 'Scheduled'],
     ];
     $status = $statusConfig[$campaign->status] ?? ['color' => 'slate-400', 'label' => $campaign->status];
@@ -41,6 +43,23 @@
         </div>
 
         <div class="flex items-center gap-3">
+            @if($campaign->status === 'paused')
+                <button wire:click="resumeCampaign" wire:loading.attr="disabled"
+                    class="px-6 py-3 bg-emerald-600 hover:bg-emerald-700 text-white font-black uppercase tracking-widest text-[10px] rounded-2xl shadow-xl shadow-emerald-600/20 transition-all active:scale-95 flex items-center gap-2">
+                    <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
+                        <path d="M8 5v14l11-7z"/>
+                    </svg>
+                    <span>Resume Campaign</span>
+                </button>
+            @elseif(in_array($campaign->status, ['processing', 'sending', 'queued']))
+                <button wire:click="pauseCampaign" wire:loading.attr="disabled"
+                    class="px-6 py-3 bg-amber-500 hover:bg-amber-600 text-white font-black uppercase tracking-widest text-[10px] rounded-2xl shadow-xl shadow-amber-500/20 transition-all active:scale-95 flex items-center gap-2">
+                    <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
+                        <path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"/>
+                    </svg>
+                    <span>Pause Campaign</span>
+                </button>
+            @endif
             <a href="{{ route('campaigns.show', $campaign->id) }}"
                 class="px-6 py-3 bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800 text-slate-900 dark:text-white text-[10px] font-black uppercase tracking-widest rounded-2xl hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors shadow-sm">
                 Full Report
@@ -51,6 +70,26 @@
             </a>
         </div>
     </div>
+
+    @if($campaign->status === 'paused')
+        <div class="p-5 bg-amber-500/10 border-2 border-amber-500/20 rounded-3xl flex flex-col sm:flex-row items-center justify-between gap-4">
+            <div class="flex items-center gap-3">
+                <div class="w-10 h-10 rounded-2xl bg-amber-500/20 text-amber-500 flex items-center justify-center flex-shrink-0">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 9v6m4-6v6m7-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                </div>
+                <div>
+                    <div class="text-sm font-bold text-slate-900 dark:text-white">Campaign is currently Paused</div>
+                    <div class="text-xs text-slate-500 dark:text-slate-400">Sending is temporarily on hold. Click "Resume Now" to continue dispatching to the remaining queued contacts.</div>
+                </div>
+            </div>
+            <button wire:click="resumeCampaign" class="px-6 py-3 bg-emerald-600 hover:bg-emerald-700 text-white font-black uppercase tracking-widest text-[10px] rounded-2xl shadow-lg shadow-emerald-600/20 transition-all active:scale-95 flex items-center gap-2 flex-shrink-0">
+                <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
+                <span>Resume Now</span>
+            </button>
+        </div>
+    @endif
 
     <!-- Live Performance Funnel -->
     <div
