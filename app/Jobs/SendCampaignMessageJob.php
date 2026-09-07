@@ -429,6 +429,8 @@ class SendCampaignMessageJob implements ShouldQueue
             'template not found',
             'blocked by policy',
             'messaging blocked',
+            'ecosystem engagement',
+            '131049',
             'marketing requires opt-in',
             'plan limit reached',
             'insufficient funds',
