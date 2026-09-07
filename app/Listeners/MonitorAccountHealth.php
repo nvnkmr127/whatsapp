@@ -49,7 +49,7 @@ class MonitorAccountHealth implements ShouldQueue
     protected function isCritical($type, $payload)
     {
         // Define what constitutes a critical risk requiring automated action
-        if ($type === 'BAN' || $type === 'RESTRICTION') {
+        if (in_array($type, ['BAN', 'RESTRICTION', 'CIRCUIT_BREAKER'])) {
             return true;
         }
 
@@ -65,13 +65,15 @@ class MonitorAccountHealth implements ShouldQueue
 
     protected function pauseCampaigns(Team $team)
     {
-        Log::warning("MonitorAccountHealth: Pausing active campaigns for Team {$team->id} due to Account Risk.");
+        Log::warning("MonitorAccountHealth: Pausing active/processing campaigns for Team {$team->id} due to Account Risk.");
 
         \App\Models\Campaign::where('team_id', $team->id)
-            ->where('status', 'active')
+            ->whereIn('status', ['processing', 'sending', 'queued', 'active'])
             ->update(['status' => 'paused']);
 
-        $team->update(['whatsapp_setup_state' => \App\Enums\IntegrationState::READY_WARNING]);
+        if ($team->whatsapp_setup_state !== \App\Enums\IntegrationState::RESTRICTED) {
+            $team->update(['whatsapp_setup_state' => \App\Enums\IntegrationState::READY_WARNING]);
+        }
     }
 
     protected function notifyAdmins(WhatsAppAccountRisk $event, ?Team $team)

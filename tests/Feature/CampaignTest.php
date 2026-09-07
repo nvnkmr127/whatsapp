@@ -268,8 +268,11 @@ class CampaignTest extends TestCase
             'to' => '+1234567890',
         ]);
 
+        \Illuminate\Database\Eloquent\Model::preventLazyLoading(true);
+
         \Livewire\Livewire::actingAs($user)
             ->test(\App\Livewire\Campaigns\Dashboard::class, ['campaign' => $campaign])
+            ->assertSee($contact->phone_number)
             ->call('replayAllFailed')
             ->assertHasNoErrors();
 

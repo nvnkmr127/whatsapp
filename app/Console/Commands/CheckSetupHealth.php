@@ -58,9 +58,12 @@ class CheckSetupHealth extends Command
         foreach ($suspendedTeams as $team) {
             $this->error("Team {$team->id}: {$team->whatsapp_setup_state->value}");
 
-            Log::critical('Setup suspended', [
+            Log::critical('WhatsApp setup suspended or restricted', [
                 'team_id' => $team->id,
+                'state' => $team->whatsapp_setup_state?->value ?? $team->whatsapp_setup_state,
                 'quality_rating' => $team->whatsapp_quality_rating,
+                'phone_status' => $team->whatsapp_phone_status,
+                'token_expires_at' => $team->whatsapp_token_expires_at?->toIso8601String(),
             ]);
         }
 

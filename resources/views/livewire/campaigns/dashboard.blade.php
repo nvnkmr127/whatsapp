@@ -211,7 +211,7 @@
                                 <td class="py-3 text-slate-900 dark:text-white">
                                     <div class="flex flex-col">
                                         <span class="text-sm font-bold">{{ $msg->contact->name ?? 'Unknown' }}</span>
-                                        <span class="text-[10px] font-bold text-slate-400 tracking-tight">{{ $msg->contact->phone_number }}</span>
+                                        <span class="text-[10px] font-bold text-slate-400 tracking-tight">{{ $msg->contact?->phone_number ?? '' }}</span>
                                     </div>
                                 </td>
                                 <td class="py-3">
@@ -312,12 +312,12 @@
                 </div>
 
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    @foreach($campaign->messages()->where('status', 'failed')->latest()->take(6)->get() as $msg)
+                    @foreach($campaign->messages()->with('contact:id,phone_number')->where('status', 'failed')->latest()->take(6)->get() as $msg)
                         <div
                             class="flex items-center justify-between p-4 bg-rose-50/50 dark:bg-rose-500/5 rounded-2xl border border-rose-100 dark:border-rose-500/10 transition-all hover:bg-rose-50 dark:hover:bg-rose-500/10">
                             <div class="flex flex-col">
                                 <span
-                                    class="text-sm font-bold text-slate-900 dark:text-white">{{ $msg->contact->phone_number }}</span>
+                                    class="text-sm font-bold text-slate-900 dark:text-white">{{ $msg->contact?->phone_number ?? 'Unknown' }}</span>
                                 <span
                                     class="text-[10px] font-black text-rose-400 uppercase tracking-widest mt-0.5">{{ $msg->error_message ?? 'API Rejection' }}</span>
                             </div>

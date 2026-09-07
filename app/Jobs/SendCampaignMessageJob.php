@@ -29,14 +29,18 @@ class SendCampaignMessageJob implements ShouldQueue
     protected $traceId;
 
     /**
-     * The number of times the job may be attempted.
-     */
-    public $tries = 5;
-
-    /**
      * The number of seconds to wait before retrying the job.
      */
     public $backoff = [60, 300, 600, 1200, 3600];
+
+    /**
+     * Determine the time at which the job should timeout and stop retrying.
+     * Prevents MaxAttemptsExceededException when job is released for RPS rate limiting or campaign pauses.
+     */
+    public function retryUntil(): \DateTimeInterface
+    {
+        return now()->addHours(24);
+    }
 
     protected $snapshotId;
 
@@ -307,6 +311,10 @@ class SendCampaignMessageJob implements ShouldQueue
                         'next_retry_at' => null,
                     ]);
                 }
+
+                \App\Models\CampaignDetail::where('campaign_id', $this->campaignId)
+                    ->where('contact_id', $this->contactId)
+                    ->update(['status' => 'failed']);
             }
 
             // Report failure to RateLimitService for adaptive throttling if it looks like a rate limit error
@@ -320,6 +328,56 @@ class SendCampaignMessageJob implements ShouldQueue
             // Our logic in updateCampaignProgress uses counts from the messages table.
         } finally {
             Cache::forget($lockKey);
+            $this->updateCampaignProgress();
+        }
+    }
+
+    /**
+     * Handle a permanent job failure (e.g. timeout, unrecoverable exception).
+     */
+    public function failed(?\Throwable $exception): void
+    {
+        $lockKey = "campaign_send_lock:{$this->campaignId}:{$this->contactId}";
+        Cache::forget($lockKey);
+
+        $errorMessage = $exception ? substr($exception->getMessage(), 0, 255) : 'Job failed or exceeded attempts';
+
+        try {
+            $msg = Message::where('campaign_id', $this->campaignId)
+                ->where('contact_id', $this->contactId)
+                ->first();
+
+            if (! $msg) {
+                $contact = Contact::find($this->contactId);
+                $campaign = Campaign::find($this->campaignId);
+                if ($contact && $campaign) {
+                    $conversation = (new ConversationService)->ensureActiveConversation($contact);
+                    $msg = Message::create([
+                        'team_id' => $campaign->team_id,
+                        'contact_id' => $contact->id,
+                        'conversation_id' => $conversation->id,
+                        'campaign_id' => $this->campaignId,
+                        'type' => 'template',
+                        'direction' => 'outbound',
+                        'status' => 'failed',
+                        'content' => 'Send failed: ' . $errorMessage,
+                    ]);
+                }
+            }
+
+            if ($msg) {
+                $msg->update([
+                    'status' => 'failed',
+                    'error_message' => $errorMessage,
+                ]);
+            }
+
+            \App\Models\CampaignDetail::where('campaign_id', $this->campaignId)
+                ->where('contact_id', $this->contactId)
+                ->update(['status' => 'failed']);
+        } catch (\Throwable $t) {
+            Log::error("SendCampaignMessageJob failed() handler error: {$t->getMessage()}");
+        } finally {
             $this->updateCampaignProgress();
         }
     }
@@ -370,6 +428,7 @@ class SendCampaignMessageJob implements ShouldQueue
         $permanentErrors = [
             'template not found',
             'blocked by policy',
+            'messaging blocked',
             'marketing requires opt-in',
             'plan limit reached',
             'insufficient funds',

@@ -150,6 +150,9 @@ class WhatsAppEventRouter
 
             // [STAFF-HARDENING] Circuit Breaker Logic
             if ($statusData['status'] === 'failed' && $this->teamId) {
+                $errorCodes = collect($statusData['errors'] ?? [])->pluck('code')->all();
+                $isAccountLevel = ! empty(array_intersect($errorCodes, [131031, 131048, 131056, 141006, 200, 190]));
+
                 $errorKey = "whatsapp_consecutive_errors:{$this->teamId}";
                 $errors = Cache::increment($errorKey);
 
@@ -157,12 +160,14 @@ class WhatsAppEventRouter
                     Cache::put($errorKey, 1, 600); // 10 min window
                 }
 
-                if ($errors >= 10) {
-                    Log::critical("Circuit Breaker Tripped for Team {$this->teamId} due to 10+ consecutive delivery failures.");
+                $threshold = $isAccountLevel ? 3 : 50;
+
+                if ($errors >= $threshold) {
+                    Log::critical("Circuit Breaker Tripped for Team {$this->teamId} due to {$errors}+ consecutive delivery failures (Account-level: " . ($isAccountLevel ? 'YES' : 'NO') . ").");
                     $team = Team::find($this->teamId);
                     if ($team && $team->whatsapp_setup_state !== IntegrationState::RESTRICTED) {
                         $team->update(['whatsapp_setup_state' => IntegrationState::RESTRICTED]);
-                        WhatsAppAccountRisk::dispatch('CIRCUIT_BREAKER', ['errors' => $errors], $this->teamId);
+                        WhatsAppAccountRisk::dispatch('CIRCUIT_BREAKER', ['errors' => $errors, 'account_level' => $isAccountLevel], $this->teamId);
                     }
                 }
             } elseif ($statusData['status'] === 'delivered' && $this->teamId) {
