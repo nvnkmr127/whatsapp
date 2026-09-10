@@ -48,13 +48,13 @@ Schedule::job(new \App\Jobs\CheckTrialExpiry)->daily();
 // running both just adds a redundant worker.
 Schedule::command('queue:work --queue=high,webhooks,messages,push_notifications,notifications,broadcasts,campaigns,automations,workflows,ai_processing,default --max-time=55 --tries=3 --timeout=600 --sleep=2')
     ->everyMinute()
-    ->withoutOverlapping();
+    ->withoutOverlapping(5);
 
 // Broadcast Event Consumer (Polling loop that runs for 55s then exits, restarted by Cron)
 // This replaces the need for a separate Supervisor process
 Schedule::command('broadcast:consume --count=500 --seconds=55')
     ->everyMinute()
-    ->withoutOverlapping();
+    ->withoutOverlapping(5);
 
 // Compliance Audits
 Schedule::command('whatsapp:audit-compliance')->weekly()->sundays()->at('04:00');
