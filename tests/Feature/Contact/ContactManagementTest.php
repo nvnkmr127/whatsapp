@@ -110,4 +110,26 @@ class ContactManagementTest extends TestCase
             ->assertSet('isViewModalOpen', false)
             ->assertSet('viewingContactId', null);
     }
+
+    public function test_create_contact_with_language_succeeds()
+    {
+        $team = Team::factory()->create();
+        $this->actingAs($team->owner);
+
+        \Livewire\Livewire::test(\App\Livewire\Contacts\ContactManager::class)
+            ->set('name', 'Maria Garcia')
+            ->set('phoneNumberWithoutCode', '9876543210')
+            ->set('countryCode', '+1')
+            ->set('email', 'maria@example.com')
+            ->set('language', 'es')
+            ->call('store')
+            ->assertHasNoErrors();
+
+        $this->assertDatabaseHas('contacts', [
+            'team_id' => $team->id,
+            'name' => 'Maria Garcia',
+            'language' => 'es',
+        ]);
+    }
 }
+
