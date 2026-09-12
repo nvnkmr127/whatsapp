@@ -1856,14 +1856,14 @@ STRICT GROUNDING RULES:
         ]);
 
         // Outbound Push to Client's External System
-        $this->dispatchTicketOutboundPush($ticket, $team);
+        $this->dispatchTicketOutboundPush($ticket, $team, $node);
     }
 
-    protected function dispatchTicketOutboundPush(\App\Models\Ticket $ticket, \App\Models\Team $team)
+    protected function dispatchTicketOutboundPush(\App\Models\Ticket $ticket, \App\Models\Team $team, array $node = [])
     {
         $settings = $team->ticket_settings ?? [];
-        $outboundUrl = $settings['outbound_webhook_url'] ?? null;
-        $secret = $settings['outbound_webhook_secret'] ?? null;
+        $outboundUrl = $node['data']['webhook_url'] ?? ($settings['outbound_webhook_url'] ?? ($team->outbound_webhook_url ?? null));
+        $secret = $node['data']['webhook_secret'] ?? ($settings['outbound_webhook_secret'] ?? null);
 
         $payload = [
             'event' => 'ticket.created',
@@ -1893,9 +1893,12 @@ STRICT GROUNDING RULES:
             \Illuminate\Support\Facades\Log::warning("Ticket #{$ticket->id}: WebhookService dispatch failed: ".$e->getMessage());
         }
 
-        // Direct push if external URL configured on team
+        // Direct push if external URL configured
         if (! empty($outboundUrl)) {
+            \Illuminate\Support\Facades\Log::info("Ticket #{$ticket->ticket_number} (ID: {$ticket->id}): Dispatching PushTicketToExternalSystemJob to {$outboundUrl}");
             \App\Jobs\PushTicketToExternalSystemJob::dispatch($ticket->id, $outboundUrl, $payload, $secret);
+        } else {
+            \Illuminate\Support\Facades\Log::warning("Ticket #{$ticket->ticket_number} (ID: {$ticket->id}): No outbound webhook URL configured for Team #{$team->id}. Push skipped.");
         }
     }
 
