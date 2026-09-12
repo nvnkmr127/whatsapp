@@ -54,22 +54,32 @@ class TicketApiController extends Controller
 
         $team = $ticket->team;
 
-        // Verify API Callback Key if configured for the team
+        // Verify API Callback Key — this route runs without auth:sanctum, so the key is the
+        // ONLY thing standing between the public internet and the ability to flip ticket
+        // status + send an arbitrary WhatsApp message to the citizen. Fail CLOSED: reject
+        // when no key is configured rather than leaving the endpoint wide open.
         $expectedKey = $team->ticket_settings['callback_api_key'] ?? null;
-        if (! empty($expectedKey)) {
-            $providedKey = $request->header('X-Callback-Key')
-                ?? $request->bearerToken()
-                ?? $request->input('api_key');
+        if (empty($expectedKey)) {
+            Log::warning("TicketApiController: callback rejected — no callback_api_key set for Team #{$team->id}. Configure one in Settings > Ticket Integration.", [
+                'ip' => $request->ip(),
+            ]);
 
-            if ($providedKey !== $expectedKey) {
-                Log::warning("TicketApiController: Unauthorized callback attempt for Ticket #{$ticket->id}", [
-                    'ip' => $request->ip(),
-                ]);
-
-                return $this->error('Unauthorized callback key.', 401, null, 'ERR_UNAUTHORIZED');
-            }
+            return $this->error('Callback authentication is not configured for this account.', 403, null, 'ERR_CALLBACK_NOT_CONFIGURED');
         }
 
+        $providedKey = $request->header('X-Callback-Key')
+            ?? $request->bearerToken()
+            ?? $request->input('api_key');
+
+        if (! is_string($providedKey) || ! hash_equals($expectedKey, $providedKey)) {
+            Log::warning("TicketApiController: Unauthorized callback attempt for Ticket #{$ticket->id}", [
+                'ip' => $request->ip(),
+            ]);
+
+            return $this->error('Unauthorized callback key.', 401, null, 'ERR_UNAUTHORIZED');
+        }
+
+        $previousStatus = $ticket->status;
         $newStatus = strtolower($validated['status']);
         $notes = $validated['resolution_notes'] ?? null;
         $imageUrl = $validated['resolution_image_url'] ?? null;
@@ -90,11 +100,12 @@ class TicketApiController extends Controller
 
         $ticket->update($updateData);
 
-        // Notify Citizen on WhatsApp
+        // Notify Citizen on WhatsApp — only when the status actually changed. External
+        // systems retry callbacks; without this guard every retry re-spams the citizen.
         $notified = false;
         $contact = $ticket->contact;
 
-        if ($contact && ! empty($contact->phone_number)) {
+        if ($previousStatus !== $newStatus && $contact && ! empty($contact->phone_number)) {
             try {
                 $wa = app(WhatsAppService::class)->setTeam($team);
                 $policy = app(\App\Services\PolicyService::class);
