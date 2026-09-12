@@ -1610,7 +1610,7 @@ class AutomationService
         }
         // SPECIAL CASE: Image/Media Message Reply
         elseif (($receivedMsg?->type ?? '') === 'image' || isset($metadata['image'])) {
-            $imageUrl = $receivedMsg?->media_url ?? ($metadata['image']['url'] ?? ($receivedMsg?->media_id ?? ''));
+            $imageUrl = $receivedMsg?->full_media_url ?: ($receivedMsg?->media_url ?? ($metadata['image']['url'] ?? ($receivedMsg?->media_id ?? '')));
             $input = $imageUrl ?: ($messageContent ?: 'Image shared');
 
             $varName = $currentNode['data']['variable'] ?? 'image';
@@ -1619,7 +1619,12 @@ class AutomationService
         } else {
             // Standard Text Reply
             if (isset($currentNode['data']['variable'])) {
-                $vars[$currentNode['data']['variable']] = $messageContent;
+                $trimmed = trim((string) $messageContent);
+                if (strtolower($trimmed) === 'skip' && in_array($currentNode['data']['variable'], ['image_url', 'image', 'photo'])) {
+                    $vars[$currentNode['data']['variable']] = null;
+                } else {
+                    $vars[$currentNode['data']['variable']] = $messageContent;
+                }
             }
         }
 
@@ -1876,6 +1881,7 @@ STRICT GROUNDING RULES:
                 'priority' => $ticket->priority,
                 'status' => $ticket->status,
                 'description' => $ticket->description,
+                'image_url' => $ticket->custom_fields['image_url'] ?? null,
                 'custom_fields' => $ticket->custom_fields,
                 'created_at' => $ticket->created_at?->toIso8601String(),
             ],

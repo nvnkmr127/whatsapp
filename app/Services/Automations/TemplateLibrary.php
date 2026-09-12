@@ -42,14 +42,19 @@ class TemplateLibrary
                         'text' => 'Please share the exact location of the issue using the button below:',
                         'variable' => 'location',
                     ]],
-                    ['id' => 'n4', 'type' => 'create_ticket', 'x' => 1060, 'y' => 50, 'data' => [
+                    ['id' => 'n3_photo', 'type' => 'user_input', 'x' => 1060, 'y' => 50, 'data' => [
+                        'label' => 'Photo Capture',
+                        'question' => "📸 Please snap & send a photo of the issue using your camera (or type 'skip' if you don't have one):",
+                        'variable' => 'image_url',
+                    ]],
+                    ['id' => 'n4', 'type' => 'create_ticket', 'x' => 1400, 'y' => 50, 'data' => [
                         'label' => 'Create & Push Ticket',
                         'subject' => 'Civic Complaint: {{category}}',
                         'category' => '{{category}}',
                         'priority' => 'medium',
                         'description' => 'Reported via WhatsApp bot at {{location_address}}',
                     ]],
-                    ['id' => 'n5', 'type' => 'text', 'x' => 1400, 'y' => 50, 'data' => [
+                    ['id' => 'n5', 'type' => 'text', 'x' => 1740, 'y' => 50, 'data' => [
                         'label' => 'Confirm Ticket to Citizen',
                         'text' => "✅ Grievance Registered Successfully!\n\nTicket ID: #{{ticket_number}}\nCategory: {{category}}\nLocation: {{location_address}}\n\nOur team has been dispatched. You will receive an automated update here once resolved.",
                     ]],
@@ -57,7 +62,8 @@ class TemplateLibrary
                 'edges' => [
                     ['source' => 'n1', 'target' => 'n2'],
                     ['source' => 'n2', 'target' => 'n3'],
-                    ['source' => 'n3', 'target' => 'n4'],
+                    ['source' => 'n3', 'target' => 'n3_photo'],
+                    ['source' => 'n3_photo', 'target' => 'n4'],
                     ['source' => 'n4', 'target' => 'n5'],
                 ],
             ],
