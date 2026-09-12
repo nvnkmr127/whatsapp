@@ -26,6 +26,8 @@ class AutomationBuilder extends Component
 
     public $automationId;
 
+    public $uploadFile;
+
     protected $listeners = [
         'template-selected' => 'loadTemplate'
     ];

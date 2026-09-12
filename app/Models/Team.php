@@ -135,6 +135,7 @@ class Team extends JetstreamTeam
         'offer_snapshot', // Added
         'read_receipts_enabled',
         'is_sandbox_mode',
+        'ticket_settings',
     ];
 
     /**
@@ -196,6 +197,7 @@ class Team extends JetstreamTeam
             'whatsapp_settings' => 'array',
             'is_sandbox_mode' => 'boolean',
             'last_webhook_received_at' => 'datetime',
+            'ticket_settings' => 'array',
         ];
     }
 
