@@ -166,6 +166,28 @@ class TicketIntegrationSettings extends Component
         $this->isTesting = false;
     }
 
+    public function insertTag(string $tag)
+    {
+        $this->resolveMessageTemplate .= ' {{' . $tag . '}}';
+    }
+
+    public function getPreviewMessageProperty(): string
+    {
+        $placeholders = [
+            '{{' . 'name}}' => 'Ramesh Kumar',
+            '{{' . 'ticket_number}}' => $this->prefix . '-260912-ABCD',
+            '{{' . 'category}}' => 'Garbage Dump',
+            '{{' . 'status}}' => 'RESOLVED',
+            '{{' . 'resolution_notes}}' => 'Cleaned by sanitation truck #12 on Main St.',
+        ];
+
+        return str_replace(
+            array_keys($placeholders),
+            array_values($placeholders),
+            $this->resolveMessageTemplate
+        );
+    }
+
     public function render()
     {
         $callbackEndpoint = url('/api/v1/tickets/status-update');

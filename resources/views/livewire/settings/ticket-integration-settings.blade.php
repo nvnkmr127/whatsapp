@@ -220,11 +220,11 @@
 
                     <div class="flex flex-wrap gap-1.5">
                         <span class="text-[10px] font-bold text-zinc-400 self-center mr-1">Insert tags:</span>
-                        <button type="button" @click="$wire.resolveMessageTemplate += ' {{name}}'" class="text-[10px] px-2 py-1 bg-zinc-100 dark:bg-zinc-800 rounded-md font-mono text-orange-500 hover:bg-orange-500/10">&#123;&#123;name&#125;&#125;</button>
-                        <button type="button" @click="$wire.resolveMessageTemplate += ' {{ticket_number}}'" class="text-[10px] px-2 py-1 bg-zinc-100 dark:bg-zinc-800 rounded-md font-mono text-orange-500 hover:bg-orange-500/10">&#123;&#123;ticket_number&#125;&#125;</button>
-                        <button type="button" @click="$wire.resolveMessageTemplate += ' {{category}}'" class="text-[10px] px-2 py-1 bg-zinc-100 dark:bg-zinc-800 rounded-md font-mono text-orange-500 hover:bg-orange-500/10">&#123;&#123;category&#125;&#125;</button>
-                        <button type="button" @click="$wire.resolveMessageTemplate += ' {{status}}'" class="text-[10px] px-2 py-1 bg-zinc-100 dark:bg-zinc-800 rounded-md font-mono text-orange-500 hover:bg-orange-500/10">&#123;&#123;status&#125;&#125;</button>
-                        <button type="button" @click="$wire.resolveMessageTemplate += ' {{resolution_notes}}'" class="text-[10px] px-2 py-1 bg-zinc-100 dark:bg-zinc-800 rounded-md font-mono text-orange-500 hover:bg-orange-500/10">&#123;&#123;resolution_notes&#125;&#125;</button>
+                        <button type="button" wire:click="insertTag('name')" class="text-[10px] px-2 py-1 bg-zinc-100 dark:bg-zinc-800 rounded-md font-mono text-orange-500 hover:bg-orange-500/10">&#123;&#123;name&#125;&#125;</button>
+                        <button type="button" wire:click="insertTag('ticket_number')" class="text-[10px] px-2 py-1 bg-zinc-100 dark:bg-zinc-800 rounded-md font-mono text-orange-500 hover:bg-orange-500/10">&#123;&#123;ticket_number&#125;&#125;</button>
+                        <button type="button" wire:click="insertTag('category')" class="text-[10px] px-2 py-1 bg-zinc-100 dark:bg-zinc-800 rounded-md font-mono text-orange-500 hover:bg-orange-500/10">&#123;&#123;category&#125;&#125;</button>
+                        <button type="button" wire:click="insertTag('status')" class="text-[10px] px-2 py-1 bg-zinc-100 dark:bg-zinc-800 rounded-md font-mono text-orange-500 hover:bg-orange-500/10">&#123;&#123;status&#125;&#125;</button>
+                        <button type="button" wire:click="insertTag('resolution_notes')" class="text-[10px] px-2 py-1 bg-zinc-100 dark:bg-zinc-800 rounded-md font-mono text-orange-500 hover:bg-orange-500/10">&#123;&#123;resolution_notes&#125;&#125;</button>
                     </div>
 
                     <div>
@@ -243,11 +243,7 @@
                         <div class="w-full bg-[#E5DDD5] dark:bg-[#0b141a] rounded-2xl p-4 border border-zinc-300 dark:border-zinc-800 shadow-inner">
                             <div class="max-w-[85%] bg-white dark:bg-[#1f2c34] text-zinc-800 dark:text-zinc-100 p-3 rounded-2xl rounded-tl-none shadow-sm text-xs space-y-1">
                                 <div class="whitespace-pre-line leading-relaxed">
-                                    {{ str_replace(
-                                        ['{{name}}', '{{ticket_number}}', '{{category}}', '{{status}}', '{{resolution_notes}}'],
-                                        ['Ramesh Kumar', $prefix . '-260912-ABCD', 'Garbage Dump', 'RESOLVED', 'Cleaned by sanitation truck #12 on Main St.'],
-                                        $resolveMessageTemplate
-                                    ) }}
+                                    {{ $this->previewMessage }}
                                 </div>
                                 <div class="text-[9px] text-zinc-400 text-right">
                                     {{ now()->format('h:i A') }} &#10003;&#10003;
