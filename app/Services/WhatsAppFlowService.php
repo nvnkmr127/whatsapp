@@ -708,9 +708,8 @@ class WhatsAppFlowService
                 // Store response
                 WhatsAppFlowResponse::create([
                     'whatsapp_flow_id' => $flowId,
-                    'whatsapp_flow_version_id' => $version->id,
                     'contact_id' => $tokenData['c'] ?? null,
-                    'response_data' => $validation['cleanedData'],
+                    'data' => $validation['cleanedData'],
                 ]);
 
                 // Trigger automation

@@ -54,6 +54,9 @@ Route::group(['middleware' => ['auth:sanctum', 'tenant', 'throttle:api', \App\Ht
     Route::post('/webhooks/inbound', [\App\Http\Controllers\Api\InboundWebhookController::class, 'handle']);
     Route::get('/webhooks/inbound/url', [\App\Http\Controllers\Api\InboundWebhookController::class, 'getUrl']);
 
+    // External Ticket Status Updates & Resolution Callback
+    Route::post('/tickets/status-update', [\App\Http\Controllers\Api\TicketApiController::class, 'updateStatus'])->withoutMiddleware(['auth:sanctum']);
+
     // Source-specific webhook endpoints (no auth required - verified by source config)
     Route::post('/webhooks/inbound/{source}', [\App\Http\Controllers\Api\InboundWebhookController::class, 'handleSource'])->withoutMiddleware(['auth:sanctum']);
     Route::get('/webhooks/sources/{source}/url', [\App\Http\Controllers\Api\InboundWebhookController::class, 'getSourceUrl']);

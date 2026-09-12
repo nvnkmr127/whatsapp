@@ -55,6 +55,14 @@ class SettingsHub extends Component
                 'privelege' => 'manage-settings',
             ],
             [
+                'title' => 'Ticket Integration',
+                'description' => 'Push bot grievances to external systems and auto-notify citizens upon resolution.',
+                'route' => 'settings.ticket-integration',
+                'icon' => 'M15 5v2m0 4v2m0 4v2M5 5a2 2 0 00-2 2v3a2 2 0 110 4v3a2 2 0 002 2h14a2 2 0 002-2v-3a2 2 0 110-4V7a2 2 0 00-2-2H5z',
+                'color' => 'orange',
+                'privelege' => 'manage-settings',
+            ],
+            [
                 'title' => 'Environment',
                 'description' => 'Global system settings, email configuration, and core preferences.',
                 'route' => 'settings.system',

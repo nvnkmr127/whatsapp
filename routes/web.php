@@ -141,6 +141,7 @@ Route::middleware([
     Route::get('/settings/canned-messages', \App\Livewire\Settings\CannedMessageManager::class)->name('settings.canned-messages')->middleware('can:manage-settings');
     Route::get('/settings/chat-routing', \App\Livewire\Settings\ChatRouting::class)->name('settings.chat-routing')->middleware('can:manage-settings');
     Route::get('/settings/mobile-app', \App\Livewire\Settings\MobileAppConfig::class)->name('settings.mobile-app')->middleware('can:manage-settings');
+    Route::get('/settings/ticket-integration', \App\Livewire\Settings\TicketIntegrationSettings::class)->name('settings.ticket-integration')->middleware('can:manage-settings');
     Route::get('/settings/onboarding-automation', \App\Livewire\Settings\OnboardingAutomation::class)
         ->name('settings.onboarding-automation')
         ->middleware(['can:manage-settings', \App\Http\Middleware\EnsureUserIsSuperAdmin::class]);

@@ -10,6 +10,58 @@ class TemplateLibrary
     public static function getAll(): array
     {
         return [
+            // --- CIVIC & GRIEVANCE ---
+            'civic_grievance_intake' => [
+                'name' => 'Civic Grievance & Ticket Intake',
+                'icon' => '🎫',
+                'industry' => 'Public Sector',
+                'use_case' => 'Support',
+                'desc' => 'Intake complaints/grievances (sanitation, civic, field issues), capture GPS location & category, push to external portal, and confirm ticket ID to citizen.',
+                'nodes' => [
+                    ['id' => 'n1', 'type' => 'trigger', 'x' => 50, 'y' => 50, 'data' => ['label' => 'Keyword: "complaint"', 'keywords' => ['complaint', 'clean', 'garbage', 'grievance', 'issue']]],
+                    ['id' => 'n2', 'type' => 'interactive_list', 'x' => 380, 'y' => 50, 'data' => [
+                        'label' => 'Select Category',
+                        'text' => 'Welcome! Please select your grievance category below:',
+                        'button_text' => 'Choose Category',
+                        'variable' => 'category',
+                        'sections' => [
+                            [
+                                'title' => 'Common Categories',
+                                'rows' => [
+                                    ['id' => 'Garbage Dump', 'title' => 'Garbage Dump / Waste', 'description' => 'Uncollected waste or overflow'],
+                                    ['id' => 'Drain Overflow', 'title' => 'Drain / Sewage Overflow', 'description' => 'Blocked or overflowing drains'],
+                                    ['id' => 'Street Sweeping', 'title' => 'Street Sweeping', 'description' => 'Unclean street or debris'],
+                                    ['id' => 'Public Toilet', 'title' => 'Public Toilet Issue', 'description' => 'Hygiene / maintenance needed'],
+                                    ['id' => 'Other Issue', 'title' => 'Other Civic Grievance', 'description' => 'Any other municipal inquiry'],
+                                ],
+                            ],
+                        ],
+                    ]],
+                    ['id' => 'n3', 'type' => 'location_request', 'x' => 720, 'y' => 50, 'data' => [
+                        'label' => 'Request GPS Pin',
+                        'text' => 'Please share the exact location of the issue using the button below:',
+                        'variable' => 'location',
+                    ]],
+                    ['id' => 'n4', 'type' => 'create_ticket', 'x' => 1060, 'y' => 50, 'data' => [
+                        'label' => 'Create & Push Ticket',
+                        'subject' => 'Civic Complaint: {{category}}',
+                        'category' => '{{category}}',
+                        'priority' => 'medium',
+                        'description' => 'Reported via WhatsApp bot at {{location_address}}',
+                    ]],
+                    ['id' => 'n5', 'type' => 'text', 'x' => 1400, 'y' => 50, 'data' => [
+                        'label' => 'Confirm Ticket to Citizen',
+                        'text' => "✅ Grievance Registered Successfully!\n\nTicket ID: #{{ticket_number}}\nCategory: {{category}}\nLocation: {{location_address}}\n\nOur team has been dispatched. You will receive an automated update here once resolved.",
+                    ]],
+                ],
+                'edges' => [
+                    ['source' => 'n1', 'target' => 'n2'],
+                    ['source' => 'n2', 'target' => 'n3'],
+                    ['source' => 'n3', 'target' => 'n4'],
+                    ['source' => 'n4', 'target' => 'n5'],
+                ],
+            ],
+
             // --- ECOMMERCE ---
             'ec_abandoned_cart' => [
                 'name' => 'Abandoned Cart Recovery',

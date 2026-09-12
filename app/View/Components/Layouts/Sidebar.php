@@ -230,6 +230,12 @@ class Sidebar extends Component
                 'can' => 'manage-settings',
             ],
             [
+                'route' => 'settings.ticket-integration',
+                'label' => 'Ticket Integration',
+                'icon' => 'M15 5v2m0 4v2m0 4v2M5 5a2 2 0 00-2 2v3a2 2 0 110 4v3a2 2 0 002 2h14a2 2 0 002-2v-3a2 2 0 110-4V7a2 2 0 00-2-2H5z',
+                'can' => 'manage-settings',
+            ],
+            [
                 'route' => 'teams.members',
                 'label' => 'Team Members',
                 'icon' => 'M18 9v3m0 0v3m0-3h3m-3 0h-3m-2-5a4 4 0 11-8 0 4 4 0 018 0zM3 20a6 6 0 0112 0v1H3v-1z',

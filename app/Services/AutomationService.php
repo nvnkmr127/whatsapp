@@ -1264,8 +1264,12 @@ class AutomationService
 
             case 'tag_contact':
             case 'remove_tag':
-            case 'create_ticket':
                 $this->handleUtilityNode($run, $node);
+
+                return 'continue';
+
+            case 'create_ticket':
+                $this->handleCreateTicketNode($run, $node);
 
                 return 'continue';
 
@@ -1589,6 +1593,29 @@ class AutomationService
             if (isset($currentNode['data']['variable'])) {
                 $vars[$currentNode['data']['variable']] = $input;
             }
+        }
+        // SPECIAL CASE: Location Message Reply
+        elseif (($receivedMsg?->type ?? '') === 'location' || isset($metadata['location'])) {
+            $loc = $metadata['location'] ?? [];
+            $lat = $loc['latitude'] ?? null;
+            $lng = $loc['longitude'] ?? null;
+            $addr = $loc['address'] ?? ($loc['name'] ?? '');
+            $input = ($lat && $lng) ? "{$lat},{$lng}" : ($addr ?: ($messageContent ?: 'Location shared'));
+
+            $varName = $currentNode['data']['variable'] ?? 'location';
+            $vars[$varName] = $input;
+            $vars['latitude'] = $lat;
+            $vars['longitude'] = $lng;
+            $vars['location_address'] = $addr;
+        }
+        // SPECIAL CASE: Image/Media Message Reply
+        elseif (($receivedMsg?->type ?? '') === 'image' || isset($metadata['image'])) {
+            $imageUrl = $receivedMsg?->media_url ?? ($metadata['image']['url'] ?? ($receivedMsg?->media_id ?? ''));
+            $input = $imageUrl ?: ($messageContent ?: 'Image shared');
+
+            $varName = $currentNode['data']['variable'] ?? 'image';
+            $vars[$varName] = $input;
+            $vars['image_url'] = $input;
         } else {
             // Standard Text Reply
             if (isset($currentNode['data']['variable'])) {
@@ -1764,6 +1791,111 @@ STRICT GROUNDING RULES:
                     $run->contact->tags()->detach($tag->id);
                 }
             }
+        }
+    }
+
+    protected function handleCreateTicketNode(AutomationRun $run, array $node)
+    {
+        $team = $run->automation->team;
+        $contact = $run->contact;
+        $variables = $run->state_data['variables'] ?? [];
+
+        $subject = $this->resolveVariable($run, $node['data']['subject'] ?? ($node['data']['title'] ?? 'Grievance / Ticket from Automation'));
+        $category = $this->resolveVariable($run, $node['data']['category'] ?? ($variables['category'] ?? ($variables['flow_category'] ?? 'General')));
+        $priority = $node['data']['priority'] ?? 'medium';
+        $description = $this->resolveVariable($run, $node['data']['description'] ?? ($variables['details'] ?? ($variables['description'] ?? '')));
+
+        // Collect custom fields from node configuration
+        $customFields = [];
+        if (isset($node['data']['custom_fields']) && is_array($node['data']['custom_fields'])) {
+            foreach ($node['data']['custom_fields'] as $k => $v) {
+                $customFields[$k] = $this->resolveVariable($run, (string) $v);
+            }
+        }
+
+        // Include any common sector variables dynamically collected during the flow
+        $knownKeys = ['ward', 'area', 'location', 'latitude', 'longitude', 'location_address', 'image_url', 'department', 'landmark', 'address'];
+        foreach ($knownKeys as $k) {
+            if (isset($variables[$k]) && ! isset($customFields[$k])) {
+                $customFields[$k] = $variables[$k];
+            }
+        }
+
+        // Include any flow_ prefixed fields from WhatsApp Flow forms
+        foreach ($variables as $k => $v) {
+            if (str_starts_with($k, 'flow_') && ! isset($customFields[substr($k, 5)])) {
+                $customFields[substr($k, 5)] = $v;
+            }
+        }
+
+        $ticketNumber = \App\Models\Ticket::generateTicketNumber($team);
+
+        $ticket = \App\Models\Ticket::create([
+            'team_id' => $team->id,
+            'contact_id' => $contact->id,
+            'ticket_number' => $ticketNumber,
+            'subject' => $subject,
+            'category' => $category,
+            'priority' => in_array($priority, ['low', 'medium', 'high', 'urgent']) ? $priority : 'medium',
+            'status' => 'open',
+            'description' => $description,
+            'source' => 'bot_automation',
+            'custom_fields' => $customFields,
+            'metadata' => [
+                'automation_id' => $run->automation_id,
+                'automation_run_id' => $run->id,
+            ],
+        ]);
+
+        // Save ticket_id and ticket_number into state variables so subsequent bot nodes can interpolate them
+        $vars = $run->state_data['variables'] ?? [];
+        $vars['ticket_id'] = $ticket->id;
+        $vars['ticket_number'] = $ticket->ticket_number;
+        $run->update([
+            'state_data' => array_merge($run->state_data, ['variables' => $vars]),
+        ]);
+
+        // Outbound Push to Client's External System
+        $this->dispatchTicketOutboundPush($ticket, $team);
+    }
+
+    protected function dispatchTicketOutboundPush(\App\Models\Ticket $ticket, \App\Models\Team $team)
+    {
+        $settings = $team->ticket_settings ?? [];
+        $outboundUrl = $settings['outbound_webhook_url'] ?? null;
+        $secret = $settings['outbound_webhook_secret'] ?? null;
+
+        $payload = [
+            'event' => 'ticket.created',
+            'timestamp' => now()->toIso8601String(),
+            'ticket' => [
+                'id' => $ticket->id,
+                'ticket_number' => $ticket->ticket_number,
+                'subject' => $ticket->subject,
+                'category' => $ticket->category,
+                'priority' => $ticket->priority,
+                'status' => $ticket->status,
+                'description' => $ticket->description,
+                'custom_fields' => $ticket->custom_fields,
+                'created_at' => $ticket->created_at?->toIso8601String(),
+            ],
+            'contact' => [
+                'id' => $ticket->contact_id,
+                'name' => $ticket->contact?->name,
+                'phone' => $ticket->contact?->phone_number,
+            ],
+        ];
+
+        // Also trigger general WebhookService for any registered webhook subscribers
+        try {
+            app(\App\Services\WebhookService::class)->dispatch($team->id, 'ticket.created', $payload);
+        } catch (\Throwable $e) {
+            \Illuminate\Support\Facades\Log::warning("Ticket #{$ticket->id}: WebhookService dispatch failed: ".$e->getMessage());
+        }
+
+        // Direct push if external URL configured on team
+        if (! empty($outboundUrl)) {
+            \App\Jobs\PushTicketToExternalSystemJob::dispatch($ticket->id, $outboundUrl, $payload, $secret);
         }
     }
 

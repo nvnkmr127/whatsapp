@@ -169,6 +169,13 @@ trait HasNodes
                 $data['due_days'] = 1;
                 $data['priority'] = 'medium';
                 break;
+            case 'create_ticket':
+                $data['label'] = 'Create & Push Ticket';
+                $data['subject'] = 'Ticket: {{category}}';
+                $data['category'] = '{{category}}';
+                $data['priority'] = 'medium';
+                $data['description'] = 'Created from bot automation';
+                break;
             case 'set_variable':
                 $data['key'] = '';
                 $data['operation'] = 'set';
