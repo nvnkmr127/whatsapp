@@ -318,9 +318,9 @@ class PersistMessageJob implements ShouldQueue
                 SendPushNotificationJob::dispatch($message->id);
                 Log::info("PersistMessageJob: MessageReceived event and PushJob dispatched for Message ID: {$message->id}");
 
-                if (!$contact->is_bot_paused && !empty($content)) {
-                    ProcessAiAssistantJob::dispatch($message->id);
-                }
+                // AI is handled by AiCommerceListener on MessageReceived (with chatbot
+                // precedence guards). Dispatching ProcessAiAssistantJob here too would run
+                // the AI twice per message — double cost and a possible double reply.
             } catch (\Exception $e) {
                 Log::error('PersistMessageJob: Failed to dispatch MessageReceived event: '.$e->getMessage());
                 // Do not fail the job, as persistence was successful

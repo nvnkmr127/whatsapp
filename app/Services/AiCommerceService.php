@@ -18,13 +18,80 @@ class AiCommerceService
     }
 
     /**
+     * The AI must not answer while the chatbot owns the conversation: an agent has
+     * taken over, an automation run is mid-flow, or the message hits a keyword trigger
+     * that an automation is about to handle.
+     */
+    protected function automationTakesPrecedence(Contact $contact, \App\Models\Team $team, string $message): bool
+    {
+        // 1. Respect Bot Handoff (agent assigned or manually paused)
+        if (! app(\App\Services\BotHandoffService::class)->shouldProcess($contact)) {
+            return true;
+        }
+
+        // 2. Contact is in an active automation run — do not intercept
+        if (\App\Models\AutomationRun::where('contact_id', $contact->id)
+            ->whereIn('status', ['waiting_input', 'active'])
+            ->exists()) {
+            Log::debug("AiCommerceService: Yielding for contact {$contact->id} - active automation flow in progress.");
+
+            return true;
+        }
+
+        // 3. Message matches an active keyword automation trigger — let the automation handle it
+        $cleanText = mb_strtolower(trim($message));
+        $hasTrigger = \App\Models\Automation::where('team_id', $team->id)
+            ->where('is_active', true)
+            ->whereIn('trigger_type', ['keyword', 'multi'])
+            ->get()
+            ->contains(function ($automation) use ($cleanText) {
+                $keywords = $automation->trigger_config['keywords'] ?? [];
+                $isRegex = $automation->trigger_config['is_regex'] ?? false;
+                foreach ($keywords as $kw) {
+                    $trimmed = trim($kw);
+                    if ($trimmed === '') {
+                        continue;
+                    }
+                    if ($isRegex) {
+                        $pattern = (! str_starts_with($trimmed, '/') || ! str_ends_with($trimmed, '/')) ? '/'.str_replace('/', '\/', $trimmed).'/i' : $trimmed;
+                        if (@preg_match($pattern, $cleanText)) {
+                            return true;
+                        }
+                    } elseif (str_contains($cleanText, mb_strtolower($trimmed))) {
+                        return true;
+                    }
+                }
+
+                return false;
+            });
+
+        if ($hasTrigger) {
+            Log::debug("AiCommerceService: Yielding for contact {$contact->id} - matches a chatbot automation trigger.");
+
+            return true;
+        }
+
+        return false;
+    }
+
+    /**
      * Handle incoming user message if AI Assistant is enabled.
      * Returns true if handled (response sent), false otherwise.
      */
     public function handle(Contact $contact, string $message): bool
     {
         $team = $contact->team;
+        if (! $team) {
+            return false;
+        }
         $teamId = $team->id;
+
+        // 0. Chatbot precedence — the AI must yield to any active/queued automation.
+        // Enforced here (the shared chokepoint) so every caller — the MessageReceived
+        // listener AND ProcessAiAssistantJob — is covered by one copy of the guard.
+        if ($this->automationTakesPrecedence($contact, $team, $message)) {
+            return false;
+        }
 
         // 0. The assistant must be switched on — from either settings surface
         // (AI Settings page toggle, or the Commerce dashboard toggle).

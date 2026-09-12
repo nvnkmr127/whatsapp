@@ -36,7 +36,10 @@ class PushTicketToExternalSystemJob implements ShouldQueue
         $this->endpointUrl = $endpointUrl;
         $this->payload = $payload;
         $this->secret = $secret;
-        $this->deliveryId = (string) Str::uuid();
+        // Deterministic per ticket so the sync push and any queued fallback/retry carry
+        // the SAME X-Delivery-ID — lets the external portal dedupe instead of creating
+        // a duplicate ticket when a slow-but-successful endpoint trips the 5s timeout.
+        $this->deliveryId = 'tkt-'.$ticketId;
         $this->onQueue('webhooks');
     }
 

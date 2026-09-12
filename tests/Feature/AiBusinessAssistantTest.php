@@ -76,6 +76,37 @@ class AiBusinessAssistantTest extends TestCase
         Http::assertNothingSent();
     }
 
+    /** The AI must yield while a chatbot automation owns the conversation (active run). */
+    public function test_ai_yields_during_active_automation_run()
+    {
+        $team = Team::factory()->create(['ai_auto_reply_enabled' => true, 'commerce_config' => []]);
+        $contact = Contact::factory()->create(['team_id' => $team->id]);
+        set_setting("ai_openai_api_key_{$team->id}", 'test-key');
+
+        $automation = \App\Models\Automation::create([
+            'team_id' => $team->id,
+            'name' => 'Flow',
+            'trigger_type' => 'keyword',
+            'is_active' => true,
+            'flow_data' => ['nodes' => [], 'edges' => []],
+        ]);
+        \App\Models\AutomationRun::create([
+            'automation_id' => $automation->id,
+            'contact_id' => $contact->id,
+            'status' => 'active',
+            'state_data' => ['current_node_id' => 'n1'],
+        ]);
+
+        Http::fake();
+        $wa = Mockery::mock(WhatsAppService::class);
+        $wa->shouldNotReceive('sendText');
+
+        $handled = (new AiCommerceService($wa))->handle($contact, 'anything at all');
+
+        $this->assertFalse($handled);
+        Http::assertNothingSent();
+    }
+
     /** Store custom settings (currency, COD, min order) are given to the model. */
     public function test_store_settings_reach_the_model()
     {
