@@ -1895,8 +1895,15 @@ STRICT GROUNDING RULES:
 
         // Direct push if external URL configured
         if (! empty($outboundUrl)) {
-            \Illuminate\Support\Facades\Log::info("Ticket #{$ticket->ticket_number} (ID: {$ticket->id}): Dispatching PushTicketToExternalSystemJob to {$outboundUrl}");
-            \App\Jobs\PushTicketToExternalSystemJob::dispatch($ticket->id, $outboundUrl, $payload, $secret);
+            \Illuminate\Support\Facades\Log::info("Ticket #{$ticket->ticket_number} (ID: {$ticket->id}): Sending instant push to {$outboundUrl}");
+            try {
+                // Send immediately (instant push, zero queue lag)
+                \App\Jobs\PushTicketToExternalSystemJob::dispatchSync($ticket->id, $outboundUrl, $payload, $secret);
+            } catch (\Throwable $e) {
+                // Fallback to queue if the external endpoint is slow or temporarily down
+                \Illuminate\Support\Facades\Log::warning("Instant push failed for Ticket #{$ticket->ticket_number}: {$e->getMessage()}. Queuing retry.");
+                \App\Jobs\PushTicketToExternalSystemJob::dispatch($ticket->id, $outboundUrl, $payload, $secret);
+            }
         } else {
             \Illuminate\Support\Facades\Log::warning("Ticket #{$ticket->ticket_number} (ID: {$ticket->id}): No outbound webhook URL configured for Team #{$team->id}. Push skipped.");
         }

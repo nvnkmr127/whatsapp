@@ -53,7 +53,7 @@ class PushTicketToExternalSystemJob implements ShouldQueue
         }
 
         try {
-            $response = Http::timeout(15)
+            $response = Http::timeout(5)
                 ->withHeaders($headers)
                 ->post($this->endpointUrl, $this->payload);
 
