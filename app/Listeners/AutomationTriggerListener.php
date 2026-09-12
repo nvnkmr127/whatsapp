@@ -26,14 +26,16 @@ class AutomationTriggerListener implements ShouldQueue
         Log::debug("AutomationTriggerListener: Handle started for message {$event->message->id}");
         $message = $event->message;
 
-        // Idempotency check: Ensure we don't process the same message twice
+        // Idempotency: atomically claim the message so concurrent workers don't double-process.
+        // add() is atomic (unlike has()+put()) and returns false if already claimed. The claim is
+        // released on failure below so a transient error (e.g. log/DB blip) doesn't poison the
+        // message — otherwise a failed attempt permanently skips it for the whole TTL.
         $idempotencyKey = "automation_triggered_msg_{$message->id}";
-        if (Cache::has($idempotencyKey)) {
+        if (! Cache::add($idempotencyKey, true, 3600)) {
             Log::debug("AutomationTriggerListener: Message {$message->id} already processed. Skipping.");
 
             return;
         }
-        Cache::put($idempotencyKey, true, 3600); // 1 hour window
 
         // Skip outbound messages
         if ($message->direction !== 'inbound') {
@@ -85,6 +87,9 @@ class AutomationTriggerListener implements ShouldQueue
             }
 
         } catch (\Exception $e) {
+            // Release the idempotency claim so this message can be retried instead of being
+            // silently skipped forever.
+            Cache::forget($idempotencyKey);
             Log::error("Automation Failure for Message {$message->id}: ".$e->getMessage(), [
                 'exception' => $e,
             ]);
